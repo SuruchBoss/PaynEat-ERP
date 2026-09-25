@@ -112,8 +112,8 @@ Prometheus exposition at `GET /metrics` on each API, not exposed publicly.
 **On Kubernetes** (the SherWhyve lab, and any Google Kubernetes Engine deployment), metrics are collected
 by Managed Service for Prometheus through a `PodMonitoring` resource. For that to find a service:
 
-- its pods carry the label `app: <app>`, with the same value as the `app` log label (`payneat-erp`,
-  `payneat-pos`, `cwork`);
+- its pods carry the label `app: <app>`, with the same value as the `app` log label (`payneat-erp-api`,
+  `payneat-pos-api`, `cwork-api`, …);
 - the container port that serves `/metrics` is named `http`.
 
 This is a deployment convention, not a change to what services emit; a pod without it is simply not
