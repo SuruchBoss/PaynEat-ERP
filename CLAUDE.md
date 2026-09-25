@@ -76,6 +76,17 @@ way to make this ERP untrustworthy.
 - The ERP never reads or writes the POS database, and vice versa. (ADR-0002)
 - Never present an estimate, suggestion or inference as a fact in the UI, an API response or a report.
 
+## Observability (ADR-0011)
+
+Every system in the ecosystem must be investigable by SherWhyve from what it records.
+
+- Log as structured JSON. Every request, posting and integration event carries a **correlation id**:
+  the idempotency key for anything that came from the POS, the document number for document work.
+- Every refusal of a posting logs and counts the rule that refused it.
+- When you build a flow, add its health metrics (backlog age, received / duplicated / rejected counts,
+  failures by rule).
+- Never put secrets, tokens or personal data in logs or metric labels.
+
 ## Stack
 
 NestJS 11 + Prisma + PostgreSQL 16 in `backend/`, React 19 + Vite in `web/`, shared POS contracts in

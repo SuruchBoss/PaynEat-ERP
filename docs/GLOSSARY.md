@@ -115,7 +115,15 @@ using a new domain concept anywhere else.
 | Sales event | event ยอดขาย | A POS sale line sent to the ERP: menu item, quantity or weighed weight, modifiers, time. |
 | Outbox | outbox | A table written in the same transaction as the business change, drained to the other system afterwards. |
 | Idempotency key | idempotency key | A unique key per event so a retried delivery is applied once. |
+| Correlation id | correlation id | An id carried in every log line and event of one business flow across systems (a sale's idempotency key, a document number), so an investigator can follow it end to end. |
 | Master data version | เวอร์ชัน master data | A monotonically increasing number a POS instance uses to pull only what changed. |
+
+## Analysis · การวิเคราะห์
+
+| Term | ไทย | Meaning |
+|---|---|---|
+| Variance investigator | ตัวสืบสวนส่วนต่าง | **Future (after v1).** An AI analyst that explains business variances (yield, usage, cost, temperature) with ranked, evidence-citing hypotheses, using read-only ERP operations only (ADR-0011). |
+| Hypothesis | สมมติฐาน | A candidate explanation, ranked, that must cite the evidence supporting it. Never presented as a fact. |
 
 ## Access · สิทธิ์การใช้งาน
 
