@@ -38,7 +38,7 @@ One JSON object per line on stdout.
 
 | Label | Values |
 |---|---|
-| `app` | `payneat-erp-api`, `payneat-erp-web`, `payneat-pos-api`, `cwork-api`, … Test and lab stand-ins must not reuse these names. |
+| `app` | `payneat-erp-api`, `payneat-erp-web`, `payneat-pos-api`, `cwork-api`, … A lab stand-in that shares one of these names (SherWhyve's lab has its own `cwork-api`, which is not Cwork) must never run in the same project as the real service. |
 | `event` | Dot-named event type from the catalogue below, e.g. `ledger.posting.refused`. |
 | `correlation_id` | See "Correlation" below. |
 | `location_code` | The ecosystem location code (same in ERP, POS and Cwork). |
