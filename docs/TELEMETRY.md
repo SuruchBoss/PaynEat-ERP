@@ -76,6 +76,21 @@ One JSON object per line on stdout.
 | `master_data.pulled` | ERP | `INFO`, with `pos_instance` |
 | `outbox.delivery.failed` | POS (and any service with an outbox) | `WARNING`; `ERROR` when dead-lettered |
 
+## Where each service runs, and what an investigator can see
+
+| Service | Runs | Visible to SherWhyve on Google Cloud |
+|---|---|---|
+| PaynEat ERP | Central server | Everything in this contract |
+| Cwork | Central server | Everything in this contract |
+| PaynEat POS | **In the restaurant** (one-line Docker install; printers and scales on the shop LAN) | **Not by default** — its logs and metrics stay in the shop |
+
+Because the POS side is usually out of sight, the ERP's own evidence is what explains most POS→ERP
+incidents: `erp_sales_events_total` per outcome and reason, `erp_master_data_last_pull_timestamp_seconds`
+per `pos_instance`, and the `sales_event.*` log lines. When the answer depends on the POS side, the
+investigator says that evidence is unavailable rather than guessing. Test labs run the POS on the same
+cluster as the ERP so both sides are visible. None of these services sits behind an API gateway by design
+(ADR-0002).
+
 ## Metrics
 
 Prometheus exposition at `GET /metrics` on each API, not exposed publicly.
