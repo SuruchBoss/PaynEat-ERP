@@ -17,7 +17,7 @@ edited to change their meaning; a new ADR supersedes them.
 | 0007 | [Receiving, inspection and transfers](0007-receiving-inspection-and-transfers.md) | [การรับสินค้า การตรวจรับ และการโอน](0007-receiving-inspection-and-transfers.th.md) | Accepted |
 | 0008 | [Roles and segregation of duties](0008-roles-and-segregation-of-duties.md) | [บทบาทและการแยกหน้าที่](0008-roles-and-segregation-of-duties.th.md) | Accepted |
 | 0009 | [Replenishment planning v1](0009-replenishment-planning-v1.md) | [การวางแผนเติมสต๊อก v1](0009-replenishment-planning-v1.th.md) | Accepted |
-| 0010 | Backend stack | — | **Pending** — awaiting a decision on aligning with Cwork's stack |
+| 0010 | [Stack: NestJS, Prisma, raw-SQL ledger posting, React; aligned with Cwork](0010-backend-and-web-stack.md) | [Stack: NestJS, Prisma, post บัญชีสต๊อกด้วย SQL ตรง, React; แนวเดียวกับ Cwork](0010-backend-and-web-stack.th.md) | Accepted |
 
 ## Template
 

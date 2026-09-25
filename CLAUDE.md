@@ -78,7 +78,17 @@ way to make this ERP untrustworthy.
 
 ## Stack
 
-The backend stack is recorded in `docs/adr/0010-*` once accepted. **Until that ADR exists, do not
-scaffold application code.** The walking-skeleton ticket that follows it defines the exact lint,
-typecheck, test and architecture-check commands; they will be listed here, and must all pass before
-every commit.
+NestJS 11 + Prisma + PostgreSQL 16 in `backend/`, React 19 + Vite in `web/`, shared POS contracts in
+`contracts/` — aligned with [Cwork](https://github.com/SuruchBoss/Cwork), see
+[ADR-0010](docs/adr/0010-backend-and-web-stack.md). In short:
+
+- Business rules are pure functions in `modules/<name>/domain/`: no Prisma, no NestJS, no clock
+  unless injected.
+- A module owns its tables; other modules call its service, never its repository or Prisma models.
+- **Only the ledger module writes ledger and balance tables, and only with raw SQL inside one
+  transaction.** Everything else may use Prisma normally.
+- Infrastructure copied from Cwork (auth with MFA, permissions, audit, outbox, sequences, job locks,
+  console shell) keeps its structure; adapt it, do not rewrite it.
+
+The walking-skeleton ticket defines the exact lint, typecheck, unit, end-to-end and
+architecture-check commands. They will be listed here, and all of them must pass before every commit.
