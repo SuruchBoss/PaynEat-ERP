@@ -1,6 +1,6 @@
 # ADR-0013: Extension by integration, not by in-process plugins
 
-- **Status:** Accepted
+- **Status:** Accepted; applies to third-party code — first-party Enterprise code in `ee/` is covered by [ADR-0015](0015-editions-community-and-enterprise.md)
 - **Date:** 2026-09-25
 - **ภาษาไทย:** [0013-extension-by-integration.th.md](0013-extension-by-integration.th.md)
 

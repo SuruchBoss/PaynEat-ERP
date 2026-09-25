@@ -1,6 +1,6 @@
 # ADR-0013: ต่อยอดผ่านการเชื่อมต่อ ไม่ใช่ plugin ที่รันภายใน ERP
 
-- **สถานะ:** ยอมรับแล้ว
+- **สถานะ:** ยอมรับแล้ว; ใช้กับโค้ดของคนนอก — โค้ด Enterprise ของเราเองใน `ee/` อยู่ภายใต้ [ADR-0015](0015-editions-community-and-enterprise.th.md)
 - **วันที่:** 2026-09-25
 - **English:** [0013-extension-by-integration.md](0013-extension-by-integration.md)
 

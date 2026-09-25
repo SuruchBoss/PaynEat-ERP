@@ -1,6 +1,6 @@
 # ADR-0012: จุดยืน — ตัวเลือก open source ที่ดีที่สุดในตลาดเฉพาะ ไม่ใช่ ERP ครอบจักรวาล
 
-- **สถานะ:** ยอมรับแล้ว
+- **สถานะ:** ยอมรับแล้ว; ส่วน "ไม่มีรุ่นเสียเงิน" ในข้อ 4 ถูกแทนที่โดย [ADR-0015](0015-editions-community-and-enterprise.th.md)
 - **วันที่:** 2026-09-25
 - **English:** [0012-positioning-niche-depth-over-breadth.md](0012-positioning-niche-depth-over-breadth.md)
 

@@ -1,6 +1,6 @@
 # ADR-0012: Positioning — the best open-source option for one niche, not a general ERP
 
-- **Status:** Accepted
+- **Status:** Accepted; decision 4's "no paid edition" superseded by [ADR-0015](0015-editions-community-and-enterprise.md)
 - **Date:** 2026-09-25
 - **ภาษาไทย:** [0012-positioning-niche-depth-over-breadth.th.md](0012-positioning-niche-depth-over-breadth.th.md)
 

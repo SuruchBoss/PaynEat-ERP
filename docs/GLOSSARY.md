@@ -136,3 +136,12 @@ using a new domain concept anywhere else.
 | Role | บทบาท | `admin`, `purchasing`, `purchasing_approver`, `plant`, `logistics`, `branch_manager`, `finance`. A user may hold several. |
 | Approval threshold | เกณฑ์วงเงินที่ต้องอนุมัติ | The document value above which a second person must approve. Configuration, not code. |
 | Segregation of duties | การแยกหน้าที่ | Nobody approves a document they created, whatever roles they hold. |
+
+## Editions · รุ่นของระบบ
+
+| Term | ไทย | Meaning |
+|---|---|---|
+| Community edition | รุ่น Community | The free Apache 2.0 edition: everything outside `ee/`. Complete for one chain; never limited by users, locations or data (ADR-0015). |
+| Enterprise edition | รุ่น Enterprise | The paid edition: Community plus the modules in `ee/`, activated by a license key (ADR-0015). |
+| License key | license key | A signed key verified offline that turns on Enterprise modules. When it expires, Enterprise screens become read-only; core work and data access never stop. |
+| Active location | สถานที่ที่ใช้งาน | A plant, warehouse or branch with postings in the billing month; the unit Enterprise is priced by. |

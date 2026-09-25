@@ -73,6 +73,7 @@ The "why" matters more than the "what" in an ERP, so every decision is written d
 | [0012](docs/adr/0012-positioning-niche-depth-over-breadth.md) | Positioning: the best open-source option for Thai restaurant chains running their own supply chain — depth in one field, not a general ERP; integrate with existing accounting instead of replacing it |
 | [0013](docs/adr/0013-extension-by-integration.md) | Extension by integration: a versioned public API, scoped tokens and signed webhooks — no in-process plugins that could bypass the ledger |
 | [0014](docs/adr/0014-lot-expiry-never-later-than-supplier-date.md) | A lot's expiry is the earlier of shelf life and the supplier's date; production outputs never outlive their inputs |
+| [0015](docs/adr/0015-editions-community-and-enterprise.md) | Two editions: a free Community edition that is complete for one chain, and a paid Enterprise edition for scale, regulation and AI; food safety, data access and upgrades are never paywalled |
 
 Domain vocabulary, in English and Thai: [`docs/GLOSSARY.md`](docs/GLOSSARY.md).
 
@@ -101,6 +102,21 @@ can build their own add-ons as separate services ([ADR-0013](docs/adr/0013-exten
 
 Progress is tracked in [GitHub Issues](https://github.com/SuruchBoss/PaynEat-ERP/issues).
 
+## Editions
+
+| | Community | Enterprise |
+|---|---|---|
+| Price | Free | Paid, per active location per month (never per user) |
+| License | Apache 2.0 | Elastic License 2.0 (source available in `ee/`) |
+| What | Everything in the first release and every later improvement to the supplier-to-plate path, with no limits on users, locations or data | Needs that grow with scale, regulation or running cost: several companies and plants, a food-safety programme (HACCP, sensors, mock recalls), pack scanning, finance depth, a mobile app, accounting connectors, AI agents, single sign-on |
+| Status | Being built now | Starts after the first release, with a pilot chain |
+
+**Never behind a paywall:** food safety and data integrity (expiry blocking, recall tracing, the
+ledger, segregation of duties, the audit trail), basic security, full access to your own data, and
+the documented upgrade path. A Community feature is never moved to Enterprise. Hosting, managed
+upgrades, support and implementation are offered as paid services for either edition. Details:
+[ADR-0015](docs/adr/0015-editions-community-and-enterprise.md).
+
 ## Contributing
 
 Issues labelled `ready-for-agent` are self-contained and can be picked up; claim one before you
@@ -109,4 +125,5 @@ to AI agents).
 
 ## License
 
-[Apache License 2.0](LICENSE). If you build on this, keep the [NOTICE](NOTICE).
+[Apache License 2.0](LICENSE), except the `ee/` directory once it exists, which will carry its own
+license (ADR-0015). If you build on this, keep the [NOTICE](NOTICE).

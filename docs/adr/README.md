@@ -19,9 +19,10 @@ edited to change their meaning; a new ADR supersedes them.
 | 0009 | [Replenishment planning v1](0009-replenishment-planning-v1.md) | [การวางแผนเติมสต๊อก v1](0009-replenishment-planning-v1.th.md) | Accepted |
 | 0010 | [Stack: NestJS, Prisma, raw-SQL ledger posting, React; aligned with Cwork](0010-backend-and-web-stack.md) | [Stack: NestJS, Prisma, post บัญชีสต๊อกด้วย SQL ตรง, React; แนวเดียวกับ Cwork](0010-backend-and-web-stack.th.md) | Accepted |
 | 0011 | [One ecosystem: POS, ERP, Cwork, SherWhyve](0011-ecosystem-and-sherwhyve.md) | [ระบบนิเวศเดียวกัน: POS, ERP, Cwork, SherWhyve](0011-ecosystem-and-sherwhyve.th.md) | Accepted |
-| 0012 | [Positioning: niche depth over breadth](0012-positioning-niche-depth-over-breadth.md) | [จุดยืน: ลึกในตลาดเฉพาะ แทนความกว้าง](0012-positioning-niche-depth-over-breadth.th.md) | Accepted |
+| 0012 | [Positioning: niche depth over breadth](0012-positioning-niche-depth-over-breadth.md) | [จุดยืน: ลึกในตลาดเฉพาะ แทนความกว้าง](0012-positioning-niche-depth-over-breadth.th.md) | Accepted (decision 4 partly superseded by 0015) |
 | 0013 | [Extension by integration, not in-process plugins](0013-extension-by-integration.md) | [ต่อยอดผ่านการเชื่อมต่อ ไม่ใช่ plugin ภายใน](0013-extension-by-integration.th.md) | Accepted |
 | 0014 | [A lot's expiry is never later than the supplier's date](0014-lot-expiry-never-later-than-supplier-date.md) | [วันหมดอายุของ lot ต้องไม่เกินวันที่ซัพพลายเออร์ระบุ](0014-lot-expiry-never-later-than-supplier-date.th.md) | Accepted |
+| 0015 | [Editions: Community and Enterprise](0015-editions-community-and-enterprise.md) | [รุ่นของระบบ: Community และ Enterprise](0015-editions-community-and-enterprise.th.md) | Accepted |
 
 ## Template
 

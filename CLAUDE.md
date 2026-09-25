@@ -78,6 +78,16 @@ way to make this ERP untrustworthy.
 - The ERP never reads or writes the POS database, and vice versa. (ADR-0002)
 - Never present an estimate, suggestion or inference as a fact in the UI, an API response or a report.
 
+## Editions (ADR-0015)
+
+- v1 is **entirely Community**. Do not create `ee/` or write Enterprise code until the product owner
+  publishes an issue labelled for it.
+- When `ee/` exists: the core **never imports from `ee/`** (the architecture check enforces it), the
+  ledger rule applies inside `ee/` too, and an expired license key never blocks core work or data
+  access.
+- Never move behaviour from Community into `ee/`, and never put food safety, data integrity, basic
+  security, data export or the upgrade path behind a key.
+
 ## Observability (ADR-0011)
 
 Every system in the ecosystem must be investigable by SherWhyve from what it records.
