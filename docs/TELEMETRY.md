@@ -109,6 +109,16 @@ Prometheus exposition at `GET /metrics` on each API, not exposed publicly.
 
 `route` is the route template (`/documents/:id`), never the concrete path.
 
+**On Kubernetes** (the SherWhyve lab, and any Google Kubernetes Engine deployment), metrics are collected
+by Managed Service for Prometheus through a `PodMonitoring` resource. For that to find a service:
+
+- its pods carry the label `app: <app>`, with the same value as the `app` log label (`payneat-erp`,
+  `payneat-pos`, `cwork`);
+- the container port that serves `/metrics` is named `http`.
+
+This is a deployment convention, not a change to what services emit; a pod without it is simply not
+scraped, and an investigator then reports its metrics as missing, never as zero.
+
 ## Never in logs or labels
 
 Passwords, tokens, machine credentials, MFA codes or secrets; personal data (names, phone numbers,
