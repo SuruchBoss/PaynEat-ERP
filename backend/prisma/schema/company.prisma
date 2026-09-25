@@ -1,0 +1,15 @@
+// The company: the restaurant chain that owns this installation (docs/GLOSSARY.md).
+// One installation serves exactly one company (ADR-0001), so the table holds at
+// most one row: `singleton` is unique and a CHECK in the migration pins it to true.
+
+model Company {
+  id        String   @id @default(uuid()) @db.Uuid
+  singleton Boolean  @default(true) @unique
+  code      String   @unique
+  name      String
+  nameTh    String   @map("name_th")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("companies")
+}

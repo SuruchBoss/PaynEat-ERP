@@ -1,0 +1,18 @@
+// PaynEat ERP — Prisma schema (multi-file, one file per owning module).
+//
+// Conventions used across every model in this folder (adapted from Cwork, see NOTICE):
+//   * Primary keys are UUIDv4 stored as `uuid` — never expose sequential ids.
+//   * Timestamps are stored in UTC as `timestamptz(3)`.
+//   * A module owns the tables in its file; other modules read them through its
+//     service, never through these models (ADR-0010).
+//   * The stock ledger and balance tables (from #7) are written only by the ledger
+//     module, in raw SQL inside one transaction — never through Prisma models.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}

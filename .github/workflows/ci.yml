@@ -1,0 +1,121 @@
+name: CI
+
+# Every gate in CLAUDE.md "Stack", on every push and pull request (#2). Adapted from
+# Cwork's CI, see NOTICE.
+on:
+  push:
+  pull_request:
+
+# A new push supersedes an in-flight run for the same branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: erp
+          POSTGRES_PASSWORD: erp
+          POSTGRES_DB: payneat_erp_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U erp -d payneat_erp_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      DATABASE_URL: postgresql://erp:erp@localhost:5432/payneat_erp_test?schema=public
+      NODE_ENV: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - run: npm ci
+      - run: npx prisma generate
+
+      - name: Format
+        run: npm run format:check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # Unset, deliberately: unit tests must pass on a clean clone with no database and
+      # no configuration, which this job's env block would otherwise hide. (Cwork learned
+      # this the hard way; see its ci.yml.)
+      - name: Unit tests, with the environment a fresh clone has
+        run: env -u DATABASE_URL -u NODE_ENV npm test
+
+      - name: Architecture check (ADR-0010)
+        run: npm run check:architecture
+
+      # Black-box run against the real API and a real PostgreSQL 16: migrates, wipes
+      # (only a database named like a test database) and seeds the demo chain first.
+      - name: End-to-end tests
+        run: npm run test:e2e
+        env:
+          E2E_DATABASE_URL: postgresql://erp:erp@localhost:5432/payneat_erp_test?schema=public
+
+      - name: Build
+        run: npm run build
+
+  compose:
+    name: docker compose up
+    runs-on: ubuntu-latest
+
+    # Nothing else runs the Dockerfile or docker-compose.yml, and PaynEat POS once shipped
+    # a Dockerfile that could not build for weeks because no job built it (POS
+    # DECISIONS #63). This runs exactly what README "Try it" tells a person to run.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start PostgreSQL 16 and the API
+        run: docker compose up -d --build --wait
+
+      - name: Apply migrations and build the demo chain
+        run: |
+          docker compose run --rm --build migrate
+          docker compose run --rm migrate npm run db:seed
+
+      - name: The API reports itself and its database as up
+        run: |
+          body=$(curl -fsS http://localhost:3100/health)
+          echo "$body"
+          test "$body" = '{"status":"ok","api":"up","database":"up"}'
+
+      - name: Metrics are not published on the host
+        run: |
+          if curl -fsS --max-time 3 http://localhost:9464/metrics > /dev/null; then
+            echo "metrics port is reachable from outside the compose network"; exit 1
+          fi
+          docker compose exec -T api curl -fsS http://127.0.0.1:9464/metrics | grep -q '^http_requests_total'
+
+      - name: Logs are contract-shaped JSON
+        run: |
+          docker compose logs --no-log-prefix api | grep '"event":"http.request.completed"' | head -1 | tee line.json
+          grep -q '"severity":"INFO"' line.json
+
+      - if: always()
+        run: docker compose down -v

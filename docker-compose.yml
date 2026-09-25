@@ -1,0 +1,76 @@
+# PaynEat ERP — PostgreSQL 16 and the API, for trying it locally and small self-hosted
+# installations. Adapted from Cwork's docker-compose.yml, see NOTICE.
+#
+#   docker compose up -d --build                        # PostgreSQL 16 + the API
+#   docker compose run --rm --build migrate             # apply database migrations
+#   docker compose run --rm migrate npm run db:seed     # the fictional demo chain
+#   curl http://localhost:3100/health
+#
+# The API is published on host port 3100 (not 3000) so it can run next to PaynEat POS,
+# whose Docker install uses 3000 and 8080. Metrics (:9464/metrics) and PostgreSQL are
+# deliberately not published: a scraper or psql reaches them inside the network.
+
+name: payneat-erp
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-erp}
+      # Only reachable inside the compose network. Set your own in .env for anything
+      # beyond trying it out.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-erp-local}
+      POSTGRES_DB: ${POSTGRES_DB:-payneat_erp}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-erp} -d ${POSTGRES_DB:-payneat_erp}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-erp}:${POSTGRES_PASSWORD:-erp-local}@postgres:5432/${POSTGRES_DB:-payneat_erp}?schema=public
+      # The web console (#3) will be served from here.
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8180}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_FORMAT: ${LOG_FORMAT:-default}
+      METRICS_PORT: 9464
+    ports:
+      - "${ERP_API_PORT:-3100}:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:3000/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  # One-off tools container: migrations and the demo seed. Built from the Dockerfile's
+  # `build` stage, which keeps the Prisma CLI the runtime image prunes away. Under a
+  # profile so `docker compose up` never starts it; `docker compose run` enables it.
+  migrate:
+    profiles: ["tools"]
+    build:
+      context: ./backend
+      target: build
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://${POSTGRES_USER:-erp}:${POSTGRES_PASSWORD:-erp-local}@postgres:5432/${POSTGRES_DB:-payneat_erp}?schema=public
+    command: ["npx", "prisma", "migrate", "deploy"]
+    restart: "no"
+
+volumes:
+  postgres-data:

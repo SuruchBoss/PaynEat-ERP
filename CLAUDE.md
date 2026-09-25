@@ -135,5 +135,24 @@ NestJS 11 + Prisma + PostgreSQL 16 in `backend/`, React 19 + Vite in `web/`, sha
 - Infrastructure copied from Cwork (auth with MFA, permissions, audit, outbox, sequences, job locks,
   console shell) keeps its structure; adapt it, do not rewrite it.
 
-The walking-skeleton ticket defines the exact lint, typecheck, unit, end-to-end and
-architecture-check commands. They will be listed here, and all of them must pass before every commit.
+### Gates (all must pass before every commit; CI runs every one on each push and pull request)
+
+Run inside `backend/`, after `npm ci` and `npx prisma generate`:
+
+| Gate | Command |
+|---|---|
+| Format | `npm run format:check` (fix with `npm run format`) |
+| Lint | `npm run lint` |
+| Typecheck | `npm run typecheck` |
+| Unit tests (pure domain rules; need no database or configuration) | `npm test` |
+| Architecture check (ADR-0010: `domain/` purity, module boundaries) | `npm run check:architecture` |
+| End-to-end tests against a real PostgreSQL 16 | `E2E_DATABASE_URL=postgresql://…/payneat_erp_test npm run test:e2e` |
+| Build | `npm run build` |
+
+- The end-to-end run migrates, **wipes** and seeds its database first, so it refuses a database
+  whose name has no `test` in it (`E2E_ALLOW_NON_TEST_DB=1` overrides, deliberately).
+- The demo seed is `npm run db:seed`; it is idempotent, and the end-to-end suite runs it.
+- CI also runs `docker compose up` exactly as the README's "Try it" section tells a person to, and
+  checks `/health`, the logs and that metrics are not published.
+- Logging goes through `TelemetryLogger` only (`console.*` is a lint error in `src/`); new flows add
+  their events and metrics per `docs/TELEMETRY.md`.
