@@ -53,6 +53,25 @@ A ticket is done only when all of these hold:
   `NNNN-slug.th.md`) and indexed in `docs/adr/README.md`.
 - CI is green. Never skip, disable or weaken a test to get there.
 
+## Merging
+
+- **The dev session merges its own pull requests** once the definition of done holds and CI is green
+  on the latest commit. Use **squash merge**, so `main` has one commit per issue, titled
+  `<issue title> (#<issue number>)`. Before merging, bring the branch up to date with `main` and wait
+  for CI to pass again.
+- **Wait for the product owner's review before merging** only when a pull request:
+  - changes a contract: anything under `contracts/`, or `docs/TELEMETRY.md` beyond what its issue
+    already authorises;
+  - adds or changes an ADR;
+  - deliberately departs from its issue's acceptance criteria. Say so in the PR body; do not bury it.
+
+  Ask on the PR by commenting `@product-owner review requested` and naming the reason.
+- After merging, comment on the issue with what shipped and anything deferred. The product owner checks
+  closed issues against their acceptance criteria. A gap becomes a new issue linked to the old one; the
+  closed issue is not reopened.
+- Never merge with red or pending CI, never bypass branch protection, and never merge someone else's
+  pull request.
+
 ## Languages
 
 - Code, identifiers, commit messages, issues and pull requests: **English.**
