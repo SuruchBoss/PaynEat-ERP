@@ -84,8 +84,9 @@ Every system in the ecosystem must be investigable by SherWhyve from what it rec
 The exact log fields, labels, event names and metrics are the contract in
 [`docs/TELEMETRY.md`](docs/TELEMETRY.md); follow it rather than inventing names.
 
-- Log as structured JSON with a string `severity`. Every request, posting and integration event
-  carries a **correlation id** (`x-request-id`; the idempotency key for anything from the POS).
+- Log as structured JSON with a string `severity` and a plain `labels` object (Google Cloud keys only
+  with `LOG_FORMAT=gcp`). Every request, posting and integration event carries a **correlation id**
+  (`x-request-id`; the idempotency key for anything from the POS).
 - Every refusal of a posting logs and counts the rule that refused it.
 - When you build a flow, add its health metrics (backlog age, received / duplicated / rejected counts,
   failures by rule).

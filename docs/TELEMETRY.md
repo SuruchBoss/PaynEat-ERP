@@ -1,13 +1,24 @@
-# Telemetry contract v1 — PaynEat ERP, PaynEat POS, Cwork
+# Telemetry contract v1.1 — PaynEat ERP, PaynEat POS, Cwork
 
 What every service in the ecosystem writes to its logs and metrics, so that one investigator —
 SherWhyve — can follow an incident across all of them with the same queries (ADR-0011). It is a
 contract: renaming a field, a label or a metric is a breaking change and needs a new version here.
 
-The shapes are chosen for Google Cloud, where SherWhyve's live connectors run: JSON written to stdout
-by a container on GKE is parsed by Cloud Logging, and Prometheus metrics are collected by Managed
-Service for Prometheus into Cloud Monitoring. Off Google Cloud, the same output works with any JSON
-log pipeline and any Prometheus scraper.
+Every project in the ecosystem is self-hostable on its own, so **the default output carries no vendor
+names**. A deployment on Google Cloud — where SherWhyve's live connectors run — switches on one setting,
+`LOG_FORMAT=gcp`, and the same information moves to the keys Cloud Logging reads specially. Prometheus
+metrics are identical everywhere; on Google Cloud, Managed Service for Prometheus collects them into
+Cloud Monitoring.
+
+## Changes in v1.1 (2026-09-25, before any service implemented v1)
+
+- Labels are written as a plain `labels` object by default; `logging.googleapis.com/labels` and
+  `logging.googleapis.com/trace` are used only with `LOG_FORMAT=gcp` (proposed by Cwork: self-hosters
+  should not see a cloud vendor's keys in their own logs).
+- `event` moved into the labels, so it can be filtered and counted (proposed by SherWhyve).
+- `httpRequest.latency` is fixed as a duration string such as `"0.231s"` (proposed by SherWhyve; Cloud
+  Logging rejects a number there).
+- Correlation behind a gateway: see "Correlation".
 
 ## Logs
 
@@ -18,17 +29,17 @@ One JSON object per line on stdout.
 | `severity` | yes | One of `DEBUG`, `INFO`, `NOTICE`, `WARNING`, `ERROR`, `CRITICAL`. **Named `severity`, as a string** — Cloud Logging ignores a numeric `level`, and `severity>=WARNING` filters would silently find nothing. |
 | `time` | yes | RFC 3339 timestamp with milliseconds. |
 | `message` | yes | Human-readable sentence. |
-| `event` | yes | Dot-named event type from the catalogue below, e.g. `ledger.posting.refused`. |
-| `logging.googleapis.com/labels` | yes | Object of string labels, filterable as `labels.<name>`. Always contains `app` and `correlation_id`; the others when they apply. |
-| `logging.googleapis.com/trace` | when present | `projects/<project>/traces/<trace-id>` from an incoming W3C `traceparent`. |
-| `httpRequest` | on `http.request.completed` | Cloud Logging's request object: `requestMethod`, `requestUrl` (path only, no query string), `status`, `latency`. |
+| `labels` | yes | Object of string labels. Always contains `app`, `event` and `correlation_id`; the others when they apply. **With `LOG_FORMAT=gcp` this object is written under `logging.googleapis.com/labels` instead**, which Cloud Logging turns into filterable `labels.<name>`. |
+| `trace` | when present | The trace id from an incoming W3C `traceparent`. **With `LOG_FORMAT=gcp`** it is written as `logging.googleapis.com/trace` in the form `projects/<project>/traces/<trace-id>`. |
+| `httpRequest` | on `http.request.completed` | `requestMethod`, `requestUrl` (path only, no query string), `status`, and `latency` **as a duration string with an `s` suffix**, e.g. `"0.231s"`. |
 | `error` | on failures | `{ "type", "message" }`. Stack traces only at `DEBUG`. |
 
 ### Labels
 
 | Label | Values |
 |---|---|
-| `app` | `payneat-erp-api`, `payneat-erp-web`, `payneat-pos-api`, `cwork-api`, … |
+| `app` | `payneat-erp-api`, `payneat-erp-web`, `payneat-pos-api`, `cwork-api`, … Test and lab stand-ins must not reuse these names. |
+| `event` | Dot-named event type from the catalogue below, e.g. `ledger.posting.refused`. |
 | `correlation_id` | See "Correlation" below. |
 | `location_code` | The ecosystem location code (same in ERP, POS and Cwork). |
 | `document_number` | ERP document number, when the line concerns one. |
@@ -45,8 +56,13 @@ One JSON object per line on stdout.
   through delivery (sent as `x-request-id`) to the ERP lines that store and later consume it.
 - **Documents:** `document_number` is labelled on every line about the document; `correlation_id`
   stays the id of the request acting on it.
+- **Behind a gateway:** services read only `x-request-id`. The ecosystem's own design puts no gateway
+  between its services (POS calls the ERP directly, ADR-0002). A deployment that adds one — for example
+  an API manager that tracks requests under its own header, as WSO2 does with `activityid` — configures
+  the gateway to forward that same value as `x-request-id`, so gateway and service logs share one id.
+  Vendor headers are not added to the services themselves.
 
-### Event catalogue (v1)
+### Event catalogue (v1.1)
 
 | Event | Emitted by | Severity |
 |---|---|---|

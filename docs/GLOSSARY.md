@@ -13,7 +13,7 @@ using a new domain concept anywhere else.
 |---|---|---|
 | Company | บริษัท | The restaurant chain that owns one installation. One installation serves exactly one company. |
 | Location | สถานที่เก็บสต๊อก | Anywhere stock can physically be. Every stock movement names a location. Has a **type**. |
-| Location code | รหัสสถานที่ | The ecosystem-wide identifier of a location: uppercase letters, digits and hyphens, 2–32 characters (`^[A-Z0-9][A-Z0-9-]{1,31}$`), fixed at creation. The same site has the same code in the ERP, in PaynEat POS and as a Cwork work location (ADR-0011). |
+| Location code | รหัสสถานที่ | The ecosystem-wide identifier of a location: uppercase letters, digits and hyphens, 2–32 characters (`^[A-Z0-9][A-Z0-9-]{1,31}$`). It can be corrected **until the location is first used** (a posted document, a POS master-data pull, or a mapping in another system); after that it is fixed, and a wrong code is replaced by creating a new location and deactivating the old one with a *superseded by* link. The same site has the same code in the ERP, in PaynEat POS and as a Cwork work location (ADR-0011). |
 | Plant | โรงงาน | Location type: the company's own processing plant or central kitchen (called โรงงาน in Thai text either way). Receives from suppliers, produces, ships to branches. |
 | Warehouse | คลัง | Location type: storage that neither produces nor sells. |
 | Branch | สาขา | Location type: a restaurant that sells to guests through a POS. The ERP is the system of record for branches. |
