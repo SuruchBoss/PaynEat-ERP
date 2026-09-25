@@ -11,6 +11,16 @@ Contact / maintainer: https://www.linkedin.com/in/suruchboss
 
 Portions of the backend infrastructure and web console shell are adapted from Cwork
 (https://github.com/SuruchBoss/Cwork), by the same author, under the same license.
+Each adapted file says so in its header. Adapted so far, from Cwork commit 6e520ed:
+
+  backend/src/core/config/        configuration, typed config tree, env validation
+  backend/src/core/errors/        domain errors with stable codes
+  backend/src/core/http/          exception filter; request-context middleware (x-request-id)
+  backend/src/core/prisma/        Prisma service and module
+  backend/test/                   end-to-end harness: global setup, database wipe guard, test app
+  backend/Dockerfile, docker-compose.yml, .github/workflows/ci.yml, eslint.config.mjs,
+  prisma.config.ts, the Prisma schema conventions
+
 
 Licensed under the Apache License, Version 2.0 (see LICENSE).
 If you fork, redistribute, or build a derivative work of this project,

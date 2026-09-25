@@ -8,15 +8,16 @@ from supplier to plant to branch to plate, with every lot traceable.**
 **English** · [ภาษาไทย](./README.th.md)
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE)
-![Status](https://img.shields.io/badge/status-design%20phase-orange.svg)
+![Status](https://img.shields.io/badge/status-walking%20skeleton-orange.svg)
 
 </div>
 
 ---
 
-> **Status: design phase.** The domain model and architecture are decided and recorded as
-> [ADRs](docs/adr/README.md). No application code exists yet; it is being built in public, one
-> GitHub issue at a time. This README says only what is true today and will grow as things work.
+> **Status: walking skeleton.** The domain model and architecture are decided and recorded as
+> [ADRs](docs/adr/README.md). The backend runs — health, structured logs and metrics — but no
+> business feature exists yet; they are being built in public, one GitHub issue at a time. This
+> README says only what is true today and will grow as things work.
 
 ## What this is
 
@@ -116,6 +117,36 @@ ledger, segregation of duties, the audit trail), basic security, full access to 
 the documented upgrade path. A Community feature is never moved to Enterprise. Hosting, managed
 upgrades, support and implementation are offered as paid services for either edition. Details:
 [ADR-0015](docs/adr/0015-editions-community-and-enterprise.md).
+
+## Try it
+
+What works today is the backend's skeleton: an API that reports its own health and its database's,
+writes every request as structured JSON (the ecosystem's [telemetry contract](docs/TELEMETRY.md)),
+and counts requests in Prometheus metrics. You need [Docker](https://docs.docker.com/get-docker/).
+
+```bash
+docker compose up -d --build                        # PostgreSQL 16 and the API
+docker compose run --rm --build migrate             # apply database migrations
+docker compose run --rm migrate npm run db:seed     # the fictional fried-chicken chain (so far: the company)
+curl http://localhost:3100/health                   # {"status":"ok","api":"up","database":"up"}
+docker compose logs api                             # one JSON object per line
+```
+
+The API is on port **3100**, so it can run next to PaynEat POS, whose Docker install uses 3000 and
+8080. Metrics are served on port 9464 inside the compose network and are deliberately not published.
+`docker compose down -v` removes everything, data included.
+
+To work on the backend itself (Node.js 22 and a PostgreSQL 16 you can reach):
+
+```bash
+cd backend
+cp .env.example .env        # then point DATABASE_URL and E2E_DATABASE_URL at your PostgreSQL
+npm ci
+npx prisma migrate deploy && npm run db:seed
+npm run start:dev           # http://localhost:3000/health
+```
+
+Every check CI runs is listed in [`CLAUDE.md`](CLAUDE.md#stack).
 
 ## Contributing
 

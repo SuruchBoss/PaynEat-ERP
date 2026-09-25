@@ -8,15 +8,16 @@
 [English](./README.md) · **ภาษาไทย**
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE)
-![Status](https://img.shields.io/badge/status-design%20phase-orange.svg)
+![Status](https://img.shields.io/badge/status-walking%20skeleton-orange.svg)
 
 </div>
 
 ---
 
-> **สถานะ: ช่วงออกแบบ** โมเดลโดเมนและสถาปัตยกรรมตัดสินใจแล้ว บันทึกไว้เป็น
-> [ADR](docs/adr/README.md) ยังไม่มีโค้ดแอปพลิเคชัน กำลังสร้างแบบเปิดเผยทีละ issue บน GitHub
-> README นี้บอกเฉพาะสิ่งที่จริง ณ วันนี้ และจะเพิ่มขึ้นเมื่อแต่ละส่วนใช้งานได้จริง
+> **สถานะ: โครงระบบ (walking skeleton)** โมเดลโดเมนและสถาปัตยกรรมตัดสินใจแล้ว บันทึกไว้เป็น
+> [ADR](docs/adr/README.md) backend รันได้แล้ว (health, log แบบมีโครงสร้าง และ metric) แต่ยังไม่มีฟีเจอร์
+> ทางธุรกิจ กำลังสร้างแบบเปิดเผยทีละ issue บน GitHub README นี้บอกเฉพาะสิ่งที่จริง ณ วันนี้
+> และจะเพิ่มขึ้นเมื่อแต่ละส่วนใช้งานได้จริง
 
 ## นี่คืออะไร
 
@@ -111,6 +112,36 @@ flowchart LR
 บัญชีสต๊อก, การแยกหน้าที่, audit trail), ความปลอดภัยพื้นฐาน, สิทธิ์เข้าถึงข้อมูลของตัวเองทั้งหมด และเส้นทางอัปเกรดที่มี
 เอกสาร ฟีเจอร์ของ Community จะไม่ถูกย้ายไป Enterprise ส่วน hosting, บริการอัปเกรดให้, support และการติดตั้งวาง
 ระบบ เป็นบริการเสียเงินที่ใช้ได้กับทั้งสองรุ่น รายละเอียด: [ADR-0015](docs/adr/0015-editions-community-and-enterprise.th.md)
+
+## ลองรัน
+
+สิ่งที่ใช้ได้วันนี้คือโครงของ backend: API ที่รายงานสถานะของตัวเองและของฐานข้อมูล เขียนทุก request
+เป็น JSON แบบมีโครงสร้าง (ตาม[สัญญา telemetry](docs/TELEMETRY.md) ของระบบนิเวศ) และนับ request เป็น
+metric ของ Prometheus ต้องมี [Docker](https://docs.docker.com/get-docker/)
+
+```bash
+docker compose up -d --build                        # PostgreSQL 16 และ API
+docker compose run --rm --build migrate             # สร้างตารางในฐานข้อมูล
+docker compose run --rm migrate npm run db:seed     # เชนไก่ทอดสมมติ (ตอนนี้มีแค่ตัวบริษัท)
+curl http://localhost:3100/health                   # {"status":"ok","api":"up","database":"up"}
+docker compose logs api                             # JSON บรรทัดละ object
+```
+
+API อยู่ที่พอร์ต **3100** เพื่อให้รันคู่กับ PaynEat POS ได้ (Docker ของ POS ใช้ 3000 และ 8080) ส่วน
+metric เปิดที่พอร์ต 9464 ภายในเครือข่ายของ compose และตั้งใจไม่เปิดออกข้างนอก
+`docker compose down -v` ลบทุกอย่างรวมข้อมูล
+
+ถ้าจะพัฒนา backend เอง (ต้องมี Node.js 22 และ PostgreSQL 16 ที่เชื่อมต่อได้):
+
+```bash
+cd backend
+cp .env.example .env        # แล้วแก้ DATABASE_URL และ E2E_DATABASE_URL ให้ชี้ไปที่ PostgreSQL ของคุณ
+npm ci
+npx prisma migrate deploy && npm run db:seed
+npm run start:dev           # http://localhost:3000/health
+```
+
+การตรวจทุกอย่างที่ CI รันอยู่ในหัวข้อ Stack ของ [`CLAUDE.md`](CLAUDE.md#stack)
 
 ## ร่วมพัฒนา
 
