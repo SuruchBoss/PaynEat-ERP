@@ -14,7 +14,9 @@ the rules below exist to stop them from duplicating or overwriting each other's 
 ## Issue tracker and triage labels
 
 - **Tracker:** GitHub Issues on `SuruchBoss/PaynEat-ERP`. Work that has to happen inside PaynEat POS
-  is tracked as issues on `SuruchBoss/PaynEat` and linked from the ERP issue that needs it.
+  follows **that** repository's convention: ticket files in its `docs/tickets/` (tickets 24–26 are the POS
+  side of this ERP's first release), linked from the ERP issue that needs them. The same dev session works
+  in both repositories; each repository's own `CLAUDE.md` applies inside it.
 - **Labels (the triage vocabulary):**
 
   | Label | Meaning |
