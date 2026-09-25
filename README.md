@@ -15,9 +15,10 @@ from supplier to plant to branch to plate, with every lot traceable.**
 ---
 
 > **Status: walking skeleton.** The domain model and architecture are decided and recorded as
-> [ADRs](docs/adr/README.md). The backend runs — health, structured logs and metrics — but no
-> business feature exists yet; they are being built in public, one GitHub issue at a time. This
-> README says only what is true today and will grow as things work.
+> [ADRs](docs/adr/README.md). The backend runs — health, structured logs and metrics — and so does
+> the web console's shell, in Thai and English, but no business feature exists yet; they are being
+> built in public, one GitHub issue at a time. This README says only what is true today and will
+> grow as things work.
 
 ## What this is
 
@@ -120,21 +121,29 @@ upgrades, support and implementation are offered as paid services for either edi
 
 ## Try it
 
-What works today is the backend's skeleton: an API that reports its own health and its database's,
-writes every request as structured JSON (the ecosystem's [telemetry contract](docs/TELEMETRY.md)),
-and counts requests in Prometheus metrics. You need [Docker](https://docs.docker.com/get-docker/).
+What works today is the skeleton: an API that reports its own health and its database's, writes
+every request as structured JSON (the ecosystem's [telemetry contract](docs/TELEMETRY.md)) and counts
+requests in Prometheus metrics, and the web console every later screen will live in. You need
+[Docker](https://docs.docker.com/get-docker/).
 
 ```bash
-docker compose up -d --build                        # PostgreSQL 16 and the API
+docker compose up -d --build                        # PostgreSQL 16, the API and the web console
 docker compose run --rm --build migrate             # apply database migrations
 docker compose run --rm migrate npm run db:seed     # the fictional fried-chicken chain (so far: the company)
 curl http://localhost:3100/health                   # {"status":"ok","api":"up","database":"up"}
 docker compose logs api                             # one JSON object per line
 ```
 
-The API is on port **3100**, so it can run next to PaynEat POS, whose Docker install uses 3000 and
-8080. Metrics are served on port 9464 inside the compose network and are deliberately not published.
-`docker compose down -v` removes everything, data included.
+Then open **http://localhost:8180**: the console opens in Thai on its **System status** screen,
+which asks the API whether it and its database are healthy. **English** is one click away, top
+right, and the browser remembers the choice. Stop the database (`docker compose stop postgres`)
+and press **Check again**: the database shows as not healthy, with the **correlation ID** of that
+check, which is the same id on the API's log line for it (`docker compose logs api | grep <id>`).
+Sign-in arrives with the next ticket; until then the console has nothing to protect.
+
+The console is on port **8180** and the API on **3100**, so both can run next to PaynEat POS, whose
+Docker install uses 3000 and 8080. Metrics are served on port 9464 inside the compose network and
+are deliberately not published. `docker compose down -v` removes everything, data included.
 
 To work on the backend itself (Node.js 22 and a PostgreSQL 16 you can reach):
 
@@ -144,6 +153,14 @@ cp .env.example .env        # then point DATABASE_URL and E2E_DATABASE_URL at yo
 npm ci
 npx prisma migrate deploy && npm run db:seed
 npm run start:dev           # http://localhost:3000/health
+```
+
+And the console (Node.js 22), which forwards `/api` and `/health` to that backend:
+
+```bash
+cd web
+npm ci
+npm run dev                 # http://localhost:5173 (VITE_API_PROXY_TARGET changes the backend address)
 ```
 
 Every check CI runs is listed in [`CLAUDE.md`](CLAUDE.md#stack).

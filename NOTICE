@@ -20,6 +20,10 @@ Each adapted file says so in its header. Adapted so far, from Cwork commit 6e520
   backend/test/                   end-to-end harness: global setup, database wipe guard, test app
   backend/Dockerfile, docker-compose.yml, .github/workflows/ci.yml, eslint.config.mjs,
   prisma.config.ts, the Prisma schema conventions
+  web/src/lib/                    API client (request/send/parse structure), ApiError, env
+  web/src/app/                    layout, navigation, route guard, query client
+  web/src/styles/                 design tokens and layout styles
+  web/Dockerfile, web/nginx.conf, web/vite.config.ts, web/eslint.config.js
 
 
 Licensed under the Apache License, Version 2.0 (see LICENSE).

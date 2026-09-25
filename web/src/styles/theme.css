@@ -1,0 +1,73 @@
+/*
+ * Design tokens. Adapted from Cwork (web/src/styles/theme.css), see NOTICE: the same
+ * token names and dark-mode structure, with the ERP's own brand colour and a font stack
+ * that needs no web-font download (the console makes no third-party requests).
+ */
+:root {
+  color-scheme: light dark;
+
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #f1f3f6;
+  --surface-hover: #eaedf2;
+  --border: #dfe3ea;
+  --border-strong: #c3cad6;
+
+  --text: #16181d;
+  --text-muted: #525b69;
+  --text-subtle: #5f6876;
+  --text-inverse: #ffffff;
+
+  --brand: #a4480f;
+  --brand-hover: #8a3c0c;
+  --brand-soft: #fcefe6;
+  --brand-text: #7d360b;
+
+  --success: #146c42;
+  --success-soft: #e3f5ec;
+  --danger: #b42121;
+  --danger-soft: #fdeaea;
+  --neutral-soft: #eceff3;
+
+  --radius-sm: 6px;
+  --radius: 10px;
+
+  --shadow-sm: 0 1px 2px rgb(16 24 40 / 6%);
+
+  --font:
+    system-ui, -apple-system, 'Segoe UI', 'Noto Sans Thai', 'Leelawadee UI', Tahoma, 'Noto Sans',
+    sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  --sidebar-width: 232px;
+  --header-height: 56px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1116;
+    --surface: #171a21;
+    --surface-2: #1e222b;
+    --surface-hover: #252a34;
+    --border: #2a3039;
+    --border-strong: #3b4350;
+
+    --text: #e8eaef;
+    --text-muted: #aab2bf;
+    --text-subtle: #9aa3b2;
+    --text-inverse: #0f1116;
+
+    --brand: #f3a36b;
+    --brand-hover: #f7ba8f;
+    --brand-soft: #3a2415;
+    --brand-text: #f7c29d;
+
+    --success: #5fd29a;
+    --success-soft: #142b20;
+    --danger: #f58582;
+    --danger-soft: #331a1a;
+    --neutral-soft: #252a34;
+
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 40%);
+  }
+}
