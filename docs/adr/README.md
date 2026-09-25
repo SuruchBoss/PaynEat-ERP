@@ -21,6 +21,7 @@ edited to change their meaning; a new ADR supersedes them.
 | 0011 | [One ecosystem: POS, ERP, Cwork, SherWhyve](0011-ecosystem-and-sherwhyve.md) | [ระบบนิเวศเดียวกัน: POS, ERP, Cwork, SherWhyve](0011-ecosystem-and-sherwhyve.th.md) | Accepted |
 | 0012 | [Positioning: niche depth over breadth](0012-positioning-niche-depth-over-breadth.md) | [จุดยืน: ลึกในตลาดเฉพาะ แทนความกว้าง](0012-positioning-niche-depth-over-breadth.th.md) | Accepted |
 | 0013 | [Extension by integration, not in-process plugins](0013-extension-by-integration.md) | [ต่อยอดผ่านการเชื่อมต่อ ไม่ใช่ plugin ภายใน](0013-extension-by-integration.th.md) | Accepted |
+| 0014 | [A lot's expiry is never later than the supplier's date](0014-lot-expiry-never-later-than-supplier-date.md) | [วันหมดอายุของ lot ต้องไม่เกินวันที่ซัพพลายเออร์ระบุ](0014-lot-expiry-never-later-than-supplier-date.th.md) | Accepted |
 
 ## Template
 

@@ -68,6 +68,7 @@ flowchart LR
 | [0011](docs/adr/0011-ecosystem-and-sherwhyve.th.md) | ระบบนิเวศเดียวกับ POS, Cwork และ SherWhyve; ทุกระบบสืบสวนได้; ตัวสืบสวนส่วนต่างในอนาคต |
 | [0012](docs/adr/0012-positioning-niche-depth-over-breadth.th.md) | จุดยืน: ตัวเลือก open source ที่ดีที่สุดสำหรับเชนร้านอาหารไทยที่คุมห่วงโซ่อุปทานเอง — ลึกในสนามเดียว ไม่ใช่ ERP ครอบจักรวาล; เชื่อมกับโปรแกรมบัญชีที่มีอยู่แทนการแทนที่ |
 | [0013](docs/adr/0013-extension-by-integration.th.md) | ต่อยอดผ่านการเชื่อมต่อ: public API ที่มีเวอร์ชัน, token จำกัดสิทธิ์ และ webhook ที่มีลายเซ็น — ไม่มี plugin ที่รันภายในแล้วข้ามกฎบัญชีสต๊อกได้ |
+| [0014](docs/adr/0014-lot-expiry-never-later-than-supplier-date.th.md) | วันหมดอายุของ lot คือวันที่เร็วกว่าระหว่างอายุการเก็บกับวันที่ของซัพพลายเออร์; ผลผลิตหมดอายุไม่ช้ากว่าวัตถุดิบ |
 
 ศัพท์โดเมนภาษาอังกฤษ–ไทย: [`docs/GLOSSARY.md`](docs/GLOSSARY.md)
 
