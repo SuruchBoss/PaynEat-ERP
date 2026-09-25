@@ -64,10 +64,10 @@ flowchart LR
 | [0007](docs/adr/0007-receiving-inspection-and-transfers.th.md) | การตรวจรับโมเดลเดียว, โอนผ่านระหว่างขนส่ง, ไม่มีส่วนต่างที่หายไปเงียบๆ |
 | [0008](docs/adr/0008-roles-and-segregation-of-duties.th.md) | 7 บทบาท, ไม่มีใครอนุมัติเอกสารที่ตัวเองสร้าง |
 | [0009](docs/adr/0009-replenishment-planning-v1.th.md) | จุดสั่งซื้อ ใบขอเบิก และ MRP-lite — เป็นคำแนะนำ ไม่ใช่ระบบอัตโนมัติ |
-
 | [0010](docs/adr/0010-backend-and-web-stack.th.md) | NestJS + Prisma + PostgreSQL, post บัญชีสต๊อกด้วย SQL ตรง, หน้าจอ React — แนวเดียวกับ Cwork |
 | [0011](docs/adr/0011-ecosystem-and-sherwhyve.th.md) | ระบบนิเวศเดียวกับ POS, Cwork และ SherWhyve; ทุกระบบสืบสวนได้; ตัวสืบสวนส่วนต่างในอนาคต |
 | [0012](docs/adr/0012-positioning-niche-depth-over-breadth.th.md) | จุดยืน: ตัวเลือก open source ที่ดีที่สุดสำหรับเชนร้านอาหารไทยที่คุมห่วงโซ่อุปทานเอง — ลึกในสนามเดียว ไม่ใช่ ERP ครอบจักรวาล; เชื่อมกับโปรแกรมบัญชีที่มีอยู่แทนการแทนที่ |
+| [0013](docs/adr/0013-extension-by-integration.th.md) | ต่อยอดผ่านการเชื่อมต่อ: public API ที่มีเวอร์ชัน, token จำกัดสิทธิ์ และ webhook ที่มีลายเซ็น — ไม่มี plugin ที่รันภายในแล้วข้ามกฎบัญชีสต๊อกได้ |
 
 ศัพท์โดเมนภาษาอังกฤษ–ไทย: [`docs/GLOSSARY.md`](docs/GLOSSARY.md)
 
@@ -90,6 +90,9 @@ flowchart LR
 4. ฝั่ง POS: outbox, โหมดเชื่อมต่อ ERP, master data แบบอ่านอย่างเดียว (ทำใน repo ของ POS)
 5. การย้อนรอยและ recall, ตรวจนับ, ปิดงวด
 6. คุณภาพ: เทสต์ ข้อมูล demo เอกสาร วิดีโอพาทัวร์
+
+หลัง release แรก: public API ที่มีเวอร์ชัน, API token แบบจำกัดสิทธิ์ และ webhook ขาออก เพื่อให้เชนสร้างส่วนเสริม
+ของตัวเองเป็นบริการแยกได้ ([ADR-0013](docs/adr/0013-extension-by-integration.th.md))
 
 ติดตามความคืบหน้าได้ที่ [GitHub Issues](https://github.com/SuruchBoss/PaynEat-ERP/issues)
 

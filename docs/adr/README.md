@@ -20,6 +20,7 @@ edited to change their meaning; a new ADR supersedes them.
 | 0010 | [Stack: NestJS, Prisma, raw-SQL ledger posting, React; aligned with Cwork](0010-backend-and-web-stack.md) | [Stack: NestJS, Prisma, post บัญชีสต๊อกด้วย SQL ตรง, React; แนวเดียวกับ Cwork](0010-backend-and-web-stack.th.md) | Accepted |
 | 0011 | [One ecosystem: POS, ERP, Cwork, SherWhyve](0011-ecosystem-and-sherwhyve.md) | [ระบบนิเวศเดียวกัน: POS, ERP, Cwork, SherWhyve](0011-ecosystem-and-sherwhyve.th.md) | Accepted |
 | 0012 | [Positioning: niche depth over breadth](0012-positioning-niche-depth-over-breadth.md) | [จุดยืน: ลึกในตลาดเฉพาะ แทนความกว้าง](0012-positioning-niche-depth-over-breadth.th.md) | Accepted |
+| 0013 | [Extension by integration, not in-process plugins](0013-extension-by-integration.md) | [ต่อยอดผ่านการเชื่อมต่อ ไม่ใช่ plugin ภายใน](0013-extension-by-integration.th.md) | Accepted |
 
 ## Template
 

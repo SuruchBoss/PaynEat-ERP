@@ -117,6 +117,9 @@ using a new domain concept anywhere else.
 | Outbox | outbox | A table written in the same transaction as the business change, drained to the other system afterwards. |
 | Idempotency key | idempotency key | A unique key per event so a retried delivery is applied once. |
 | Correlation id | correlation id | An id carried in every log line and event of one business flow across systems (a sale's idempotency key, a document number), so an investigator can follow it end to end. |
+| Integration token | token ของการเชื่อมต่อ | An API token that belongs to an integration, not a person, and carries explicit scopes; it can never post or approve (ADR-0013). |
+| Webhook | webhook | An event the ERP sends to an add-on's URL from the outbox: signed, retried, with an idempotency key (ADR-0013). |
+| Add-on | ส่วนเสริม | A separate service that extends the ERP through the public API and webhooks; never code loaded into the ERP (ADR-0013). |
 | Master data version | เวอร์ชัน master data | A monotonically increasing number a POS instance uses to pull only what changed. |
 
 ## Analysis · การวิเคราะห์

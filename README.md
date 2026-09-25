@@ -68,10 +68,10 @@ The "why" matters more than the "what" in an ERP, so every decision is written d
 | [0007](docs/adr/0007-receiving-inspection-and-transfers.md) | One inspection model; transfers through in-transit; no silent differences |
 | [0008](docs/adr/0008-roles-and-segregation-of-duties.md) | Seven roles; nobody approves their own document |
 | [0009](docs/adr/0009-replenishment-planning-v1.md) | Reorder points, requisitions and MRP-lite — suggestions, not automation |
-
 | [0010](docs/adr/0010-backend-and-web-stack.md) | NestJS + Prisma + PostgreSQL, raw SQL for ledger posting, React console — aligned with Cwork |
 | [0011](docs/adr/0011-ecosystem-and-sherwhyve.md) | One ecosystem with the POS, Cwork and SherWhyve; every system observable; a future variance investigator |
 | [0012](docs/adr/0012-positioning-niche-depth-over-breadth.md) | Positioning: the best open-source option for Thai restaurant chains running their own supply chain — depth in one field, not a general ERP; integrate with existing accounting instead of replacing it |
+| [0013](docs/adr/0013-extension-by-integration.md) | Extension by integration: a versioned public API, scoped tokens and signed webhooks — no in-process plugins that could bypass the ledger |
 
 Domain vocabulary, in English and Thai: [`docs/GLOSSARY.md`](docs/GLOSSARY.md).
 
@@ -94,6 +94,9 @@ The boundaries between them are in [ADR-0011](docs/adr/0011-ecosystem-and-sherwh
 4. POS side: outbox, connected mode, read-only master data (in the POS repository)
 5. Traceability and recall, stock counts, period close
 6. Quality: tests, demo data, documentation, a walkthrough video
+
+After the first release: a versioned public API, scoped API tokens and outbound webhooks, so chains
+can build their own add-ons as separate services ([ADR-0013](docs/adr/0013-extension-by-integration.md)).
 
 Progress is tracked in [GitHub Issues](https://github.com/SuruchBoss/PaynEat-ERP/issues).
 
