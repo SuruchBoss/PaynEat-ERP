@@ -1,14 +1,16 @@
 # PaynEat ERP — PostgreSQL 16 and the API, for trying it locally and small self-hosted
 # installations. Adapted from Cwork's docker-compose.yml, see NOTICE.
 #
-#   docker compose up -d --build                        # PostgreSQL 16 + the API
+#   docker compose up -d --build                        # PostgreSQL 16, the API and the console
 #   docker compose run --rm --build migrate             # apply database migrations
 #   docker compose run --rm migrate npm run db:seed     # the fictional demo chain
+#   open http://localhost:8180                          # the web console (Thai; English one click away)
 #   curl http://localhost:3100/health
 #
-# The API is published on host port 3100 (not 3000) so it can run next to PaynEat POS,
-# whose Docker install uses 3000 and 8080. Metrics (:9464/metrics) and PostgreSQL are
-# deliberately not published: a scraper or psql reaches them inside the network.
+# The console is published on host port 8180 and the API on 3100 (not 8080/3000) so both
+# can run next to PaynEat POS, whose Docker install uses 3000 and 8080. Metrics
+# (:9464/metrics) and PostgreSQL are deliberately not published: a scraper or psql reaches
+# them inside the network.
 
 name: payneat-erp
 
@@ -41,7 +43,8 @@ services:
       NODE_ENV: ${NODE_ENV:-production}
       PORT: 3000
       DATABASE_URL: postgresql://${POSTGRES_USER:-erp}:${POSTGRES_PASSWORD:-erp-local}@postgres:5432/${POSTGRES_DB:-payneat_erp}?schema=public
-      # The web console (#3) will be served from here.
+      # The console reaches the API through its own nginx (same origin, no CORS needed);
+      # this allows a console served separately at the default address as well.
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8180}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_FORMAT: ${LOG_FORMAT:-default}
@@ -54,6 +57,18 @@ services:
       timeout: 5s
       retries: 20
       start_period: 10s
+
+  # The admin console (#3): the built React app behind nginx, which also forwards `/api/`
+  # and `/health` to the API, so the browser sees one origin.
+  web:
+    build:
+      context: ./web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${ERP_WEB_PORT:-8180}:80"
 
   # One-off tools container: migrations and the demo seed. Built from the Dockerfile's
   # `build` stage, which keeps the Prisma CLI the runtime image prunes away. Under a

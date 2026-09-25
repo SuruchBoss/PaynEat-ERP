@@ -15,9 +15,9 @@
 ---
 
 > **สถานะ: โครงระบบ (walking skeleton)** โมเดลโดเมนและสถาปัตยกรรมตัดสินใจแล้ว บันทึกไว้เป็น
-> [ADR](docs/adr/README.md) backend รันได้แล้ว (health, log แบบมีโครงสร้าง และ metric) แต่ยังไม่มีฟีเจอร์
-> ทางธุรกิจ กำลังสร้างแบบเปิดเผยทีละ issue บน GitHub README นี้บอกเฉพาะสิ่งที่จริง ณ วันนี้
-> และจะเพิ่มขึ้นเมื่อแต่ละส่วนใช้งานได้จริง
+> [ADR](docs/adr/README.md) backend รันได้แล้ว (health, log แบบมีโครงสร้าง และ metric) พร้อมโครงของ
+> web console ภาษาไทยและอังกฤษ แต่ยังไม่มีฟีเจอร์ทางธุรกิจ กำลังสร้างแบบเปิดเผยทีละ issue บน GitHub
+> README นี้บอกเฉพาะสิ่งที่จริง ณ วันนี้ และจะเพิ่มขึ้นเมื่อแต่ละส่วนใช้งานได้จริง
 
 ## นี่คืออะไร
 
@@ -115,20 +115,26 @@ flowchart LR
 
 ## ลองรัน
 
-สิ่งที่ใช้ได้วันนี้คือโครงของ backend: API ที่รายงานสถานะของตัวเองและของฐานข้อมูล เขียนทุก request
-เป็น JSON แบบมีโครงสร้าง (ตาม[สัญญา telemetry](docs/TELEMETRY.md) ของระบบนิเวศ) และนับ request เป็น
-metric ของ Prometheus ต้องมี [Docker](https://docs.docker.com/get-docker/)
+สิ่งที่ใช้ได้วันนี้คือโครงของระบบ: API ที่รายงานสถานะของตัวเองและของฐานข้อมูล เขียนทุก request เป็น
+JSON แบบมีโครงสร้าง (ตาม[สัญญา telemetry](docs/TELEMETRY.md) ของระบบนิเวศ) และนับ request เป็น metric
+ของ Prometheus กับ web console ที่ทุกหน้าจอต่อจากนี้จะอยู่ในนั้น ต้องมี [Docker](https://docs.docker.com/get-docker/)
 
 ```bash
-docker compose up -d --build                        # PostgreSQL 16 และ API
+docker compose up -d --build                        # PostgreSQL 16, API และ web console
 docker compose run --rm --build migrate             # สร้างตารางในฐานข้อมูล
 docker compose run --rm migrate npm run db:seed     # เชนไก่ทอดสมมติ (ตอนนี้มีแค่ตัวบริษัท)
 curl http://localhost:3100/health                   # {"status":"ok","api":"up","database":"up"}
 docker compose logs api                             # JSON บรรทัดละ object
 ```
 
-API อยู่ที่พอร์ต **3100** เพื่อให้รันคู่กับ PaynEat POS ได้ (Docker ของ POS ใช้ 3000 และ 8080) ส่วน
-metric เปิดที่พอร์ต 9464 ภายในเครือข่ายของ compose และตั้งใจไม่เปิดออกข้างนอก
+แล้วเปิด **http://localhost:8180** console เปิดเป็นภาษาไทยที่หน้า **สถานะระบบ** ซึ่งถาม API ว่าตัวมันและ
+ฐานข้อมูลทำงานปกติไหม กด **English** มุมขวาบนเพื่อสลับภาษา แล้วเบราว์เซอร์จะจำไว้ ลองหยุดฐานข้อมูล
+(`docker compose stop postgres`) แล้วกด **ตรวจอีกครั้ง** ฐานข้อมูลจะขึ้นว่าขัดข้อง พร้อม **รหัสอ้างอิง
+(correlation ID)** ของการตรวจครั้งนั้น ซึ่งเป็นรหัสเดียวกับในบรรทัด log ของ API
+(`docker compose logs api | grep <รหัส>`) การเข้าสู่ระบบมากับทิกเก็ตถัดไป ตอนนี้ console ยังไม่มีข้อมูลอะไรต้องปกป้อง
+
+console อยู่ที่พอร์ต **8180** และ API อยู่ที่ **3100** เพื่อให้รันคู่กับ PaynEat POS ได้ (Docker ของ POS
+ใช้ 3000 และ 8080) ส่วน metric เปิดที่พอร์ต 9464 ภายในเครือข่ายของ compose และตั้งใจไม่เปิดออกข้างนอก
 `docker compose down -v` ลบทุกอย่างรวมข้อมูล
 
 ถ้าจะพัฒนา backend เอง (ต้องมี Node.js 22 และ PostgreSQL 16 ที่เชื่อมต่อได้):
@@ -139,6 +145,14 @@ cp .env.example .env        # แล้วแก้ DATABASE_URL และ E2E_D
 npm ci
 npx prisma migrate deploy && npm run db:seed
 npm run start:dev           # http://localhost:3000/health
+```
+
+และ console (Node.js 22) ซึ่งส่งต่อ `/api` กับ `/health` ไปที่ backend ตัวนั้น:
+
+```bash
+cd web
+npm ci
+npm run dev                 # http://localhost:5173 (เปลี่ยนที่อยู่ backend ด้วย VITE_API_PROXY_TARGET)
 ```
 
 การตรวจทุกอย่างที่ CI รันอยู่ในหัวข้อ Stack ของ [`CLAUDE.md`](CLAUDE.md#stack)

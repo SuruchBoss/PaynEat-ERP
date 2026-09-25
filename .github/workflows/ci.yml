@@ -81,17 +81,52 @@ jobs:
       - name: Build
         run: npm run build
 
+  web:
+    name: Web console
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - run: npm ci
+
+      - name: Format
+        run: npm run format:check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # Includes the catalogue parity check, the scan for hard-coded UI text and axe on
+      # every screen in both languages.
+      - name: Tests (Vitest, Testing Library, axe)
+        run: npm test
+
+      - name: Production build
+        run: npm run build
+
   compose:
     name: docker compose up
     runs-on: ubuntu-latest
 
-    # Nothing else runs the Dockerfile or docker-compose.yml, and PaynEat POS once shipped
+    # Nothing else runs the Dockerfiles or docker-compose.yml, and PaynEat POS once shipped
     # a Dockerfile that could not build for weeks because no job built it (POS
     # DECISIONS #63). This runs exactly what README "Try it" tells a person to run.
     steps:
       - uses: actions/checkout@v4
 
-      - name: Start PostgreSQL 16 and the API
+      - name: Start PostgreSQL 16, the API and the console
         run: docker compose up -d --build --wait
 
       - name: Apply migrations and build the demo chain
@@ -111,6 +146,19 @@ jobs:
             echo "metrics port is reachable from outside the compose network"; exit 1
           fi
           docker compose exec -T api curl -fsS http://127.0.0.1:9464/metrics | grep -q '^http_requests_total'
+
+      - name: The console is served and reaches the API through its own origin
+        run: |
+          curl -fsS http://localhost:8180/ | grep -q '<div id="root"></div>'
+          # Client-side routes survive a reload (SPA fallback).
+          curl -fsS http://localhost:8180/some/deep/link | grep -q '<div id="root"></div>'
+          body=$(curl -fsS http://localhost:8180/health)
+          echo "$body"
+          test "$body" = '{"status":"ok","api":"up","database":"up"}'
+          curl -fsS -D - -o /dev/null http://localhost:8180/health | grep -qi '^x-request-id:'
+          # Security headers on the page itself, not only on the server block (nginx drops
+          # inherited add_header in a location that sets its own).
+          curl -fsS -D - -o /dev/null http://localhost:8180/ | grep -qi '^content-security-policy:'
 
       - name: Logs are contract-shaped JSON
         run: |

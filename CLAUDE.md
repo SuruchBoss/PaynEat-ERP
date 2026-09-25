@@ -149,10 +149,24 @@ Run inside `backend/`, after `npm ci` and `npx prisma generate`:
 | End-to-end tests against a real PostgreSQL 16 | `E2E_DATABASE_URL=postgresql://…/payneat_erp_test npm run test:e2e` |
 | Build | `npm run build` |
 
+Run inside `web/` (the admin console), after `npm ci`:
+
+| Gate | Command |
+|---|---|
+| Format | `npm run format:check` (fix with `npm run format`) |
+| Lint | `npm run lint` |
+| Typecheck | `npm run typecheck` |
+| Tests: Vitest + Testing Library + axe, the TH/EN catalogue parity check and the scan for hard-coded UI text | `npm test` |
+| Production build | `npm run build` |
+
 - The end-to-end run migrates, **wipes** and seeds its database first, so it refuses a database
   whose name has no `test` in it (`E2E_ALLOW_NON_TEST_DB=1` overrides, deliberately).
 - The demo seed is `npm run db:seed`; it is idempotent, and the end-to-end suite runs it.
 - CI also runs `docker compose up` exactly as the README's "Try it" section tells a person to, and
-  checks `/health`, the logs and that metrics are not published.
+  checks `/health` (directly and through the console's nginx), the console's page and security
+  headers, the logs and that metrics are not published.
+- Console text goes through `t()` with keys from `web/src/i18n/messages/th.ts`; `en.ts` is typed
+  against it. A string written straight into JSX, or a key missing from either language, fails
+  `npm test`.
 - Logging goes through `TelemetryLogger` only (`console.*` is a lint error in `src/`); new flows add
   their events and metrics per `docs/TELEMETRY.md`.
