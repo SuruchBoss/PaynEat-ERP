@@ -161,15 +161,17 @@ export function SuppliersPage() {
                 </thead>
                 <tbody>
                   {shown.map((supplier) => (
-                    <tr key={supplier.id}>
+                    <tr key={supplier.id} className={supplier.active ? undefined : 'row--off'}>
                       <th scope="row">
                         <span className="cell-title">{supplier.name}</span>
                         <span className="subtle">
                           <code>{supplier.code}</code>
                         </span>
                       </th>
-                      <td className="nowrap">{formatTaxId(supplier.taxId)}</td>
-                      <td>
+                      <td className="nowrap" data-label={t('suppliers.column.taxId')}>
+                        {formatTaxId(supplier.taxId)}
+                      </td>
+                      <td data-label={t('suppliers.column.contact')}>
                         {supplier.contactName || supplier.phone || supplier.email ? (
                           <ul className="plain-list">
                             {[supplier.contactName, supplier.phone, supplier.email]
@@ -182,7 +184,7 @@ export function SuppliersPage() {
                           <span className="subtle">{t('suppliers.noContact')}</span>
                         )}
                       </td>
-                      <td>
+                      <td data-label={t('suppliers.column.status')}>
                         <span className={`badge badge--${supplier.active ? 'up' : 'neutral'}`}>
                           {t(supplier.active ? 'status.active' : 'status.inactive')}
                         </span>

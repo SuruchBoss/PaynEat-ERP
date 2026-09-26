@@ -7,7 +7,17 @@
  * carry the meaning, so every icon is hidden from assistive technology.
  */
 export type IconName =
-  'pulse' | 'box' | 'pin' | 'truck' | 'users' | 'signOut' | 'menu' | 'close' | 'shield' | 'ledger' | 'scale';
+  | 'pulse'
+  | 'box'
+  | 'pin'
+  | 'truck'
+  | 'users'
+  | 'signOut'
+  | 'menu'
+  | 'close'
+  | 'shield'
+  | 'ledger'
+  | 'scale';
 
 const PATHS: Record<IconName, string> = {
   // System status: a heartbeat line.
