@@ -7,6 +7,7 @@
 // stops it at once.
 import { randomUUID } from 'node:crypto';
 import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import { AuthenticationError } from '../../core/errors/domain.errors';
 import { JwtService } from '@nestjs/jwt';
 import type { Prisma } from '@prisma/client';
 import { APP_CONFIG } from '../../core/config/config.token';
@@ -118,7 +119,7 @@ export class SessionTokensService {
         audience: this.config.auth.audience,
       });
     } catch {
-      throw new UnauthorizedException('Invalid or expired refresh token');
+      throw new AuthenticationError('SESSION_ENDED', 'Invalid or expired refresh token');
     }
   }
 
@@ -195,10 +196,10 @@ export class SessionTokensService {
         audience: this.config.auth.audience,
       });
     } catch {
-      throw new UnauthorizedException('Sign-in has expired. Start again.');
+      throw new AuthenticationError('SIGN_IN_EXPIRED', 'Sign-in has expired. Start again.');
     }
     if (payload.typ !== MFA_CHALLENGE_TOKEN_TYPE) {
-      throw new UnauthorizedException('Wrong kind of token for this step');
+      throw new AuthenticationError('SIGN_IN_EXPIRED', 'Wrong kind of token for this step');
     }
     return payload;
   }

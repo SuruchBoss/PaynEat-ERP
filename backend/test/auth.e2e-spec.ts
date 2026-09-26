@@ -102,7 +102,7 @@ describe('signing in', () => {
 
       expect(res.status).toBe(401);
       expect(res.body).toMatchObject({
-        code: 'UNAUTHENTICATED',
+        code: 'INVALID_CREDENTIALS',
         message: 'Invalid email or password',
         requestId: 'e2e-wrong-password-01',
       });
@@ -139,7 +139,9 @@ describe('signing in', () => {
         .set('x-request-id', 'e2e-unknown-email-01')
         .send({ email: 'nobody.at.all@demo-chicken.example', password: DEMO_PASSWORD });
 
+      // Exactly what a wrong password gets: the answer does not say which emails exist.
       expect(res.status).toBe(401);
+      expect(res.body.code).toBe('INVALID_CREDENTIALS');
       expect(res.body.message).toBe('Invalid email or password');
       expect(await failureCount()).toBe(before + 1);
 
@@ -227,7 +229,7 @@ describe('signing in', () => {
         .post(`${API}/auth/mfa/verify`)
         .send({ challengeToken: login.body.challengeToken, code });
       expect(replay.status).toBe(401);
-      expect(replay.body.message).toBe('That code is not right');
+      expect(replay.body.code).toBe('SECOND_FACTOR_REJECTED');
     });
 
     it('signs in with a recovery code, once', async () => {
@@ -264,6 +266,7 @@ describe('signing in', () => {
         .send({ challengeToken: login.body.challengeToken, code: '000000' });
 
       expect(res.status).toBe(401);
+      expect(res.body.code).toBe('SECOND_FACTOR_REJECTED');
       expect(await failureCount()).toBe(before + 1);
       const [entry] = await auditFor('e2e-admin-wrong-code');
       expect(entry.summary).toMatch(/^Sign-in refused: wrong second-factor code/);

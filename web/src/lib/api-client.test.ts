@@ -1,4 +1,5 @@
-import { jsonResponse, mockFetch, sentHeaders } from '@/test/render';
+import { useAuthStore } from '@/stores/auth.store';
+import { jsonResponse, mockApi, mockFetch, sentHeaders } from '@/test/render';
 import { api } from './api-client';
 import { ApiError } from './api-error';
 
@@ -78,5 +79,58 @@ describe('api client', () => {
 
     expect(error.isUnreachable).toBe(true);
     expect(error.requestId).toBeUndefined();
+  });
+
+  describe('with a session', () => {
+    beforeEach(() => {
+      useAuthStore.setState({ accessToken: 'old-access', refreshToken: 'old-refresh' });
+    });
+
+    it('sends the access token, except on requests marked anonymous', async () => {
+      const fetchMock = mockFetch(async () => jsonResponse(200, {}));
+      await api.get('/things');
+      await api.post('/auth/login', {}, { anonymous: true });
+      expect(sentHeaders(fetchMock, 0).get('authorization')).toBe('Bearer old-access');
+      expect(sentHeaders(fetchMock, 1).get('authorization')).toBeNull();
+    });
+
+    it('refreshes once for requests that fail together, and retries each of them', async () => {
+      let refreshes = 0;
+      mockApi({
+        'GET /a': (init) => answer(init),
+        'GET /b': (init) => answer(init),
+        'POST /auth/refresh': async () => {
+          refreshes += 1;
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          return jsonResponse(200, {
+            accessToken: 'new-access',
+            refreshToken: 'new-refresh',
+            expiresIn: 900,
+            tokenType: 'Bearer',
+          });
+        },
+      });
+      function answer(init: RequestInit) {
+        return new Headers(init.headers).get('authorization') === 'Bearer new-access'
+          ? jsonResponse(200, { ok: true })
+          : jsonResponse(401, { code: 'UNAUTHENTICATED' });
+      }
+
+      await expect(Promise.all([api.get('/a'), api.get('/b')])).resolves.toEqual([
+        { ok: true },
+        { ok: true },
+      ]);
+      expect(refreshes).toBe(1);
+      expect(useAuthStore.getState().refreshToken).toBe('new-refresh');
+    });
+
+    it('never refreshes for a failed sign-in, which is not an expired session', async () => {
+      const fetchMock = mockFetch(async () => jsonResponse(401, { code: 'INVALID_CREDENTIALS' }));
+      await expect(api.post('/auth/login', {}, { anonymous: true })).rejects.toMatchObject({
+        code: 'INVALID_CREDENTIALS',
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(useAuthStore.getState().accessToken).toBe('old-access');
+    });
   });
 });

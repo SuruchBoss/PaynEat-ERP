@@ -340,6 +340,275 @@ code {
   margin-bottom: 0;
 }
 
+/* ---------------------------------------------------------------- forms */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 14px;
+}
+
+.field label {
+  font-weight: 600;
+}
+
+.field input,
+.field select {
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+.field p {
+  margin: 0;
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  column-gap: 16px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.button--block {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.button--small {
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 0.9rem;
+}
+
+.callout--success {
+  border-color: var(--success);
+  background: var(--success-soft);
+  color: var(--success);
+  font-weight: 600;
+}
+
+.panel {
+  margin: 0 0 20px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.panel h2 {
+  margin: 0 0 12px;
+  font-size: 1.15rem;
+}
+
+h2:focus,
+h1:focus {
+  outline: none;
+}
+
+.role-list {
+  margin: 4px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.role-list legend {
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.role-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+}
+
+.role-option input {
+  width: 20px;
+  height: 20px;
+  margin-top: 3px;
+  flex: none;
+  accent-color: var(--brand);
+}
+
+.role-option label,
+.cell-title {
+  display: flex;
+  flex-direction: column;
+}
+
+.cell-title {
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------------- sign-in */
+
+.auth-screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 16px 32px;
+}
+
+.auth-screen__top {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: var(--header-height);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 480px;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.auth-card h1 {
+  margin-bottom: 8px;
+}
+
+.steps {
+  margin: 0 0 12px;
+  padding-left: 20px;
+}
+
+.qr {
+  display: block;
+  margin: 8px auto 12px;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+}
+
+.secret {
+  display: inline-block;
+  letter-spacing: 0.08em;
+}
+
+.recovery-codes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 6px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+
+/* ---------------------------------------------------------------- tables */
+
+.page--wide {
+  max-width: 1120px;
+}
+
+/* `position: relative` keeps visually hidden (absolutely positioned) text inside the
+   scrolling box; without it that text widens the whole page on a phone. */
+.table-scroll {
+  position: relative;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 20px;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th,
+.data-table td {
+  padding: 12px 16px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border);
+  font-weight: normal;
+}
+
+.data-table thead th {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.data-table tbody tr:last-child th,
+.data-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--brand-soft);
+  color: var(--brand-text);
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.badge--neutral {
+  background: var(--neutral-soft);
+  color: var(--text);
+}
+
+/* ---------------------------------------------------------------- session */
+
+.session {
+  margin-top: 20px;
+  padding: 12px 10px 0;
+  border-top: 1px solid var(--border);
+}
+
+.session p {
+  margin: 0 0 4px;
+  overflow-wrap: anywhere;
+}
+
+.session__label {
+  font-size: 0.8rem;
+  color: var(--text-subtle);
+}
+
+.session__name {
+  font-weight: 600;
+}
+
+.session .button {
+  margin-top: 8px;
+}
+
 /* ---------------------------------------------------------------- small screens */
 
 @media (max-width: 760px) {

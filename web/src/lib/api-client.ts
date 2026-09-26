@@ -1,9 +1,24 @@
-// Adapted from Cwork (web/src/lib/api-client.ts), see NOTICE. Cwork's token refresh is
-// left out until sign-in exists (#4); the request/send/parse structure is Cwork's.
+// Adapted from Cwork (web/src/lib/api-client.ts), see NOTICE: the request/send/parse
+// structure and the single shared token refresh are Cwork's.
 import { documentLanguage } from '@/i18n/catalogue';
 import { ApiError } from './api-error';
 import { env } from './env';
 import { newRequestId, REQUEST_ID_HEADER } from './request-id';
+
+/** What `POST /auth/refresh` returns. */
+export interface AuthTokens {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+  tokenType: 'Bearer';
+}
+
+interface SessionHandlers {
+  getAccessToken: () => string | null;
+  getRefreshToken: () => string | null;
+  onTokensRefreshed: (tokens: AuthTokens) => void;
+  onSessionExpired: () => void;
+}
 
 type QueryValue = string | number | boolean | string[] | undefined | null;
 
@@ -14,6 +29,8 @@ export interface RequestOptions extends Omit<RequestInit, 'body' | 'method'> {
   unversioned?: boolean;
   /** Non-2xx statuses whose body is an answer, not an error (`/health` answers 503). */
   acceptStatus?: readonly number[];
+  /** Send no Authorization header and never refresh: sign-in and its second factor. */
+  anonymous?: boolean;
 }
 
 export interface ApiResponse<T> {
@@ -23,8 +40,28 @@ export interface ApiResponse<T> {
   requestId?: string;
 }
 
-/** Single HTTP entry point: every request gets a correlation id and the console's language. */
+/**
+ * Single HTTP entry point: every request gets a correlation id and the console's language,
+ * and the signed-in user's access token.
+ *
+ * When the access token expires mid-session, the first 401 triggers a refresh and every
+ * concurrent request waits on that single refresh rather than stampeding the endpoint
+ * and invalidating each other's rotated tokens. (Cwork.)
+ */
 class ApiClient {
+  private session: SessionHandlers = {
+    getAccessToken: () => null,
+    getRefreshToken: () => null,
+    onTokensRefreshed: () => {},
+    onSessionExpired: () => {},
+  };
+  private refreshInFlight: Promise<string | null> | null = null;
+
+  /** Wired once by the session store; the client itself holds no credentials. */
+  configure(handlers: SessionHandlers): void {
+    this.session = handlers;
+  }
+
   get<T>(path: string, options: RequestOptions = {}): Promise<T> {
     return this.request<T>('GET', path, options).then((r) => r.data);
   }
@@ -53,6 +90,14 @@ class ApiClient {
     let response: Response;
     try {
       response = await this.send(method, url, options);
+      if (response.status === 401 && !options.anonymous && this.session.getAccessToken()) {
+        const token = await this.refreshOnce();
+        if (token) {
+          response = await this.send(method, url, options);
+        } else {
+          this.session.onSessionExpired();
+        }
+      }
     } catch (cause) {
       throw ApiError.unreachable(cause);
     }
@@ -66,11 +111,13 @@ class ApiClient {
 
   private send(method: string, url: string, options: RequestOptions): Promise<Response> {
     // Options only this client understands are kept out of what goes to fetch().
-    const { body: payload, query, unversioned, acceptStatus, ...init } = options;
+    const { body: payload, query, unversioned, acceptStatus, anonymous, ...init } = options;
     const headers = new Headers(init.headers);
     headers.set('Accept', 'application/json');
     headers.set('Accept-Language', documentLanguage());
     headers.set(REQUEST_ID_HEADER, newRequestId());
+    const token = anonymous ? null : this.session.getAccessToken();
+    if (token) headers.set('Authorization', `Bearer ${token}`);
 
     let body: BodyInit | undefined;
     if (payload !== undefined) {
@@ -83,6 +130,31 @@ class ApiClient {
     }
 
     return fetch(url, { ...init, method, headers, body });
+  }
+
+  /** Collapses concurrent refresh attempts into one request; null when it fails. (Cwork.) */
+  private refreshOnce(): Promise<string | null> {
+    if (this.refreshInFlight) return this.refreshInFlight;
+    const refreshToken = this.session.getRefreshToken();
+    if (!refreshToken) return Promise.resolve(null);
+
+    this.refreshInFlight = (async () => {
+      try {
+        const response = await this.send('POST', `${env.apiOrigin}${env.apiPrefix}/auth/refresh`, {
+          body: { refreshToken },
+          anonymous: true,
+        });
+        if (!response.ok) return null;
+        const tokens = (await response.json()) as AuthTokens;
+        this.session.onTokensRefreshed(tokens);
+        return tokens.accessToken;
+      } catch {
+        return null;
+      } finally {
+        this.refreshInFlight = null;
+      }
+    })();
+    return this.refreshInFlight;
   }
 }
 

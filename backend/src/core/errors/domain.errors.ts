@@ -43,3 +43,14 @@ export class AccessDeniedError extends DomainError {
     super('ACCESS_DENIED', message, HttpStatus.FORBIDDEN);
   }
 }
+
+/**
+ * A sign-in step refused. 401 like any missing authentication, with a code the console
+ * can explain: `INVALID_CREDENTIALS`, `SECOND_FACTOR_REJECTED`, `SIGN_IN_EXPIRED`,
+ * `ACCOUNT_DISABLED`. Deliberately the same for an unknown email and a wrong password.
+ */
+export class AuthenticationError extends DomainError {
+  constructor(code: string, message: string) {
+    super(code, message, HttpStatus.UNAUTHORIZED);
+  }
+}

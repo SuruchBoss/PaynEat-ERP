@@ -133,7 +133,13 @@ using a new domain concept anywhere else.
 
 | Term | ไทย | Meaning |
 |---|---|---|
+| User | ผู้ใช้ | A person who signs in to the ERP, identified by an email. Never deleted, only disabled, so the audit trail always names who acted. |
 | Role | บทบาท | `admin`, `purchasing`, `purchasing_approver`, `plant`, `logistics`, `branch_manager`, `finance`. A user may hold several. |
+| Permission | สิทธิ์ | One thing the API allows, named `<resource>:<action>` (e.g. `user:manage`). A role is a fixed bundle of permissions; endpoints declare the permissions they need. |
+| Second factor | การยืนยันตัวตนขั้นที่สอง | A time-based code from an authenticator app (TOTP), asked for after the password. Required for every account holding `admin`. |
+| Recovery code | รหัสกู้คืน | A single-use code that works in place of the second factor when the phone is lost. Shown once, stored only as a digest. |
+| Audit trail | บันทึกการตรวจสอบ | The append-only record of who did what and when — user and role changes, sign-ins and refused sign-ins — each with the request's correlation id. Never updated or deleted. |
+| Demo account | บัญชีเดโม | A user the demo seed creates with a published password (and, for `admin`, a published second-factor secret). Evaluation only. |
 | Approval threshold | เกณฑ์วงเงินที่ต้องอนุมัติ | The document value above which a second person must approve. Configuration, not code. |
 | Segregation of duties | การแยกหน้าที่ | Nobody approves a document they created, whatever roles they hold. |
 

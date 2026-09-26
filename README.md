@@ -16,7 +16,8 @@ from supplier to plant to branch to plate, with every lot traceable.**
 
 > **Status: walking skeleton.** The domain model and architecture are decided and recorded as
 > [ADRs](docs/adr/README.md). The backend runs — health, structured logs and metrics — and so does
-> the web console's shell, in Thai and English, but no business feature exists yet; they are being
+> the web console, in Thai and English, with sign-in (a second factor for administrators), users,
+> the seven roles and an audit trail. No stock or purchasing feature exists yet; they are being
 > built in public, one GitHub issue at a time. This README says only what is true today and will
 > grow as things work.
 
@@ -121,25 +122,82 @@ upgrades, support and implementation are offered as paid services for either edi
 
 ## Try it
 
-What works today is the skeleton: an API that reports its own health and its database's, writes
-every request as structured JSON (the ecosystem's [telemetry contract](docs/TELEMETRY.md)) and counts
-requests in Prometheus metrics, and the web console every later screen will live in. You need
-[Docker](https://docs.docker.com/get-docker/).
+What works today: signing in, with a second factor for administrators; users and the seven roles
+of [ADR-0008](docs/adr/0008-roles-and-segregation-of-duties.md); an append-only audit trail; and the
+skeleton under them — an API that reports its own health and its database's, writes every request as
+structured JSON (the ecosystem's [telemetry contract](docs/TELEMETRY.md)) and counts requests and
+failed sign-ins in Prometheus metrics. You need [Docker](https://docs.docker.com/get-docker/) and,
+for the first step, `openssl`.
 
 ```bash
+# Three secrets of your own, which compose refuses to start without (see .env.example)
+printf 'JWT_ACCESS_SECRET=%s\nJWT_REFRESH_SECRET=%s\nFIELD_ENCRYPTION_KEY=%s\n' \
+  "$(openssl rand -base64 48)" "$(openssl rand -base64 48)" "$(openssl rand -base64 32)" > .env
+
 docker compose up -d --build                        # PostgreSQL 16, the API and the web console
 docker compose run --rm --build migrate             # apply database migrations
-docker compose run --rm migrate npm run db:seed     # the fictional fried-chicken chain (so far: the company)
+docker compose run --rm migrate npm run db:seed     # the fictional chain: the company and one user per role
 curl http://localhost:3100/health                   # {"status":"ok","api":"up","database":"up"}
 docker compose logs api                             # one JSON object per line
 ```
 
-Then open **http://localhost:8180**: the console opens in Thai on its **System status** screen,
-which asks the API whether it and its database are healthy. **English** is one click away, top
-right, and the browser remembers the choice. Stop the database (`docker compose stop postgres`)
-and press **Check again**: the database shows as not healthy, with the **correlation ID** of that
-check, which is the same id on the API's log line for it (`docker compose logs api | grep <id>`).
-Sign-in arrives with the next ticket; until then the console has nothing to protect.
+Then open **http://localhost:8180** and sign in with one of the demo accounts below. The console
+opens in Thai; **English** is one click away, top right, and the browser remembers the choice.
+
+### Demo accounts
+
+> **Evaluation only.** Every credential here is published in this repository and restored each time
+> the seed runs. Never use them, or the seed, for a real installation.
+
+The password of every demo account is **`demo-chicken-2026`**.
+
+| Role | Email | What the role is for (ADR-0008) | What it can do in the console today |
+|---|---|---|---|
+| `admin` | `admin@demo-chicken.example` | Manage users, roles, locations, configuration; reopen closed periods | Sign in with a second factor; **Users and roles**: list, create, give and take away roles; read the audit trail (API) |
+| `purchasing` | `purchasing@demo-chicken.example` | Create and send purchase orders; manage suppliers | Sign in; its screens arrive with #6 and #10 |
+| `purchasing_approver` | `approver@demo-chicken.example` | Approve purchase orders above the approval threshold | Sign in; its screen arrives with #10 |
+| `plant` | `plant@demo-chicken.example` | Receive goods, run production orders, manage plant stock | Sign in; its screens arrive with #11 and #13 |
+| `logistics` | `logistics@demo-chicken.example` | Dispatch transfers | Sign in; its screen arrives with #14 |
+| `branch_manager` | `branch.manager@demo-chicken.example` | Raise requisitions, receive transfers, count branch stock | Sign in; its screens arrive with #14 and #15 |
+| `finance` | `finance@demo-chicken.example` | View costs, variances and valuation; export financial data | Sign in; its screens arrive with the costing and period-close work of weeks 4–5 |
+
+A user may hold several roles; the API refuses anything none of them allows (403), and anything
+without a session (401). Nobody approves a document they created, whatever roles they hold — that
+check arrives with the first approval (#8, #10).
+
+**The admin account needs a second factor.** Add the published demo secret to any authenticator app
+(Google Authenticator, Microsoft Authenticator, 1Password, …) and type the 6-digit code it shows:
+
+- secret **`PAYNEATERPDEMOTWOFACTORSECRET234`**, or this URI as a QR code:
+  `otpauth://totp/PaynEat%20ERP%3Aadmin%40demo-chicken.example?secret=PAYNEATERPDEMOTWOFACTORSECRET234&issuer=PaynEat%20ERP&algorithm=SHA1&digits=6&period=30`
+- no authenticator at hand? These recovery codes work in place of a code, each once (the seed
+  restores them): `DEMOC-HICKE-NRCVR-YAAA2`, `DEMOC-HICKE-NRCVR-YBBB3`, `DEMOC-HICKE-NRCVR-YCCC4`,
+  `DEMOC-HICKE-NRCVR-YDDD5`, `DEMOC-HICKE-NRCVR-YEEE6`.
+
+### A five-minute tour
+
+1. Sign in as **admin**: password, then the code. A wrong code counts like a wrong password — five in
+   a row lock the account for 15 minutes.
+2. Open **Users and roles**. **Add user**: give a name, an email, a first password (at least 12
+   characters) and tick **Administrator**.
+3. **Sign out** and sign in as that new user. An administrator without a second factor has to set
+   one up before anything else: scan the QR code, type a code, and keep the recovery codes the
+   console shows once.
+4. Back as **admin**, **Manage roles** on any user: each tick gives a role, each untick takes it away,
+   effective on that user's next request. Take **Administrator** from the user you created, then
+   from yourself: the last active administrator keeps the role, and the console says why.
+5. Sign in as **purchasing**: no **Users and roles** in the menu, and `/users` says you cannot open it.
+6. Every one of those changes, and every refused sign-in, is in the audit trail with who, when and
+   the request's correlation id. Read it through the API with the admin's access token:
+   `GET /api/v1/audit-logs` (filters: `action`, `entityId`, `actorUserId`, `correlationId`, `from`,
+   `to`). A refused sign-in is also a `WARNING` line with `"event":"auth.sign_in.failed"` in
+   `docker compose logs api` — never with the email, password or code — and one more in the
+   `auth_sign_in_failures_total` metric.
+
+The **System status** screen (the home page) asks the API whether it and its database are healthy.
+Stop the database (`docker compose stop postgres`) and press **Check again**: the database shows as
+not healthy, with the **correlation ID** of that check, which is the same id on the API's log line
+for it (`docker compose logs api | grep <id>`).
 
 The console is on port **8180** and the API on **3100**, so both can run next to PaynEat POS, whose
 Docker install uses 3000 and 8080. Metrics are served on port 9464 inside the compose network and
@@ -149,7 +207,8 @@ To work on the backend itself (Node.js 22 and a PostgreSQL 16 you can reach):
 
 ```bash
 cd backend
-cp .env.example .env        # then point DATABASE_URL and E2E_DATABASE_URL at your PostgreSQL
+cp .env.example .env        # then point DATABASE_URL and E2E_DATABASE_URL at your PostgreSQL,
+                            # and set FIELD_ENCRYPTION_KEY (openssl rand -base64 32)
 npm ci
 npx prisma migrate deploy && npm run db:seed
 npm run start:dev           # http://localhost:3000/health

@@ -10,11 +10,15 @@
 //  - Cwork's /auth/mfa/complete-enrolment accepts the challenge of an account that is
 //    already enrolled, which is a session for a password alone. Here the sign-in of an
 //    account that had to enrol completes inside activation instead (`activateMfa`).
-import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { AuditAction, UserStatus } from '@prisma/client';
 import { APP_CONFIG } from '../../core/config/config.token';
 import type { RootConfig } from '../../core/config/configuration';
-import { BusinessRuleError, NotFoundError } from '../../core/errors/domain.errors';
+import {
+  AuthenticationError,
+  BusinessRuleError,
+  NotFoundError,
+} from '../../core/errors/domain.errors';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { CryptoService } from '../../core/security/crypto.service';
 import type { AuthenticatedUser } from '../../core/security/current-user';
@@ -38,7 +42,8 @@ import { UserContextService } from './user-context.service';
 /** The catalogue event for a refused sign-in (docs/TELEMETRY.md v1.1). */
 export const SIGN_IN_FAILED_EVENT = 'auth.sign_in.failed';
 
-const INVALID_CREDENTIALS = 'Invalid email or password';
+const invalidCredentials = () =>
+  new AuthenticationError('INVALID_CREDENTIALS', 'Invalid email or password');
 
 @Injectable()
 export class AuthService {
@@ -65,14 +70,14 @@ export class AuthService {
     if (!user) {
       await this.crypto.hashPassword(dto.password);
       await this.signInFailed(null, 'no account has that email', meta);
-      throw new UnauthorizedException(INVALID_CREDENTIALS);
+      throw invalidCredentials();
     }
 
     await this.refuseIfLocked(user.id, user.lockedUntil, meta);
 
     if (!(await this.crypto.verifyPassword(user.passwordHash, dto.password))) {
       await this.registerFailedAttempt(user.id, 'wrong password', meta);
-      throw new UnauthorizedException(INVALID_CREDENTIALS);
+      throw invalidCredentials();
     }
 
     await this.refuseIfDisabled(user.id, user.status, meta);
@@ -100,7 +105,8 @@ export class AuthService {
       where: { id: payload.sub },
       select: { id: true, status: true, mfaEnabled: true, lockedUntil: true },
     });
-    if (!user) throw new UnauthorizedException('Sign-in has expired. Start again.');
+    if (!user)
+      throw new AuthenticationError('SIGN_IN_EXPIRED', 'Sign-in has expired. Start again.');
 
     await this.refuseIfLocked(user.id, user.lockedUntil, meta);
     if (!user.mfaEnabled) {
@@ -112,7 +118,7 @@ export class AuthService {
 
     if (!(await this.mfa.consumeFactor(user.id, code))) {
       await this.registerFailedAttempt(user.id, 'wrong second-factor code', meta);
-      throw new UnauthorizedException('That code is not right');
+      throw new AuthenticationError('SECOND_FACTOR_REJECTED', 'That code is not right');
     }
 
     await this.refuseIfDisabled(user.id, user.status, meta);
@@ -159,7 +165,7 @@ export class AuthService {
       where: { tokenHash: this.crypto.hashToken(refreshToken) },
     });
     if (!session || session.userId !== payload.sub) {
-      throw new UnauthorizedException('Invalid or expired refresh token');
+      throw new AuthenticationError('SESSION_ENDED', 'Invalid or expired refresh token');
     }
 
     if (session.revokedAt || session.rotatedToId) {
@@ -171,10 +177,10 @@ export class AuthService {
         });
         await this.tokens.revokeFamily(session.familyId, 'TOKEN_REUSE_DETECTED');
       }
-      throw new UnauthorizedException('Session has ended, please sign in again');
+      throw new AuthenticationError('SESSION_ENDED', 'Session has ended, please sign in again');
     }
     if (session.expiresAt < new Date()) {
-      throw new UnauthorizedException('Refresh token has expired');
+      throw new AuthenticationError('SESSION_ENDED', 'Refresh token has expired');
     }
     // A disabled account keeps no way back in.
     await this.userContext.resolve(session.userId);
@@ -346,7 +352,7 @@ export class AuthService {
   ): Promise<void> {
     if (status === UserStatus.ACTIVE) return;
     await this.signInFailed(userId, 'the account is disabled', meta);
-    throw new UnauthorizedException('Account is disabled');
+    throw new AuthenticationError('ACCOUNT_DISABLED', 'Account is disabled');
   }
 
   /** Counts a wrong password or code, locking the account once it reaches the limit. */

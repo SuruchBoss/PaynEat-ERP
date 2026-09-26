@@ -11,7 +11,10 @@ export const DEFAULT_LANGUAGE: Language = 'th';
 
 export const CATALOGUES: Readonly<Record<Language, Messages>> = { th, en };
 
-/** Where the choice is remembered. Per browser, not per user: the console has no sign-in yet (#4). */
+/**
+ * Where the choice is remembered: per browser, so the sign-in screen is in the right
+ * language before anyone has signed in.
+ */
 export const LANGUAGE_STORAGE_KEY = 'payneat-erp.language';
 
 export type MessageParams = Readonly<Record<string, string | number>>;

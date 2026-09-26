@@ -126,6 +126,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The secrets .env.example asks for, generated the way it suggests.
+      - name: Create .env
+        run: |
+          printf 'JWT_ACCESS_SECRET=%s\nJWT_REFRESH_SECRET=%s\nFIELD_ENCRYPTION_KEY=%s\n' \
+            "$(openssl rand -base64 48)" "$(openssl rand -base64 48)" "$(openssl rand -base64 32)" > .env
+
+      - name: Compose refuses to start without the secrets
+        run: |
+          if env -i PATH="$PATH" docker compose --env-file /dev/null config > /dev/null 2>&1; then
+            echo "docker compose accepted a configuration without JWT secrets"; exit 1
+          fi
+
       - name: Start PostgreSQL 16, the API and the console
         run: docker compose up -d --build --wait
 
@@ -145,7 +157,9 @@ jobs:
           if curl -fsS --max-time 3 http://localhost:9464/metrics > /dev/null; then
             echo "metrics port is reachable from outside the compose network"; exit 1
           fi
-          docker compose exec -T api curl -fsS http://127.0.0.1:9464/metrics | grep -q '^http_requests_total'
+          docker compose exec -T api curl -fsS http://127.0.0.1:9464/metrics > metrics.txt
+          grep -q '^http_requests_total' metrics.txt
+          grep -q '^auth_sign_in_failures_total{app="payneat-erp-api"} 0' metrics.txt
 
       - name: The console is served and reaches the API through its own origin
         run: |
@@ -159,6 +173,18 @@ jobs:
           # Security headers on the page itself, not only on the server block (nginx drops
           # inherited add_header in a location that sets its own).
           curl -fsS -D - -o /dev/null http://localhost:8180/ | grep -qi '^content-security-policy:'
+
+      - name: A demo account signs in through the console's origin
+        run: |
+          curl -fsS -X POST http://localhost:8180/api/v1/auth/login \
+            -H 'Content-Type: application/json' \
+            -d '{"email":"purchasing@demo-chicken.example","password":"demo-chicken-2026"}' > session.json
+          grep -q '"mfaRequired":false' session.json
+          grep -q '"roles":\["purchasing"\]' session.json
+          # The admin gets a second-factor challenge, not a session.
+          curl -fsS -X POST http://localhost:8180/api/v1/auth/login \
+            -H 'Content-Type: application/json' \
+            -d '{"email":"admin@demo-chicken.example","password":"demo-chicken-2026"}' | grep -q '"mfaRequired":true'
 
       - name: Logs are contract-shaped JSON
         run: |
