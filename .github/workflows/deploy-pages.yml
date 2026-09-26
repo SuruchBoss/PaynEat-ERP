@@ -5,9 +5,12 @@
 # in-browser demo API (VITE_ERP_DEMO=1), served under /PaynEat-ERP/ with no server behind it.
 # Adapted from PaynEat POS's workflow of the same name.
 #
+# Next to it, at /PaynEat-ERP/about/, the product page (#45): static HTML generated from
+# docs/landing/content.mjs, with screenshots of this demo.
+#
 # The owner switches Pages on once: Settings → Pages → Build and deployment → Source:
 # "GitHub Actions". A workflow cannot do it itself. After that, every push to main that
-# changes the console, or the backend rules and demo data the demo imports, deploys it.
+# changes the console, the product page, or the backend rules and demo data the demo imports, deploys it.
 name: Deploy public demo
 
 on:
@@ -18,6 +21,7 @@ on:
       - 'backend/src/**/domain/**'
       - 'backend/src/core/security/permissions.ts'
       - 'backend/prisma/demo-data.ts'
+      - 'docs/landing/**'
       - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
 
@@ -66,6 +70,15 @@ jobs:
 
       - name: The demo API, its policy and 404.html are in the build
         run: node scripts/check-demo-build.mjs --demo dist
+
+      # The product page (#45) sits next to the demo at /PaynEat-ERP/about/. It is static HTML with
+      # no script, generated from docs/landing/content.mjs; the check fails if it was not rebuilt.
+      - name: Add the product page at /about/
+        run: |
+          node ../docs/landing/build.mjs --check
+          mkdir -p dist/about
+          cp ../docs/landing/index.html ../docs/landing/index.th.html dist/about/
+          cp -r ../docs/landing/img dist/about/img
 
       - uses: actions/configure-pages@v5
 

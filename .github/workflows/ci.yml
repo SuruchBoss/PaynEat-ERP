@@ -130,6 +130,11 @@ jobs:
           VITE_ERP_DEMO: '1'
           VITE_BASE_PATH: /PaynEat-ERP/
 
+      # The product page and the README section "The problems it solves today" are generated from
+      # docs/landing/content.mjs (#45); this fails when one was edited without the other.
+      - name: Product page and README section match their source
+        run: node ../docs/landing/build.mjs --check
+
   compose:
     name: docker compose up
     runs-on: ubuntu-latest
