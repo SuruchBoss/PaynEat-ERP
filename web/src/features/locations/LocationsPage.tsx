@@ -198,7 +198,7 @@ export function LocationsPage() {
                 </thead>
                 <tbody>
                   {shown.map((location) => (
-                    <tr key={location.id}>
+                    <tr key={location.id} className={location.active ? undefined : 'row--off'}>
                       <th scope="row">
                         <span className="cell-title">{nameOf(location)}</span>
                         <span className="subtle">
@@ -206,7 +206,7 @@ export function LocationsPage() {
                           {language === 'th' ? location.nameEn : location.nameTh}
                         </span>
                       </th>
-                      <td>
+                      <td data-label={t('locations.column.type')}>
                         {t(TYPE_LABEL[location.type])}
                         {location.origin && (
                           <span className="subtle">
@@ -215,7 +215,7 @@ export function LocationsPage() {
                           </span>
                         )}
                       </td>
-                      <td>
+                      <td data-label={t('locations.column.code')}>
                         {location.type === 'in_transit' ? (
                           <span className="subtle">{t('locations.systemManaged')}</span>
                         ) : (
@@ -228,7 +228,7 @@ export function LocationsPage() {
                           </span>
                         )}
                       </td>
-                      <td>
+                      <td data-label={t('locations.column.status')}>
                         <span className={`badge badge--${location.active ? 'up' : 'neutral'}`}>
                           {t(location.active ? 'status.active' : 'status.inactive')}
                         </span>

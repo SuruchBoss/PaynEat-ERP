@@ -20,12 +20,17 @@ body {
   font-family: var(--font);
   font-size: 15px;
   line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 h1 {
-  margin: 0 0 4px;
-  font-size: 1.5rem;
-  line-height: 1.3;
+  margin: 0 0 6px;
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
 }
 
 p {
@@ -38,9 +43,10 @@ a {
 
 code {
   font-family: var(--font-mono);
-  font-size: 0.92em;
+  font-size: 0.86em;
   padding: 1px 6px;
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  border-radius: 4px;
   background: var(--surface-2);
   overflow-wrap: anywhere;
 }
@@ -48,6 +54,11 @@ code {
 :focus-visible {
   outline: 3px solid var(--brand);
   outline-offset: 2px;
+}
+
+.icon {
+  display: block;
+  flex: none;
 }
 
 .visually-hidden {
@@ -66,7 +77,7 @@ code {
   position: absolute;
   left: 12px;
   top: -48px;
-  z-index: 20;
+  z-index: 30;
   padding: 8px 14px;
   border-radius: var(--radius-sm);
   background: var(--brand);
@@ -85,45 +96,91 @@ code {
 
 .subtle {
   color: var(--text-subtle);
-  font-size: 0.9rem;
+  font-size: 0.87rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+  }
 }
 
 /* ---------------------------------------------------------------- shell */
 
 .app-shell {
   display: grid;
-  grid-template-columns: var(--sidebar-width) 1fr;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
   /* The first row is the demo banner, and takes no space where there is none. */
   grid-template-rows: auto var(--header-height) 1fr;
   grid-template-areas:
     'banner banner'
-    'topbar topbar'
+    'sidebar topbar'
     'sidebar main';
   min-height: 100vh;
 }
 
-/* A demo installation (ERP_DEMO=1): on every screen, never dismissible (#5). */
+/* A demo installation (ERP_DEMO=1): on every screen, never dismissible (#5). A thin,
+   calm strip — loud enough that nobody mistakes the installation for a real one, quiet
+   enough that it does not compete with the page. */
 .demo-banner {
   grid-area: banner;
-  padding: 10px 16px;
-  border-bottom: 2px solid var(--brand);
-  background: var(--brand-soft);
-  color: var(--brand-text);
+  padding: 8px 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--warning) 35%, transparent);
+  background: var(--warning-soft);
+  color: var(--warning);
+  font-size: 0.9rem;
   text-align: center;
+}
+
+.demo-banner strong {
+  font-weight: 700;
 }
 
 .topbar {
   grid-area: topbar;
+  position: sticky;
+  top: 0;
+  z-index: 5;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 0 16px;
-  background: var(--surface);
+  min-width: 0;
+  padding: 0 24px;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: saturate(1.4) blur(8px);
   border-bottom: 1px solid var(--border);
 }
 
 .topbar__spacer {
   flex: 1;
+}
+
+/* Where am I: section / page. The page title below says it in full; this line keeps the
+   context when a long page has scrolled the title away. */
+.topbar__trail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.topbar__section {
+  color: var(--text-subtle);
+}
+
+.topbar__sep {
+  color: var(--border-strong);
+}
+
+.topbar__page {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
 }
 
 .brand {
@@ -132,11 +189,46 @@ code {
   align-items: center;
   gap: 10px;
   font-weight: 700;
+  letter-spacing: -0.005em;
 }
 
-.brand__logo {
+/* The lot-tag mark (components/Brand.tsx): rust on the workspace, the accent on the rail. */
+.brand-mark {
   display: block;
-  border-radius: var(--radius-sm);
+  flex: none;
+}
+
+.brand-mark__tag {
+  fill: var(--brand);
+}
+
+.brand-mark__lines {
+  stroke: var(--surface);
+}
+
+.sidebar .brand-mark__tag,
+.auth-aside .brand-mark__tag {
+  fill: var(--rail-accent);
+}
+
+.sidebar .brand-mark__lines,
+.auth-aside .brand-mark__lines {
+  stroke: var(--rail);
+}
+
+.brand__module {
+  font-weight: 500;
+  color: var(--text-subtle);
+}
+
+.sidebar .brand__module,
+.auth-aside .brand__module {
+  color: var(--rail-muted);
+}
+
+/* On a desktop the rail carries the brand; the top bar shows it only on a phone. */
+.topbar__brand {
+  display: none;
 }
 
 /* Qualified so it wins over `.button`, which is declared later: desktop never shows it. */
@@ -146,12 +238,33 @@ code {
 
 .sidebar {
   grid-area: sidebar;
-  padding: 16px 12px;
-  background: var(--surface);
-  border-right: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding: 16px 12px 12px;
+  background: var(--rail);
+  color: var(--rail-text);
+  overflow-y: auto;
+}
+
+.sidebar__brand {
+  padding: 4px 8px 20px;
+  font-size: 1.05rem;
+}
+
+.sidebar__groups {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  flex: 1;
 }
 
 .sidebar ul {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -159,30 +272,59 @@ code {
 
 .sidebar__heading {
   display: block;
-  padding: 4px 10px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-subtle);
+  padding: 0 10px 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--rail-muted);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.09em;
 }
 
 .nav-link {
-  display: block;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
   padding: 8px 10px;
   border-radius: var(--radius-sm);
-  color: var(--text);
+  color: var(--rail-text);
   text-decoration: none;
+  transition: background-color 120ms ease;
+}
+
+.nav-link .icon {
+  color: var(--rail-muted);
 }
 
 .nav-link:hover {
-  background: var(--surface-hover);
+  background: var(--rail-raised);
 }
 
 .nav-link--active {
-  background: var(--brand-soft);
-  color: var(--brand-text);
+  background: var(--rail-raised);
   font-weight: 600;
+}
+
+.nav-link--active .icon {
+  color: var(--rail-accent);
+}
+
+/* The current page: a short bar on the rail's edge, the one place the brand colour
+   appears in the navigation. */
+.nav-link--active::before {
+  content: '';
+  position: absolute;
+  left: -12px;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--rail-accent);
+}
+
+.sidebar :focus-visible {
+  outline-color: var(--rail-accent);
 }
 
 .main {
@@ -195,17 +337,29 @@ code {
 }
 
 .page {
-  max-width: 880px;
-  padding: 24px;
+  max-width: 960px;
+  padding: 28px 32px 48px;
 }
 
 .page__header {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: flex-end;
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 20px;
+  gap: 12px 24px;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.page__header > div:first-child {
+  flex: 1 1 420px;
+  min-width: 0;
+}
+
+.page__header .muted {
+  max-width: 72ch;
+  margin: 0;
 }
 
 /* ---------------------------------------------------------------- controls */
@@ -214,6 +368,7 @@ code {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
   min-height: 40px;
   padding: 0 16px;
   border: 1px solid var(--brand);
@@ -222,11 +377,16 @@ code {
   color: var(--text-inverse);
   font: inherit;
   font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease;
 }
 
 .button:hover:not(:disabled) {
   background: var(--brand-hover);
+  border-color: var(--brand-hover);
 }
 
 .button:disabled {
@@ -236,50 +396,83 @@ code {
 
 .button--ghost {
   border-color: var(--border-strong);
-  background: transparent;
+  background: var(--surface);
   color: var(--text);
 }
 
 .button--ghost:hover:not(:disabled) {
   background: var(--surface-hover);
+  border-color: var(--border-strong);
+}
+
+/* A quiet button on the dark rail. */
+.button--rail {
+  border-color: var(--rail-border);
+  background: transparent;
+  color: var(--rail-text);
+}
+
+.button--rail:hover:not(:disabled) {
+  background: var(--rail-raised);
+  border-color: var(--rail-border);
 }
 
 .lang-switch {
   display: inline-flex;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
+  padding: 3px;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
 }
 
 .lang-switch__option {
-  min-height: 36px;
+  min-height: 30px;
   padding: 0 12px;
   border: 0;
+  border-radius: 999px;
   background: transparent;
-  color: var(--text);
+  color: var(--text-muted);
   font: inherit;
+  font-size: 0.88rem;
   cursor: pointer;
 }
 
-.lang-switch__option + .lang-switch__option {
-  border-left: 1px solid var(--border-strong);
+.lang-switch__option:hover {
+  color: var(--text);
 }
 
 .lang-switch__option[aria-pressed='true'] {
-  background: var(--brand);
-  color: var(--text-inverse);
+  background: var(--text);
+  color: var(--surface);
   font-weight: 600;
 }
 
 /* ---------------------------------------------------------------- status */
 
 .overall {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 16px;
-  padding: 6px 12px;
-  border-radius: var(--radius-sm);
+  padding: 6px 14px 6px 12px;
+  border-radius: 999px;
   font-weight: 600;
   background: var(--neutral-soft);
+}
+
+.overall::before,
+.badge--up::before,
+.badge--down::before,
+.badge--true::before,
+.badge--false::before,
+.badge--disabled::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
 }
 
 .overall--ok {
@@ -296,23 +489,34 @@ code {
 .status-table {
   width: 100%;
   margin-bottom: 12px;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
+  overflow: hidden;
 }
 
 .status-table th,
 .status-table td {
-  padding: 12px 16px;
+  padding: 16px 20px;
   text-align: left;
   border-bottom: 1px solid var(--border);
 }
 
+.status-table tbody th {
+  font-weight: 600;
+}
+
 .status-table thead th {
-  font-size: 0.85rem;
+  padding-block: 10px;
+  background: var(--surface-2);
+  font-size: 0.75rem;
+  font-weight: 700;
   color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .status-table tbody tr:last-child th,
@@ -321,16 +525,21 @@ code {
 }
 
 .badge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 2px 10px;
   border-radius: 999px;
-  font-size: 0.9rem;
+  font-size: 0.82rem;
   font-weight: 600;
+  line-height: 1.6;
+  white-space: nowrap;
   background: var(--neutral-soft);
   color: var(--text);
 }
 
-.badge--up {
+.badge--up,
+.badge--true {
   background: var(--success-soft);
   color: var(--success);
 }
@@ -338,6 +547,12 @@ code {
 .badge--down {
   background: var(--danger-soft);
   color: var(--danger);
+}
+
+.badge--false,
+.badge--disabled {
+  background: var(--neutral-soft);
+  color: var(--text-muted);
 }
 
 .callout {
@@ -349,7 +564,7 @@ code {
 }
 
 .callout--danger {
-  border-color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
   background: var(--danger-soft);
 }
 
@@ -362,11 +577,12 @@ code {
 .field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-bottom: 14px;
+  gap: 6px;
+  margin-bottom: 16px;
 }
 
 .field label {
+  font-size: 0.9rem;
   font-weight: 600;
 }
 
@@ -379,6 +595,21 @@ code {
   background: var(--surface);
   color: var(--text);
   font: inherit;
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.field input:hover,
+.field select:hover {
+  border-color: var(--text-subtle);
+}
+
+.field input:focus-visible,
+.field select:focus-visible {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 25%, transparent);
 }
 
 .field p {
@@ -406,27 +637,27 @@ code {
 .button--small {
   min-height: 34px;
   padding: 0 12px;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
 }
 
 .callout--success {
-  border-color: var(--success);
+  border-color: color-mix(in srgb, var(--success) 45%, transparent);
   background: var(--success-soft);
   color: var(--success);
   font-weight: 600;
 }
 
 .panel {
-  margin: 0 0 20px;
-  padding: 20px;
+  margin: 0 0 24px;
+  padding: 24px;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
   background: var(--surface);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow);
 }
 
 .panel h2 {
-  margin: 0 0 12px;
+  margin: 0 0 16px;
   font-size: 1.15rem;
 }
 
@@ -450,7 +681,7 @@ h1:focus {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 8px 0;
+  padding: 10px 0;
   border-top: 1px solid var(--border);
 }
 
@@ -472,34 +703,105 @@ h1:focus {
   font-weight: 600;
 }
 
+/* A badge under a name (a disabled account) keeps its own width. */
+.cell-title .badge {
+  align-self: flex-start;
+  margin: 4px 0 0;
+}
+
 /* ---------------------------------------------------------------- sign-in */
 
+/* Two panes on a wide screen: what this system is (on the rail colour, so the sign-in
+   screen and the console read as one product) and the form. One column on a phone. */
 .auth-screen {
   min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(320px, 440px) minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    'banner banner'
+    'aside form';
+}
+
+.auth-screen .demo-banner {
+  grid-area: banner;
+}
+
+.auth-aside {
+  grid-area: aside;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: 0 16px 32px;
+  gap: 28px;
+  padding: 36px 40px;
+  background: var(--rail);
+  color: var(--rail-text);
+}
+
+.auth-aside .brand {
+  font-size: 1.1rem;
+}
+
+.auth-aside__lede {
+  margin: auto 0 0;
+  max-width: 30ch;
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+.auth-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.auth-facts li {
+  display: flex;
+  gap: 12px;
+  color: var(--rail-muted);
+  font-size: 0.93rem;
+}
+
+.auth-facts .icon {
+  margin-top: 2px;
+  color: var(--rail-accent);
+}
+
+.auth-form {
+  grid-area: form;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 40px 40px;
 }
 
 .auth-screen__top {
-  width: 100%;
-  max-width: 480px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
   min-height: var(--header-height);
 }
 
+/* The phone layout's brand; the aside carries it on a wide screen. */
+.auth-screen__top .brand {
+  display: none;
+  margin-right: auto;
+}
+
 .auth-card {
   width: 100%;
-  max-width: 480px;
-  padding: 24px;
+  max-width: 420px;
+  margin: auto;
+  padding: 32px;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
   background: var(--surface);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow);
 }
 
 .auth-card h1 {
@@ -526,7 +828,7 @@ h1:focus {
 
 .recovery-codes {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 6px;
   margin: 0 0 12px;
   padding: 0;
@@ -536,7 +838,7 @@ h1:focus {
 /* ---------------------------------------------------------------- tables */
 
 .page--wide {
-  max-width: 1120px;
+  max-width: 1200px;
 }
 
 /* `position: relative` keeps visually hidden (absolutely positioned) text inside the
@@ -545,20 +847,21 @@ h1:focus {
   position: relative;
   overflow-x: auto;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
   background: var(--surface);
   box-shadow: var(--shadow-sm);
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .data-table {
   width: 100%;
   border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
 }
 
 .data-table th,
 .data-table td {
-  padding: 12px 16px;
+  padding: 14px 16px;
   text-align: left;
   vertical-align: top;
   border-bottom: 1px solid var(--border);
@@ -566,15 +869,42 @@ h1:focus {
 }
 
 .data-table thead th {
-  font-size: 0.85rem;
-  font-weight: 600;
+  position: sticky;
+  top: 0;
+  padding-block: 10px;
+  background: var(--surface-2);
+  font-size: 0.75rem;
+  font-weight: 700;
   color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
   white-space: nowrap;
+}
+
+.data-table tbody tr {
+  transition: background-color 120ms ease;
+}
+
+.data-table tbody tr:hover {
+  background: color-mix(in srgb, var(--surface-2) 60%, transparent);
 }
 
 .data-table tbody tr:last-child th,
 .data-table tbody tr:last-child td {
   border-bottom: 0;
+}
+
+/* The row's action sits at the right edge, where the eye ends a row. */
+.data-table td:last-child:has(> .button) {
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* A row for something switched off (a disabled account, an inactive item) reads as such
+   before its badge is read. */
+.data-table .row--off th,
+.data-table .row--off td {
+  color: var(--text-muted);
 }
 
 .chips {
@@ -587,11 +917,13 @@ h1:focus {
 }
 
 .chip {
-  padding: 2px 10px;
+  padding: 1px 10px;
+  border: 1px solid color-mix(in srgb, var(--brand-text) 22%, transparent);
   border-radius: 999px;
   background: var(--brand-soft);
   color: var(--brand-text);
-  font-size: 0.9rem;
+  font-size: 0.82rem;
+  font-weight: 600;
   white-space: nowrap;
 }
 
@@ -603,75 +935,56 @@ h1:focus {
 /* ---------------------------------------------------------------- session */
 
 .session {
-  margin-top: 20px;
-  padding: 12px 10px 0;
-  border-top: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 10px;
+  margin-top: 16px;
+  padding: 12px 8px 4px;
+  border-top: 1px solid var(--rail-border);
 }
 
 .session p {
-  margin: 0 0 4px;
+  margin: 0;
   overflow-wrap: anywhere;
 }
 
-.session__label {
+.session__avatar {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--rail-raised);
+  border: 1px solid var(--rail-border);
+  color: var(--rail-accent);
   font-size: 0.8rem;
-  color: var(--text-subtle);
+  font-weight: 700;
 }
 
 .session__name {
   font-weight: 600;
+  line-height: 1.3;
 }
 
-.session .button {
-  margin-top: 8px;
+.session__roles,
+.session__email {
+  color: var(--rail-muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
 }
 
-/* ---------------------------------------------------------------- small screens */
+/* One line; the full address is in the tooltip. */
+.session .session__email {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
 
-@media (max-width: 760px) {
-  .app-shell {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      'banner'
-      'topbar'
-      'main';
-  }
-
-  .topbar {
-    gap: 8px;
-    padding: 0 10px;
-  }
-
-  .topbar .nav-toggle {
-    display: inline-flex;
-    padding: 0 10px;
-    white-space: nowrap;
-  }
-
-  .lang-switch__option {
-    padding: 0 9px;
-  }
-
-  /* Opens over the top of the page: same grid cell as main, so it sits right under the
-     top bar whether or not a demo banner is above it. */
-  .sidebar {
-    display: none;
-    grid-area: main;
-    align-self: start;
-    position: relative;
-    z-index: 10;
-    border-right: 0;
-    border-bottom: 1px solid var(--border);
-    box-shadow: var(--shadow-sm);
-  }
-
-  .sidebar--open {
-    display: block;
-  }
-
-  .page {
-    padding: 16px;
-  }
+.session__signout {
+  grid-column: 1 / -1;
+  justify-self: stretch;
+  margin-top: 10px;
 }
 
 /* ---------------------------------------------------------------- items (#5) */
@@ -688,14 +1001,14 @@ h1:focus {
 }
 
 .data-table code {
-  /* An item code is one word: the table scrolls sideways rather than breaking it. */
+  /* An item code is one word: never broken over two lines. */
   white-space: nowrap;
   overflow-wrap: normal;
 }
 
 .badge--inline {
   margin-left: 8px;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   white-space: nowrap;
 }
 
@@ -762,7 +1075,7 @@ h1:focus {
 }
 
 .field-error {
-  margin: -6px 0 12px;
+  margin: -8px 0 12px;
   color: var(--danger);
   font-weight: 600;
 }
@@ -778,12 +1091,266 @@ h1:focus {
   border-top: 1px solid var(--border);
 }
 
-.auth-screen .demo-banner {
-  align-self: stretch;
-  margin: 0 -16px;
+/* ---------------------------------------------------------------- tablet */
+
+@media (max-width: 1100px) {
+  .page {
+    padding: 24px 24px 40px;
+  }
+
+  .topbar {
+    padding: 0 20px;
+  }
 }
 
+/* A tablet: the rail keeps only its icons (names stay for screen readers and in a tooltip),
+   so a six-column table has the width it needs. */
+@media (min-width: 761px) and (max-width: 1100px) {
+  :root {
+    --sidebar-width: 72px;
+  }
+
+  .sidebar {
+    align-items: center;
+    padding-inline: 10px;
+  }
+
+  .sidebar__brand {
+    padding: 4px 0 20px;
+  }
+
+  .sidebar__brand > span,
+  .sidebar__heading,
+  .nav-link > span,
+  .session__who,
+  .session__signout > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .sidebar__groups {
+    gap: 10px;
+  }
+
+  /* Long column names ("Two-factor authentication") wrap rather than widen the table. */
+  .data-table thead th {
+    white-space: normal;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding-inline: 12px;
+  }
+
+  .sidebar__group + .sidebar__group {
+    padding-top: 10px;
+    border-top: 1px solid var(--rail-border);
+  }
+
+  .nav-link {
+    justify-content: center;
+    width: 44px;
+    min-height: 44px;
+    padding: 0;
+  }
+
+  .nav-link--active::before {
+    left: -10px;
+  }
+
+  .session {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    padding-inline: 0;
+  }
+
+  .session__signout {
+    width: 44px;
+    padding: 0;
+  }
+}
+
+/* ---------------------------------------------------------------- small screens */
+
 @media (max-width: 760px) {
+  .app-shell {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'banner'
+      'topbar'
+      'main';
+  }
+
+  .topbar {
+    gap: 8px;
+    padding: 0 12px;
+  }
+
+  .topbar__brand {
+    display: inline-flex;
+  }
+
+  /* The phone has no room for "section / page"; the page title says it. */
+  .topbar__trail {
+    display: none;
+  }
+
+  .topbar .nav-toggle {
+    display: inline-flex;
+    min-height: 38px;
+    padding: 0 10px;
+  }
+
+  /* The menu button is an icon on a phone; its name stays for screen readers. */
+  .nav-toggle__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .lang-switch__option {
+    padding: 0 9px;
+  }
+
+  /* Opens over the top of the page: same grid cell as main, so it sits right under the
+     top bar whether or not a demo banner is above it. */
+  .sidebar {
+    display: none;
+    grid-area: main;
+    align-self: start;
+    position: relative;
+    z-index: 10;
+    height: auto;
+    box-shadow: var(--shadow);
+  }
+
+  .sidebar--open {
+    display: flex;
+  }
+
+  .sidebar__brand {
+    display: none;
+  }
+
+  .nav-link--active::before {
+    display: none;
+  }
+
+  .page {
+    padding: 20px 16px 32px;
+  }
+
+  h1 {
+    font-size: 1.4rem;
+  }
+
+  .page__header {
+    align-items: stretch;
+    flex-direction: column;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+  }
+
+  .page__header > div:first-child {
+    flex-basis: auto;
+  }
+
+  .page__header > .button {
+    align-self: flex-start;
+  }
+
+  /* Tables become one card per row: a phone never scrolls sideways to reach a column.
+     Each cell names its column (data-label), the row header becomes the card's title. */
+  .table-scroll {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .data-table,
+  .data-table tbody,
+  .data-table tr,
+  .data-table th,
+  .data-table td {
+    display: block;
+  }
+
+  .data-table thead {
+    display: none;
+  }
+
+  .data-table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .data-table tbody tr {
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .data-table tbody tr:hover {
+    background: var(--surface);
+  }
+
+  .data-table th,
+  .data-table td,
+  .data-table tbody tr:last-child th,
+  .data-table tbody tr:last-child td {
+    padding: 0;
+    border-bottom: 0;
+  }
+
+  .data-table th[scope='row'] {
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .data-table td[data-label] {
+    display: grid;
+    grid-template-columns: minmax(96px, 38%) minmax(0, 1fr);
+    gap: 12px;
+    padding: 5px 0;
+  }
+
+  .data-table td[data-label]::before {
+    content: attr(data-label);
+    color: var(--text-subtle);
+    font-size: 0.82rem;
+  }
+
+  /* Everything a cell holds stays in the value column, at its own width. */
+  .data-table td[data-label] > * {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .data-table td[data-label] > .badge--inline {
+    margin: 2px 0 0;
+  }
+
+  .data-table td:last-child:has(> .button) {
+    margin-top: 10px;
+    text-align: left;
+  }
+
+  .data-table td:last-child > .button {
+    width: 100%;
+  }
+
   .purchase-unit-row {
     grid-template-columns: 1fr 1fr;
   }
@@ -791,6 +1358,46 @@ h1:focus {
   .purchase-unit-row__preview {
     grid-column: 1 / -1;
     margin-bottom: 8px;
+  }
+
+  .panel {
+    padding: 18px;
+  }
+
+  /* Sign-in: the form first, the brand in the top line; the aside's facts follow below. */
+  .auth-screen {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'banner'
+      'form'
+      'aside';
+  }
+
+  .auth-form {
+    padding: 0 16px 24px;
+  }
+
+  .auth-screen__top .brand {
+    display: inline-flex;
+  }
+
+  .auth-card {
+    margin: 8px auto 0;
+    padding: 24px 20px;
+  }
+
+  .auth-aside {
+    gap: 20px;
+    padding: 28px 20px 32px;
+  }
+
+  .auth-aside > .brand {
+    display: none;
+  }
+
+  .auth-aside__lede {
+    margin: 0;
+    font-size: 1.15rem;
   }
 }
 

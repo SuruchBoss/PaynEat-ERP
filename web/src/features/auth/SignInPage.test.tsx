@@ -1,7 +1,7 @@
 // Copyright 2026 Suruch Chakrapeesirisuk
 // SPDX-License-Identifier: Apache-2.0
 
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { LANGUAGE_STORAGE_KEY } from '@/i18n/catalogue';
 import { SESSION_STORAGE_KEY, useAuthStore } from '@/stores/auth.store';
@@ -46,6 +46,16 @@ describe('sign-in', () => {
     await userEvent.setup().click(screen.getByRole('button', { name: 'English' }));
     expect(screen.getByRole('heading', { level: 1, name: 'Sign in' })).toBeVisible();
     expect(await axeViolations()).toEqual([]);
+  });
+
+  it('says what the system is and what it holds itself to, beside the form', async () => {
+    renderApp('/sign-in', { as: null });
+    await screen.findByRole('heading', { level: 1, name: 'เข้าสู่ระบบ' });
+
+    const aside = screen.getByRole('complementary', { name: /ระบบหลังบ้านของเชนร้านอาหาร/ });
+    expect(within(aside).getAllByRole('listitem')).toHaveLength(3);
+    expect(within(aside).getByText(/บันทึกการตรวจสอบ/)).toBeVisible();
+    expect(within(aside).getByText(/ยืนยันตัวตนสองขั้นตอน/)).toBeVisible();
   });
 
   it('signs in with a password alone when the account has no second factor', async () => {

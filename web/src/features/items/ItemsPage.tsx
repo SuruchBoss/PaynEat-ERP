@@ -223,14 +223,14 @@ export function ItemsPage() {
                     const name = language === 'th' ? item.nameTh : item.nameEn;
                     const otherName = language === 'th' ? item.nameEn : item.nameTh;
                     return (
-                      <tr key={item.id}>
+                      <tr key={item.id} className={item.active ? undefined : 'row--off'}>
                         <th scope="row">
                           <span className="cell-title">{name}</span>
                           <span className="subtle">
                             <code>{item.code}</code> {otherName}
                           </span>
                         </th>
-                        <td>
+                        <td data-label={t('items.column.baseUnit')}>
                           {unitName(unitList, item.baseUnitCode, language)}
                           {item.variableWeight && (
                             <span className="badge badge--neutral badge--inline">
@@ -238,7 +238,7 @@ export function ItemsPage() {
                             </span>
                           )}
                         </td>
-                        <td>
+                        <td data-label={t('items.column.purchaseUnits')}>
                           {item.purchaseUnits.length === 0 ? (
                             <span className="subtle">{t('items.noPurchaseUnits')}</span>
                           ) : (
@@ -255,12 +255,12 @@ export function ItemsPage() {
                             </ul>
                           )}
                         </td>
-                        <td>
+                        <td data-label={t('items.column.shelfLife')}>
                           {item.shelfLifeDays === 1
                             ? t('items.shelfLife.oneDay')
                             : t('items.shelfLife.days', { days: item.shelfLifeDays })}
                         </td>
-                        <td>
+                        <td data-label={t('items.column.status')}>
                           <span className={`badge badge--${item.active ? 'up' : 'neutral'}`}>
                             {t(item.active ? 'items.status.active' : 'items.status.inactive')}
                           </span>

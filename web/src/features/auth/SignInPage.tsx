@@ -7,7 +7,9 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import QRCode from 'qrcode';
+import { Brand } from '@/components/Brand';
 import { DemoBanner } from '@/components/DemoBanner';
+import { Icon } from '@/components/Icon';
 import { ErrorCallout } from '@/components/ErrorCallout';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import type { MessageKey } from '@/i18n/catalogue';
@@ -147,123 +149,147 @@ export function SignInPage() {
   return (
     <div className="auth-screen">
       <DemoBanner />
-      <header className="auth-screen__top">
-        <span className="brand">
-          <img className="brand__logo" src="/favicon.svg" alt="" width={28} height={28} />
-          <span>{t('app.name')}</span>
-        </span>
-        <LanguageSwitcher />
-      </header>
 
-      <main id="main" className="auth-card" aria-labelledby="sign-in-title">
-        <h1 id="sign-in-title" ref={headingRef} tabIndex={-1}>
-          {t(titleKey[step.kind])}
-        </h1>
+      <div className="auth-form">
+        <header className="auth-screen__top">
+          <Brand />
+          <LanguageSwitcher />
+        </header>
 
-        {step.kind === 'password' && (
-          <form onSubmit={submitPassword}>
-            <p className="muted">{t('signIn.intro')}</p>
-            <div className="field">
-              <label htmlFor="sign-in-email">{t('signIn.email')}</label>
-              <input
-                id="sign-in-email"
-                type="email"
-                autoComplete="username"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="sign-in-password">{t('signIn.password')}</label>
-              <input
-                id="sign-in-password"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-            {error !== null && <ErrorCallout error={error} messages={PASSWORD_ERRORS} />}
-            <button type="submit" className="button button--block" disabled={busy}>
-              {busy ? t('signIn.working') : t('signIn.submit')}
-            </button>
-          </form>
-        )}
+        <main id="main" className="auth-card" aria-labelledby="sign-in-title">
+          <h1 id="sign-in-title" ref={headingRef} tabIndex={-1}>
+            {t(titleKey[step.kind])}
+          </h1>
 
-        {(step.kind === 'code' || step.kind === 'enrol') && (
-          <form onSubmit={submitCode}>
-            {step.kind === 'code' ? (
-              <p className="muted">{t('signIn.code.intro')}</p>
-            ) : (
-              <>
-                <p className="muted">{t('signIn.enrol.intro')}</p>
-                <ol className="steps">
-                  <li>{t('signIn.enrol.stepScan')}</li>
-                  <li>{t('signIn.enrol.stepCode')}</li>
-                </ol>
-                <img
-                  className="qr"
-                  src={step.qr}
-                  width={200}
-                  height={200}
-                  alt={t('signIn.enrol.qrAlt')}
+          {step.kind === 'password' && (
+            <form onSubmit={submitPassword}>
+              <p className="muted">{t('signIn.intro')}</p>
+              <div className="field">
+                <label htmlFor="sign-in-email">{t('signIn.email')}</label>
+                <input
+                  id="sign-in-email"
+                  type="email"
+                  autoComplete="username"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                 />
-                <p className="subtle">
-                  {t('signIn.enrol.manual')} <code className="secret">{step.offer.secret}</code>
-                </p>
-              </>
-            )}
-            <div className="field">
-              <label htmlFor="sign-in-code">{t('signIn.code.label')}</label>
-              <input
-                id="sign-in-code"
-                type="text"
-                inputMode={step.kind === 'enrol' ? 'numeric' : 'text'}
-                autoComplete="one-time-code"
-                required
-                aria-describedby="sign-in-code-hint"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-              />
-              <p id="sign-in-code-hint" className="subtle">
-                {step.kind === 'code' ? t('signIn.code.hint') : t('signIn.enrol.codeHint')}
-              </p>
-            </div>
-            {error !== null && <ErrorCallout error={error} messages={CODE_ERRORS} />}
-            <div className="actions">
-              <button type="submit" className="button" disabled={busy}>
-                {busy
-                  ? t('signIn.working')
-                  : step.kind === 'code'
-                    ? t('signIn.code.submit')
-                    : t('signIn.enrol.submit')}
+              </div>
+              <div className="field">
+                <label htmlFor="sign-in-password">{t('signIn.password')}</label>
+                <input
+                  id="sign-in-password"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
+              {error !== null && <ErrorCallout error={error} messages={PASSWORD_ERRORS} />}
+              <button type="submit" className="button button--block" disabled={busy}>
+                {busy ? t('signIn.working') : t('signIn.submit')}
               </button>
-              <button type="button" className="button button--ghost" onClick={startOver}>
-                {t('signIn.startOver')}
-              </button>
-            </div>
-          </form>
-        )}
+            </form>
+          )}
 
-        {step.kind === 'recovery' && (
-          <>
-            <p className="muted">{t('signIn.recovery.intro')}</p>
-            <ul className="recovery-codes" aria-label={t('signIn.recovery.listLabel')}>
-              {step.recoveryCodes.map((recoveryCode) => (
-                <li key={recoveryCode}>
-                  <code>{recoveryCode}</code>
-                </li>
-              ))}
-            </ul>
-            <p className="callout">{t('signIn.recovery.warning')}</p>
-            <button type="button" className="button button--block" onClick={finish}>
-              {t('signIn.recovery.continue')}
-            </button>
-          </>
-        )}
-      </main>
+          {(step.kind === 'code' || step.kind === 'enrol') && (
+            <form onSubmit={submitCode}>
+              {step.kind === 'code' ? (
+                <p className="muted">{t('signIn.code.intro')}</p>
+              ) : (
+                <>
+                  <p className="muted">{t('signIn.enrol.intro')}</p>
+                  <ol className="steps">
+                    <li>{t('signIn.enrol.stepScan')}</li>
+                    <li>{t('signIn.enrol.stepCode')}</li>
+                  </ol>
+                  <img
+                    className="qr"
+                    src={step.qr}
+                    width={200}
+                    height={200}
+                    alt={t('signIn.enrol.qrAlt')}
+                  />
+                  <p className="subtle">
+                    {t('signIn.enrol.manual')} <code className="secret">{step.offer.secret}</code>
+                  </p>
+                </>
+              )}
+              <div className="field">
+                <label htmlFor="sign-in-code">{t('signIn.code.label')}</label>
+                <input
+                  id="sign-in-code"
+                  type="text"
+                  inputMode={step.kind === 'enrol' ? 'numeric' : 'text'}
+                  autoComplete="one-time-code"
+                  required
+                  aria-describedby="sign-in-code-hint"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                />
+                <p id="sign-in-code-hint" className="subtle">
+                  {step.kind === 'code' ? t('signIn.code.hint') : t('signIn.enrol.codeHint')}
+                </p>
+              </div>
+              {error !== null && <ErrorCallout error={error} messages={CODE_ERRORS} />}
+              <div className="actions">
+                <button type="submit" className="button" disabled={busy}>
+                  {busy
+                    ? t('signIn.working')
+                    : step.kind === 'code'
+                      ? t('signIn.code.submit')
+                      : t('signIn.enrol.submit')}
+                </button>
+                <button type="button" className="button button--ghost" onClick={startOver}>
+                  {t('signIn.startOver')}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {step.kind === 'recovery' && (
+            <>
+              <p className="muted">{t('signIn.recovery.intro')}</p>
+              <ul className="recovery-codes" aria-label={t('signIn.recovery.listLabel')}>
+                {step.recoveryCodes.map((recoveryCode) => (
+                  <li key={recoveryCode}>
+                    <code>{recoveryCode}</code>
+                  </li>
+                ))}
+              </ul>
+              <p className="callout">{t('signIn.recovery.warning')}</p>
+              <button type="button" className="button button--block" onClick={finish}>
+                {t('signIn.recovery.continue')}
+              </button>
+            </>
+          )}
+        </main>
+      </div>
+
+      {/* What this system is, before anyone signs in — three facts the ERP holds itself to,
+          not marketing: every change audited (ADR-0008), a second factor for administrators,
+          quantities kept exact (ADR-0019). */}
+      <aside className="auth-aside" aria-labelledby="auth-aside-lede">
+        <Brand size={30} />
+        <p className="auth-aside__lede" id="auth-aside-lede">
+          {t('signIn.aside.lede')}
+        </p>
+        <ul className="auth-facts">
+          <li>
+            <Icon name="ledger" />
+            <span>{t('signIn.aside.audit')}</span>
+          </li>
+          <li>
+            <Icon name="shield" />
+            <span>{t('signIn.aside.mfa')}</span>
+          </li>
+          <li>
+            <Icon name="scale" />
+            <span>{t('signIn.aside.exact')}</span>
+          </li>
+        </ul>
+      </aside>
     </div>
   );
 }
