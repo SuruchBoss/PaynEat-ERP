@@ -26,6 +26,12 @@ export const NAV: readonly NavSection[] = [
     items: [{ to: '/', labelKey: 'nav.status' }],
   },
   {
+    id: 'master-data',
+    headingKey: 'nav.section.masterData',
+    // Anyone signed in reads items; only `item:manage` sees the buttons that change them.
+    items: [{ to: '/items', labelKey: 'nav.items' }],
+  },
+  {
     id: 'administration',
     headingKey: 'nav.section.administration',
     items: [{ to: '/users', labelKey: 'nav.users', permission: Permission.USER_READ }],

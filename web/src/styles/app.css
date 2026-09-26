@@ -93,11 +93,23 @@ code {
 .app-shell {
   display: grid;
   grid-template-columns: var(--sidebar-width) 1fr;
-  grid-template-rows: var(--header-height) 1fr;
+  /* The first row is the demo banner, and takes no space where there is none. */
+  grid-template-rows: auto var(--header-height) 1fr;
   grid-template-areas:
+    'banner banner'
     'topbar topbar'
     'sidebar main';
   min-height: 100vh;
+}
+
+/* A demo installation (ERP_DEMO=1): on every screen, never dismissible (#5). */
+.demo-banner {
+  grid-area: banner;
+  padding: 10px 16px;
+  border-bottom: 2px solid var(--brand);
+  background: var(--brand-soft);
+  color: var(--brand-text);
+  text-align: center;
 }
 
 .topbar {
@@ -620,6 +632,7 @@ h1:focus {
   .app-shell {
     grid-template-columns: 1fr;
     grid-template-areas:
+      'banner'
       'topbar'
       'main';
   }
@@ -639,12 +652,13 @@ h1:focus {
     padding: 0 9px;
   }
 
+  /* Opens over the top of the page: same grid cell as main, so it sits right under the
+     top bar whether or not a demo banner is above it. */
   .sidebar {
     display: none;
-    position: absolute;
-    top: var(--header-height);
-    left: 0;
-    right: 0;
+    grid-area: main;
+    align-self: start;
+    position: relative;
     z-index: 10;
     border-right: 0;
     border-bottom: 1px solid var(--border);
@@ -657,5 +671,119 @@ h1:focus {
 
   .page {
     padding: 16px;
+  }
+}
+
+/* ---------------------------------------------------------------- items (#5) */
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 16px;
+  align-items: flex-end;
+}
+
+.filters .field {
+  min-width: 220px;
+}
+
+.badge--inline {
+  margin-left: 8px;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.plain-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.input--code {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+}
+
+.check-field {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.check-field input {
+  width: 20px;
+  height: 20px;
+  margin-top: 3px;
+  flex: none;
+  accent-color: var(--brand);
+}
+
+.check-field p {
+  margin: 0;
+}
+
+.purchase-units {
+  margin: 4px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.purchase-units legend {
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.purchase-unit-row {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) minmax(160px, 1fr) minmax(160px, 1fr) auto;
+  gap: 0 12px;
+  align-items: end;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.purchase-unit-row__preview {
+  margin-bottom: 24px;
+}
+
+.purchase-unit-row .button {
+  margin-bottom: 18px;
+}
+
+.purchase-unit-row__error {
+  grid-column: 1 / -1;
+}
+
+.field-error {
+  margin: -6px 0 12px;
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.field input[aria-invalid='true'],
+.field select[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.panel__footer {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.auth-screen .demo-banner {
+  align-self: stretch;
+  margin: 0 -16px;
+}
+
+@media (max-width: 760px) {
+  .purchase-unit-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .purchase-unit-row__preview {
+    grid-column: 1 / -1;
+    margin-bottom: 8px;
   }
 }

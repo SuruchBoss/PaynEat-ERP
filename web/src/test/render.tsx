@@ -28,7 +28,7 @@ export const ADMIN: SessionUser = {
   displayName: 'Demo admin',
   locale: 'th',
   roles: ['admin'],
-  permissions: ['user:read', 'user:manage', 'audit:read'],
+  permissions: ['user:read', 'user:manage', 'audit:read', 'item:manage'],
   mfaEnabled: true,
 };
 
@@ -66,12 +66,30 @@ export function jsonResponse(
   });
 }
 
-/** Replaces `fetch` for one test; returns the mock so a test can read what was sent. */
-export function mockFetch(handler: (url: string, init: RequestInit) => Promise<Response>) {
+export interface FakeApiOptions {
+  /** What `GET /installation` answers: not a demo installation unless a test says so. */
+  installation?: { demo: boolean };
+}
+
+/**
+ * Replaces `fetch` for one test; returns the mock so a test can read what was sent.
+ *
+ * Every screen asks `GET /installation` once, for the demo banner. The fake answers that
+ * itself and leaves it out of the mock's calls, so a test counts only the requests it is
+ * about.
+ */
+export function mockFetch(
+  handler: (url: string, init: RequestInit) => Promise<Response>,
+  { installation = { demo: false } }: FakeApiOptions = {},
+) {
   const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
     handler(String(input), init ?? {}),
   );
-  vi.stubGlobal('fetch', fetchMock);
+  vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) =>
+    String(input).split('?')[0] === '/api/v1/installation'
+      ? Promise.resolve(jsonResponse(200, installation))
+      : fetchMock(input, init),
+  );
   return fetchMock;
 }
 
@@ -81,6 +99,7 @@ export function mockFetch(handler: (url: string, init: RequestInit) => Promise<R
  */
 export function mockApi(
   routes: Record<string, (init: RequestInit, url: URL) => Response | Promise<Response>>,
+  options: FakeApiOptions = {},
 ) {
   return mockFetch(async (url, init) => {
     const parsed = new URL(url, 'http://console.test');
@@ -89,7 +108,7 @@ export function mockApi(
     const handler = routes[key];
     if (!handler) throw new Error(`unexpected request ${key}`);
     return handler(init, parsed);
-  });
+  }, options);
 }
 
 /** The JSON body of the `n`-th request `fetchMock` saw. */

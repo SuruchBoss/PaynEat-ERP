@@ -3,6 +3,7 @@
 
 import type { RouteObject } from 'react-router-dom';
 import { SignInPage } from '@/features/auth/SignInPage';
+import { ItemsPage } from '@/features/items/ItemsPage';
 import { NotFoundPage } from '@/features/not-found/NotFoundPage';
 import { StatusPage } from '@/features/status/StatusPage';
 import { UsersPage } from '@/features/users/UsersPage';
@@ -21,6 +22,7 @@ export const routes: RouteObject[] = [
         element: <AppLayout />,
         children: [
           { index: true, element: <StatusPage /> },
+          { path: 'items', element: <ItemsPage /> },
           {
             element: <RequirePermission permission={Permission.USER_READ} />,
             children: [{ path: 'users', element: <UsersPage /> }],

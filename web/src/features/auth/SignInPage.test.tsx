@@ -69,6 +69,24 @@ describe('sign-in', () => {
     expect(window.localStorage.getItem(SESSION_STORAGE_KEY)).toContain('refresh-after-sign-in');
   });
 
+  it('explains that demo accounts only work on a demo installation', async () => {
+    mockApi({
+      'POST /auth/login': () =>
+        jsonResponse(401, {
+          code: 'DEMO_ACCOUNTS_OFF',
+          message: 'Demo accounts sign in only on a demo installation (ERP_DEMO=1)',
+          requestId: 'erp-web-0000000000000009',
+        }),
+    });
+    renderApp('/', { as: null });
+
+    await typeCredentials('admin@demo-chicken.example', 'demo-chicken-2026');
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('บัญชีเดโมใช้ได้เฉพาะในระบบเดโม (ERP_DEMO=1)');
+    expect(alert).not.toHaveTextContent('erp-web-0000000000000009');
+  });
+
   it('says so when the email or password is wrong, without a correlation id to quote', async () => {
     mockApi({
       'POST /auth/login': () =>
