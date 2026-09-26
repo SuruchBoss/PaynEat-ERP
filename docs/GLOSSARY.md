@@ -45,10 +45,12 @@ using a new domain concept anywhere else.
 | Ledger entry | รายการเคลื่อนไหว | One row: item, lot, location, signed quantity, (secondary quantity), cost, source document. Never updated or deleted. |
 | Balance | ยอดคงเหลือ | Derived from ledger entries. May be cached as a snapshot for speed; the ledger wins on any disagreement. |
 | Document | เอกสาร | A business record that, once **posted**, writes ledger entries. Examples below. |
+| Document number | เลขที่เอกสาร | A document's human-readable identifier: two capital letters for its type, the year it was created and a counter, `OB-2026-00001`, `RV-2026-00001`. Given when the draft is created, in the same transaction, so the numbers that exist have no gaps. Every log line about a document carries it as `document_number`. |
 | Draft | ร่าง | A document not yet posted. Freely editable; affects nothing. |
 | Post | post (ลงรายการ) | The irreversible act that turns a draft into ledger entries, atomically. Written as "post" in Thai text too, because ลงบัญชี would be confused with accounting entries, which this system does not make. |
 | Reversal | เอกสารกลับรายการ | A new document that exactly negates a posted one. The only way to correct a posting. |
-| Business time | เวลาที่เกิดรายการ | When a movement actually happened: a document's business date, or a sale's sale time. Stock as of a date, counts and period close all use it (ADR-0018). |
+| Business date | วันที่เกิดรายการ | The calendar day, in the company's time zone (`COMPANY_TIME_ZONE`, default `Asia/Bangkok`), on which a document's movements happened. Today unless entered; can be earlier, never later (ADR-0018). |
+| Business time | เวลาที่เกิดรายการ | When a movement actually happened: a document's business date, or a sale's sale time. Stock as of a date, counts and period close all use it (ADR-0018). A document's entries carry the start of its business date in the company's time zone. |
 | Posting time | เวลาที่ post | When the ERP wrote a ledger entry. Kept alongside business time on every entry; never used to decide which period an entry belongs to. |
 | Period close | ปิดงวด | A per-location date before which nothing may be posted. |
 | Closed-until date | วันที่ปิดงวดถึง | A location's period close: no entry with a business date on or before it can be posted there. Moves forward by closing, backward only by an audited reopen (ADR-0018). |
@@ -71,13 +73,17 @@ using a new domain concept anywhere else.
 | Book quantity | ยอดตามระบบ | The balance the ledger holds for a count line as of the count time. Hidden from the counter until the count is submitted (blind count). |
 | Blind count | การนับแบบไม่เห็นยอด | Counting without seeing the book quantity, so the count is not steered towards it (ADR-0017). |
 | Adjustment | ใบปรับยอด | Posts the difference between counted and recorded stock, or writes off waste, with a reason and an approver. |
-| Opening balance | ยอดยกมา | The adjustment used once to bring existing stock into the system at go-live. |
+| Opening balance | ยอดยกมา | The document that brings stock already on hand into the system when a plant, warehouse or branch goes live. Each line becomes a lot, with the unit cost and expiry date entered on it, because no receipt priced it (#7). |
+| Stock on hand | สต๊อกคงเหลือ | What the ledger holds per item, lot and location as of the end of a business date, with quantity, secondary quantity, unit cost, value and expiry. |
+| Unit cost | ต้นทุนต่อหน่วย | A lot's cost per base unit, an exact decimal (at most 6 decimals), carried by every entry of that lot (ADR-0004). |
+| Stock value | มูลค่าสต๊อก | Quantity × unit cost, exact and never rounded, so the values of a report always add up to its total. |
 
 ## Lots and traceability · lot และการย้อนรอย
 
 | Term | ไทย | Meaning |
 |---|---|---|
-| Lot | lot | A quantity of one item that shares an origin, a cost and an expiry date. Created by a receipt or a production output. |
+| Lot | lot | A quantity of one item that shares an origin, a cost and an expiry date. Created by a receipt or a production output (and, at go-live, an opening balance). Never changed once created. |
+| Lot number | เลขที่ lot | A lot's identifier: its origin document's number and line, `OB-2026-00001/2`. |
 | Expiry date | วันหมดอายุ | Receipt or production date plus shelf life. An expired lot cannot be issued or transferred. |
 | FEFO | FEFO (หมดอายุก่อนออกก่อน) | First Expired, First Out: the rule that picks which lot a consumption comes from. |
 | Lot genealogy | ผังความสัมพันธ์ lot | The recorded links from each production output lot back to the input lots it consumed. |

@@ -1,0 +1,38 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
+// Opening balances — owned by the opening-balances module (#7; docs/GLOSSARY.md "Opening
+// balance"). The stock that already exists at a location when it starts using the ERP. Each
+// line becomes a lot when the document is posted, with the cost and expiry entered on it.
+
+/// The opening-balance part of a stock document: where the stock is.
+model OpeningBalance {
+  documentId String        @id @map("document_id") @db.Uuid
+  document   StockDocument @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  locationId String        @map("location_id") @db.Uuid
+  location   Location      @relation(fields: [locationId], references: [id], onDelete: Restrict)
+
+  lines OpeningBalanceLine[]
+
+  @@index([locationId])
+  @@map("opening_balances")
+}
+
+/// One lot to be. Changes only while its document is a draft (a trigger refuses otherwise).
+model OpeningBalanceLine {
+  documentId        String         @map("document_id") @db.Uuid
+  openingBalance    OpeningBalance @relation(fields: [documentId], references: [documentId], onDelete: Cascade)
+  lineNo            Int            @map("line_no")
+  itemId            String         @map("item_id") @db.Uuid
+  item              Item           @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  /// In the item's base unit, greater than zero, no more precise than the unit allows.
+  quantity          Decimal        @db.Decimal(18, 3)
+  /// Variable-weight items only: the piece count (ADR-0005).
+  secondaryQuantity Decimal?       @map("secondary_quantity") @db.Decimal(18, 0)
+  /// Per base unit. Entered, because the stock already exists and no receipt priced it.
+  unitCost          Decimal        @map("unit_cost") @db.Decimal(18, 6)
+  expiryDate        DateTime       @map("expiry_date") @db.Date
+
+  @@id([documentId, lineNo])
+  @@map("opening_balance_lines")
+}

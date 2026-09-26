@@ -38,6 +38,15 @@ export const NAV: readonly NavSection[] = [
     ],
   },
   {
+    id: 'stock',
+    headingKey: 'nav.section.stock',
+    // Anyone signed in sees stock and its documents (#7); the plant role changes them.
+    items: [
+      { to: '/stock', labelKey: 'nav.stock', icon: 'layers' },
+      { to: '/opening-balances', labelKey: 'nav.openingBalances', icon: 'ledger' },
+    ],
+  },
+  {
     id: 'administration',
     headingKey: 'nav.section.administration',
     items: [

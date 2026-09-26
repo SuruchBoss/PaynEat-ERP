@@ -6,7 +6,9 @@ import { SignInPage } from '@/features/auth/SignInPage';
 import { ItemsPage } from '@/features/items/ItemsPage';
 import { LocationsPage } from '@/features/locations/LocationsPage';
 import { NotFoundPage } from '@/features/not-found/NotFoundPage';
+import { OpeningBalancesPage } from '@/features/opening-balances/OpeningBalancesPage';
 import { StatusPage } from '@/features/status/StatusPage';
+import { StockOnHandPage } from '@/features/stock/StockOnHandPage';
 import { SuppliersPage } from '@/features/suppliers/SuppliersPage';
 import { UsersPage } from '@/features/users/UsersPage';
 import { Permission } from '@/lib/access';
@@ -27,6 +29,8 @@ export const routes: RouteObject[] = [
           { path: 'items', element: <ItemsPage /> },
           { path: 'locations', element: <LocationsPage /> },
           { path: 'suppliers', element: <SuppliersPage /> },
+          { path: 'stock', element: <StockOnHandPage /> },
+          { path: 'opening-balances', element: <OpeningBalancesPage /> },
           {
             element: <RequirePermission permission={Permission.USER_READ} />,
             children: [{ path: 'users', element: <UsersPage /> }],

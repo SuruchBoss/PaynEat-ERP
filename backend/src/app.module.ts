@@ -9,6 +9,7 @@ import { APP_CONFIG } from './core/config/config.token';
 import type { RootConfig } from './core/config/configuration';
 import { AllExceptionsFilter } from './core/http/all-exceptions.filter';
 import { PrismaModule } from './core/prisma/prisma.module';
+import { SequenceModule } from './core/sequence/sequence.module';
 import { PermissionsGuard } from './core/security/permissions.guard';
 import { TelemetryModule } from './core/telemetry/telemetry.module';
 import { AuditModule } from './modules/audit/audit.module';
@@ -16,8 +17,10 @@ import { AuthModule } from './modules/auth/auth.module';
 import { JwtAuthGuard } from './modules/auth/jwt-auth.guard';
 import { HealthModule } from './modules/health/health.module';
 import { ItemsModule } from './modules/items/items.module';
+import { LedgerModule } from './modules/ledger/ledger.module';
 import { LocationsModule } from './modules/locations/locations.module';
 import { MasterDataModule } from './modules/master-data/master-data.module';
+import { OpeningBalancesModule } from './modules/opening-balances/opening-balances.module';
 import { SuppliersModule } from './modules/suppliers/suppliers.module';
 
 /**
@@ -29,6 +32,7 @@ import { SuppliersModule } from './modules/suppliers/suppliers.module';
   imports: [
     AppConfigModule,
     PrismaModule,
+    SequenceModule,
     TelemetryModule,
     // In-process counters: right for one API instance, which is what docker-compose.yml
     // runs. Cwork's shared PostgreSQL storage can follow when the ERP runs several.
@@ -51,6 +55,8 @@ import { SuppliersModule } from './modules/suppliers/suppliers.module';
     ItemsModule,
     LocationsModule,
     SuppliersModule,
+    LedgerModule,
+    OpeningBalancesModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: AllExceptionsFilter },

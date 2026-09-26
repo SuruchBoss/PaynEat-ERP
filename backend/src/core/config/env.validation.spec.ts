@@ -24,11 +24,19 @@ describe('validateEnv', () => {
     expect(env.AUTH_MAX_FAILED_ATTEMPTS).toBe(5);
     expect(env.PASSWORD_MIN_LENGTH).toBe(12);
     expect(env.ERP_DEMO).toBe('0');
+    expect(env.COMPANY_TIME_ZONE).toBe('Asia/Bangkok');
   });
 
   it('accepts only 0 or 1 for ERP_DEMO', () => {
     expect(validateEnv({ ...base, ERP_DEMO: '1' }).ERP_DEMO).toBe('1');
     expect(() => validateEnv({ ...base, ERP_DEMO: 'yes' })).toThrow(/ERP_DEMO must be 0 or 1/);
+  });
+
+  it('refuses a time zone the runtime does not know', () => {
+    expect(validateEnv({ ...base, COMPANY_TIME_ZONE: 'UTC' }).COMPANY_TIME_ZONE).toBe('UTC');
+    expect(() => validateEnv({ ...base, COMPANY_TIME_ZONE: 'Asia/Bangkokk' })).toThrow(
+      /COMPANY_TIME_ZONE "Asia\/Bangkokk" is not a time zone/,
+    );
   });
 
   it('refuses to boot without a database', () => {
