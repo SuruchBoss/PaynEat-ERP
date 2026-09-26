@@ -17,7 +17,9 @@ using a new domain concept anywhere else.
 | Plant | โรงงาน | Location type: the company's own processing plant or central kitchen (called โรงงาน in Thai text either way). Receives from suppliers, produces, ships to branches. |
 | Warehouse | คลัง | Location type: storage that neither produces nor sells. |
 | Branch | สาขา | Location type: a restaurant that sells to guests through a POS. The ERP is the system of record for branches. |
-| In-transit | ระหว่างขนส่ง | Location type, system-managed: stock that has left its origin and has not yet been received at its destination. |
+| In-transit | ระหว่างขนส่ง | Location type, system-managed: stock that has left its origin and has not yet been received at its destination. Every plant and warehouse gets one when it is created; its code is `IN-TRANSIT:` followed by its origin's code, a shape no person can type, and it follows its origin's code, names and active flag. Nobody edits it directly. |
+| First use | การใช้งานครั้งแรก | The event that fixes a location code: in the ERP, the first posted document that names the location, or the first POS pull of a branch. The ERP records when and what it was. |
+| Superseded by | แทนที่ด้วย | The link from a location whose wrong code was already in use to the new location, of the same type, that replaces it. The old one is deactivated and stays out of use; a POS receives the link. |
 | Subcontractor | โรงงานรับจ้าง | Location type, **reserved, not built in v1**: a third party that processes our stock for a fee. |
 
 ## Items and units · สินค้าและหน่วยนับ
@@ -52,7 +54,8 @@ using a new domain concept anywhere else.
 | Closed-until date | วันที่ปิดงวดถึง | A location's period close: no entry with a business date on or before it can be posted there. Moves forward by closing, backward only by an audited reopen (ADR-0018). |
 | Reopen | เปิดงวดใหม่ | An `admin` moving a closed-until date backward, with a reason, audited. Supersedes any export of the reopened range. |
 | Late for a closed period | มาช้าสำหรับงวดที่ปิดแล้ว | Branch consumption from a sale whose time falls in a closed period, posted on the first open day and marked, keeping its original sale time (ADR-0018). |
-| Supplier | ซัพพลายเออร์ | A company the chain buys from. Owned by the ERP. |
+| Supplier | ซัพพลายเออร์ | A company the chain buys from. Owned by the ERP, never sent to a POS. Managed by `admin` and `purchasing`. |
+| Tax identification number | เลขประจำตัวผู้เสียภาษีอากร | The 13-digit Thai number of a company or a person, the last digit a check over the other twelve. Printed as 0-0000-00000-00-0. |
 | Purchase order (PO) | ใบสั่งซื้อ | Commitment to buy from a supplier. Writes no stock. |
 | Goods receipt (GRN) | ใบรับสินค้า | Receiving supplier goods into a location, creating lots. |
 | Return to supplier | ใบส่งคืนสินค้า | Sending rejected or defective goods back to a supplier. |

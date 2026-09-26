@@ -184,7 +184,8 @@ Run inside `web/` (the admin console), after `npm ci`:
   their events and metrics per `docs/TELEMETRY.md`.
 - Every route is authenticated unless it says `@Public()`, and every route that touches data declares
   `@RequirePermissions(...)` (#4), except reads the issue opens to any signed-in user, which say so
-  in their controller's comment (items, units and the master data change log, #5). A new permission goes into `core/security/permissions.ts`, is given
+  in their controller's comment (items, units and the master data change log, #5; locations and
+  suppliers, #6). A new permission goes into `core/security/permissions.ts`, is given
   to the roles ADR-0008 says should have it, and is mirrored in `web/src/lib/access.ts`.
 - The end-to-end suite supplies its own test-only JWT secrets and encryption key when the environment
   has none; signing in as the demo admin uses the published second-factor secret
