@@ -165,11 +165,17 @@ describe('user administration', () => {
       });
 
       const entries = await trail({ correlationId: 'e2e-create-user-001' });
-      expect(entries.map((e) => [e.action, e.summary])).toEqual([
-        ['CREATE', `Created user ${body.email}`],
-        ['ROLE_GRANTED', `Granted role plant to ${body.email}`],
-        ['ROLE_GRANTED', `Granted role logistics to ${body.email}`],
-      ]);
+      // One transaction writes all three, often within the same millisecond, and the
+      // trail orders entries of equal time by id: their order among themselves is not
+      // defined, so it is not asserted.
+      expect(entries.map((e) => [e.action, e.summary])).toHaveLength(3);
+      expect(entries.map((e) => [e.action, e.summary])).toEqual(
+        expect.arrayContaining([
+          ['CREATE', `Created user ${body.email}`],
+          ['ROLE_GRANTED', `Granted role plant to ${body.email}`],
+          ['ROLE_GRANTED', `Granted role logistics to ${body.email}`],
+        ]),
+      );
       for (const entry of entries) {
         expect(entry).toMatchObject({
           entityType: 'User',
