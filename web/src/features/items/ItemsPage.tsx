@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { qk } from '@/app/query-client';
 import { ErrorCallout } from '@/components/ErrorCallout';
-import type { Language, MessageKey } from '@/i18n/catalogue';
+import type { Language, MessageKey, MessageParams } from '@/i18n/catalogue';
 import { useI18n } from '@/i18n/useI18n';
 import { Permission } from '@/lib/access';
 import { ApiError } from '@/lib/api-error';
@@ -22,6 +22,12 @@ import {
 } from './items.api';
 
 type StatusFilter = 'active' | 'inactive' | 'all';
+
+/** Kept as a key, not as text, so it follows a language switch made after it appeared. */
+interface Notice {
+  key: MessageKey;
+  params: MessageParams;
+}
 
 const SAVE_ERRORS: Record<string, MessageKey> = {
   ITEM_CODE_TAKEN: 'items.error.codeTaken',
@@ -79,7 +85,7 @@ export function ItemsPage() {
   const [status, setStatus] = useState<StatusFilter>('active');
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<Notice | null>(null);
 
   const shown = useMemo(() => {
     const needle = search.trim().toLocaleLowerCase();
@@ -126,7 +132,7 @@ export function ItemsPage() {
 
       {notice && (
         <p className="callout callout--success" role="status">
-          {notice}
+          {t(notice.key, notice.params)}
         </p>
       )}
 
@@ -136,7 +142,7 @@ export function ItemsPage() {
           onClose={() => setCreating(false)}
           onSaved={(item) => {
             setCreating(false);
-            setNotice(t('items.create.done', { code: item.code }));
+            setNotice({ key: 'items.create.done', params: { code: item.code } });
           }}
         />
       )}
@@ -146,9 +152,9 @@ export function ItemsPage() {
           item={editing}
           units={units.data}
           onClose={() => setEditingId(null)}
-          onSaved={(item, message) => {
+          onSaved={(item, notice) => {
             setEditingId(null);
-            setNotice(message ?? t('items.edit.done', { code: item.code }));
+            setNotice(notice ?? { key: 'items.edit.done', params: { code: item.code } });
           }}
         />
       )}
@@ -300,7 +306,7 @@ function ItemForm({
   item?: ItemView;
   units: UnitView[];
   onClose: () => void;
-  onSaved: (item: ItemView, message?: string) => void;
+  onSaved: (item: ItemView, notice?: Notice) => void;
 }) {
   const { t, language } = useI18n();
   const queryClient = useQueryClient();
@@ -349,10 +355,10 @@ function ItemForm({
   const toggleActive = useMutation({
     mutationFn: () => updateItem(item!.id, { version: item!.version, active: !item!.active }),
     onSuccess: async (saved) =>
-      onSaved(
-        await afterSave(saved),
-        t(saved.active ? 'items.reactivated' : 'items.deactivated', { code: saved.code }),
-      ),
+      onSaved(await afterSave(saved), {
+        key: saved.active ? 'items.reactivated' : 'items.deactivated',
+        params: { code: saved.code },
+      }),
     onError: afterError,
   });
 

@@ -46,7 +46,8 @@ export function UsersPage() {
   const users = useQuery({ queryKey: qk.users, queryFn: listUsers });
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  // The created account's email, not a sentence: the notice follows a language switch.
+  const [createdEmail, setCreatedEmail] = useState<string | null>(null);
 
   const editing = users.data?.find((u) => u.id === editingId) ?? null;
 
@@ -63,7 +64,7 @@ export function UsersPage() {
             className="button"
             onClick={() => {
               setCreating(true);
-              setNotice(null);
+              setCreatedEmail(null);
             }}
           >
             {t('users.create.open')}
@@ -71,9 +72,9 @@ export function UsersPage() {
         )}
       </div>
 
-      {notice && (
+      {createdEmail && (
         <p className="callout callout--success" role="status">
-          {notice}
+          {t('users.create.done', { email: createdEmail })}
         </p>
       )}
 
@@ -82,7 +83,7 @@ export function UsersPage() {
           onCancel={() => setCreating(false)}
           onCreated={(user) => {
             setCreating(false);
-            setNotice(t('users.create.done', { email: user.email }));
+            setCreatedEmail(user.email);
           }}
         />
       )}
@@ -157,7 +158,7 @@ export function UsersPage() {
                         aria-controls="role-editor"
                         onClick={() => {
                           setEditingId(editingId === user.id ? null : user.id);
-                          setNotice(null);
+                          setCreatedEmail(null);
                         }}
                       >
                         {t('users.roles.editShort')}
@@ -329,7 +330,8 @@ function RoleEditor({ user, onClose }: { user: UserView; onClose: () => void }) 
   const { t } = useI18n();
   const queryClient = useQueryClient();
   const headingRef = useRef<HTMLHeadingElement>(null);
-  const [lastChange, setLastChange] = useState<string | null>(null);
+  // What changed, not a sentence: the message follows a language switch.
+  const [changed, setChanged] = useState<{ role: Role; grant: boolean; name: string } | null>(null);
   const [pending, setPending] = useState<{ role: Role; grant: boolean } | null>(null);
   const mutation = useMutation({
     mutationFn: ({ role, grant }: { role: Role; grant: boolean }) =>
@@ -338,16 +340,18 @@ function RoleEditor({ user, onClose }: { user: UserView; onClose: () => void }) 
       queryClient.setQueryData<UserView[]>(qk.users, (list) =>
         list?.map((u) => (u.id === updated.id ? updated : u)),
       );
-      setLastChange(
-        t(grant ? 'users.roles.granted' : 'users.roles.revoked', {
-          role: t(ROLE_LABEL[role]),
-          name: updated.displayName,
-        }),
-      );
+      setChanged({ role, grant, name: updated.displayName });
     },
   });
 
   useEffect(() => headingRef.current?.focus(), [user.id]);
+
+  const lastChange = changed
+    ? t(changed.grant ? 'users.roles.granted' : 'users.roles.revoked', {
+        role: t(ROLE_LABEL[changed.role]),
+        name: changed.name,
+      })
+    : null;
 
   // The tick shows the choice at once while the API is asked; if it refuses, the
   // checklist goes back to what the API holds and the error says why. Local state, set
@@ -370,7 +374,7 @@ function RoleEditor({ user, onClose }: { user: UserView; onClose: () => void }) 
         selected={shown}
         disabled={mutation.isPending}
         onToggle={(role, grant) => {
-          setLastChange(null);
+          setChanged(null);
           setPending({ role, grant });
           mutation.mutate({ role, grant }, { onSettled: () => setPending(null) });
         }}

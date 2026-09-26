@@ -189,6 +189,10 @@ describe('items and units', () => {
     });
     expect(await screen.findByText('แป้งชุบทอด')).toBeVisible();
     expect(screen.queryByRole('form', { name: 'สินค้าใหม่' })).not.toBeInTheDocument();
+
+    // The notice is kept as a message, so it follows a switch of language.
+    await u.click(screen.getByRole('button', { name: 'English' }));
+    expect(screen.getByText('Created item FLOUR-BATTER.')).toBeVisible();
   });
 
   it('marks each purchase unit row the API refuses, and why', async () => {
