@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 /**
  * NIST SP 800-63B style password policy: length is what matters, plus a block-list of
  * obviously guessable values. Character-class rotation is deliberately not forced — it

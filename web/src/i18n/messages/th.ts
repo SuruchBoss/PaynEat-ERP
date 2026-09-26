@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 /**
  * The source catalogue: every string the console shows, in Thai (the default language).
  * `en.ts` is typed against this object, so a key missing from either side fails the

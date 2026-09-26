@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 /**
  * Fails the build when the architecture of ADR-0010 is broken. See
  * scripts/architecture/rules.ts for the rules and rules.spec.ts for each rule failing

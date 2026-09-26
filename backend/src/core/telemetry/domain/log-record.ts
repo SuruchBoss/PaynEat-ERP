@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 /**
  * The shape of one log line, as fixed by docs/TELEMETRY.md v1.1.
  *

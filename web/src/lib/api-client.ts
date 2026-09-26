@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 // Adapted from Cwork (web/src/lib/api-client.ts), see NOTICE: the request/send/parse
 // structure and the single shared token refresh are Cwork's.
 import { documentLanguage } from '@/i18n/catalogue';

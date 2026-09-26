@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 /**
  * Prepares the database the e2e suite runs against, once, before any spec:
  * migrate, wipe (refusing a database not marked as a test database), seed.

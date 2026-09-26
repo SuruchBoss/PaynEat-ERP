@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 import ts from 'typescript';
 
 /** JSX attributes whose value a person reads or hears. */

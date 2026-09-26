@@ -1,4 +1,7 @@
 # syntax=docker/dockerfile:1
+# Copyright 2026 Suruch Chakrapeesirisuk
+# SPDX-License-Identifier: Apache-2.0
+
 # Adapted from Cwork (web/Dockerfile), see NOTICE.
 
 FROM node:22-bookworm-slim AS build

@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 import { validateEnv } from './env.validation';
 
 // Test-only values: long enough to pass validation, never used anywhere real.

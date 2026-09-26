@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 // Adapted from Cwork (backend/src/core/http/all-exceptions.filter.ts), see NOTICE.
 // The ERP has no uploads, so Cwork's multer mapping is left out; the failure is
 // reported on the request's `http.request.completed` line instead of a line of its own.

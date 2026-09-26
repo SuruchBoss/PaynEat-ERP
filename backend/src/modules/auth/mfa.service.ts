@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 // Adapted from Cwork (backend/src/modules/auth/mfa.service.ts), see NOTICE. The ERP has
 // one company, so Cwork's organisation-wide "require MFA for everyone" switch is gone:
 // an account needs a second factor when its roles demand one (ADR-0008 admin). Disabling

@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 // The user-administration endpoints (backend `modules/auth/users.controller.ts`).
 import type { Role } from '@/lib/access';
 import { api } from '@/lib/api-client';

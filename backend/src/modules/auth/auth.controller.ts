@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 // Adapted from Cwork (backend/src/modules/auth/auth.controller.ts), see NOTICE. Without
 // Cwork's device fields, session listing, MFA disabling and recovery-code regeneration
 // (not in #4), and without /auth/mfa/complete-enrolment (see auth.service.ts).

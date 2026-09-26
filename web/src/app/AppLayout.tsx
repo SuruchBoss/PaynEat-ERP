@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 // Adapted from Cwork (web/src/app/AppLayout.tsx), see NOTICE.
 import clsx from 'clsx';
 import { useQueryClient } from '@tanstack/react-query';

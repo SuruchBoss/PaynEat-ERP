@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { configureHttp } from './core/http/http-setup';

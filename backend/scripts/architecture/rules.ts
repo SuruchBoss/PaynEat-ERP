@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 /**
  * The architecture rules of ADR-0010, as pure functions over source text, so each
  * rule can be shown to fail on a deliberate violation in `rules.spec.ts`.
@@ -9,7 +12,11 @@
  *     `<b>` only through `<b>.service` (or `<b>.module`, to import the module itself),
  *     never through its repositories, domain, DTOs or anything else.
  *
- * From #7 a third rule joins them: nothing outside the ledger module writes ledger or
+ *  3. core-never-imports-ee — nothing in `backend/` imports from the repository's `ee/`
+ *     directory, by relative path or by a package name containing `ee` as a segment
+ *     (ADR-0015: the Community core must build and run with `ee/` deleted).
+ *
+ * From #7 another rule joins them: nothing outside the ledger module writes ledger or
  * balance tables.
  */
 import { posix } from 'node:path';
@@ -20,7 +27,7 @@ export interface SourceFile {
   content: string;
 }
 
-export type RuleName = 'domain-purity' | 'module-boundary';
+export type RuleName = 'domain-purity' | 'module-boundary' | 'core-never-imports-ee';
 
 export interface Violation {
   rule: RuleName;
@@ -46,6 +53,10 @@ export function importSpecifiers(content: string): string[] {
 }
 
 const FRAMEWORK = [/^@nestjs\//, /^@prisma\//, /^prisma(\/|$)/, /^\.prisma(\/|$)/];
+
+/** `ee/` at the repository root, seen from `backend/`, or a package such as `@payneat/ee`. */
+const reachesEnterprise = (target: string | undefined, specifier: string): boolean =>
+  (target !== undefined && /^\.\.\/ee(\/|$)/.test(target)) || /(^|\/)ee(\/|$)/.test(specifier);
 
 const inDomainFolder = (path: string): boolean => path.split('/').includes('domain');
 
@@ -84,6 +95,17 @@ export function checkArchitecture(files: SourceFile[]): Violation[] {
             message: `a domain/ file imports "${specifier}", which is outside any domain/ folder and may pull a framework in behind it`,
           });
         }
+      }
+    }
+
+    for (const specifier of specifiers) {
+      if (reachesEnterprise(resolveRelative(file.path, specifier), specifier)) {
+        violations.push({
+          rule: 'core-never-imports-ee',
+          file: file.path,
+          specifier,
+          message: `the Community core imports "${specifier}" from ee/; it must build and run without it (ADR-0015)`,
+        });
       }
     }
 

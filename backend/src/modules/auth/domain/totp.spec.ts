@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 // Copied from Cwork (backend/src/modules/auth/domain/totp.spec.ts), see NOTICE; only the
 // example issuer and account names are the ERP's own.
 import {

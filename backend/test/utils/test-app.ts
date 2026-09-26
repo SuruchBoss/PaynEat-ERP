@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 /**
  * Boots the real application for e2e tests, configured exactly as `main.ts` does
  * (both call `configureHttp`), with every log line captured instead of printed.

@@ -99,13 +99,22 @@ way to make this ERP untrustworthy.
 
 ## Editions (ADR-0015)
 
-- v1 is **entirely Community**. Do not create `ee/` or write Enterprise code until the product owner
-  publishes an issue labelled for it.
-- When `ee/` exists: the core **never imports from `ee/`** (the architecture check enforces it), the
+- v1 is **entirely Community**. `ee/` exists but holds only its license (Elastic License 2.0) and a
+  README. Do not write Enterprise code until the product owner publishes an issue labelled for it.
+- The core **never imports from `ee/`** (`check:architecture` rule `core-never-imports-ee`), the
   ledger rule applies inside `ee/` too, and an expired license key never blocks core work or data
   access.
 - Never move behaviour from Community into `ee/`, and never put food safety, data integrity, basic
   security, data export or the upgrade path behind a key.
+
+## Licensing
+
+- Every source file starts with `// Copyright 2026 Suruch Chakrapeesirisuk` and
+  `// SPDX-License-Identifier: Apache-2.0` (`Elastic-2.0` under `ee/`), in the comment syntax of its type.
+  `node scripts/license-headers.mjs --fix` (from the repository root) adds it; CI's "License headers"
+  job fails without it. Applied migrations are exempt and never edited.
+- Outside contributions (pull requests from forks) are signed off under the DCO (`CONTRIBUTING.md`).
+  A dev session does not sign off: a sign-off is a person's statement.
 
 ## Observability (ADR-0011)
 
@@ -145,7 +154,7 @@ Run inside `backend/`, after `npm ci` and `npx prisma generate`:
 | Lint | `npm run lint` |
 | Typecheck | `npm run typecheck` |
 | Unit tests (pure domain rules; need no database or configuration) | `npm test` |
-| Architecture check (ADR-0010: `domain/` purity, module boundaries) | `npm run check:architecture` |
+| Architecture check (ADR-0010: `domain/` purity, module boundaries; ADR-0015: core never imports `ee/`) | `npm run check:architecture` |
 | End-to-end tests against a real PostgreSQL 16 | `E2E_DATABASE_URL=postgresql://…/payneat_erp_test npm run test:e2e` |
 | Build | `npm run build` |
 

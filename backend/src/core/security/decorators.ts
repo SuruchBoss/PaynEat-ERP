@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 // Adapted from Cwork (backend/src/core/security/decorators.ts), see NOTICE.
 import { SetMetadata } from '@nestjs/common';
 import type { PermissionKey } from './permissions';

@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 /**
  * The destructive operations the end-to-end suite needs: empty the database and put
  * the demo chain back. Adapted from Cwork (backend/test/utils/database.ts), see NOTICE.

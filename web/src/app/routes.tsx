@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 import type { RouteObject } from 'react-router-dom';
 import { SignInPage } from '@/features/auth/SignInPage';
 import { NotFoundPage } from '@/features/not-found/NotFoundPage';

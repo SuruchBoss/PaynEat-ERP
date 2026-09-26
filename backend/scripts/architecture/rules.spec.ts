@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 import { checkArchitecture, importSpecifiers, SourceFile } from './rules';
 
 const file = (path: string, ...imports: string[]): SourceFile => ({
@@ -96,6 +99,30 @@ describe('architecture rules (ADR-0010)', () => {
             "import { x } from '../purchasing.service';",
           ),
           file('src/app.module.ts', "import { LotsModule } from './modules/lots/lots.module';"),
+        ]),
+      ).toEqual([]);
+    });
+  });
+
+  describe('core-never-imports-ee', () => {
+    it('fails when core code imports from ee/, by path or by package', () => {
+      const v = checkArchitecture([
+        file('src/modules/lots/lots.service.ts', "import { x } from '../../../../ee/backend/x';"),
+        file('src/main.ts', "import { y } from '@payneat/ee';"),
+        file('src/app.module.ts', "const z = require('../../ee');"),
+      ]);
+      expect(v.map((x) => [x.rule, x.specifier])).toEqual([
+        ['core-never-imports-ee', '../../../../ee/backend/x'],
+        ['core-never-imports-ee', '@payneat/ee'],
+        ['core-never-imports-ee', '../../ee'],
+      ]);
+    });
+
+    it('passes names that merely contain the letters ee', () => {
+      expect(
+        checkArchitecture([
+          file('src/modules/fees/fees.service.ts', "import { x } from './fee.domain';"),
+          file('src/main.ts', "import { y } from 'free-ports';"),
         ]),
       ).toEqual([]);
     });

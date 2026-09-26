@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 /**
  * The telemetry contract, end to end: docs/TELEMETRY.md v1.1 as seen from outside —
  * the headers a caller gets back, the lines the API writes, and the metrics it serves.

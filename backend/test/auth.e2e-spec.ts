@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 /**
  * Signing in (#4), end to end: passwords, the second factor, sessions, lockout, and the
  * failed-sign-in log line, metric and audit entry (docs/TELEMETRY.md).

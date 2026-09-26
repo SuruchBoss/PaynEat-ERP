@@ -1,0 +1,50 @@
+name: License
+
+# Every tracked source file carries its copyright and SPDX header, and every commit in a pull
+# request from a fork is signed off under the Developer Certificate of Origin (CONTRIBUTING.md).
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  headers:
+    name: License headers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/license-headers.mjs
+
+  dco:
+    name: DCO sign-off
+    # Only outside contributions need a sign-off: the owner's own branches are the owner's work.
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Every commit is signed off by its author
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          missing=0
+          for sha in $(git rev-list --no-merges "$BASE..$HEAD"); do
+            author=$(git log -1 --format='%ae' "$sha")
+            if ! git log -1 --format='%B' "$sha" | grep -qiF "Signed-off-by:" \
+              || ! git log -1 --format='%B' "$sha" | grep -i "^Signed-off-by:" | grep -qiF "<$author>"; then
+              echo "::error::$sha by <$author> has no 'Signed-off-by:' line for its author (git commit -s)"
+              missing=1
+            fi
+          done
+          exit $missing

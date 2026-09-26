@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 // Adapted from Cwork (web/src/app/guards.tsx), see NOTICE.
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useI18n } from '@/i18n/useI18n';

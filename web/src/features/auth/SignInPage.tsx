@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 // Adapted from Cwork (web/src/features/auth/LoginPage.tsx), see NOTICE: the same steps —
 // password, then a code or, for an account that must have a second factor and has none,
 // enrolment and recovery codes — without Cwork's device fields.

@@ -225,5 +225,7 @@ issue ที่ติด label `ready-for-agent` เป็นงานที่�
 
 ## License
 
-[Apache License 2.0](LICENSE) ยกเว้นไดเรกทอรี `ee/` เมื่อมีขึ้นมา ซึ่งจะมี license ของตัวเอง (ADR-0015)
-ถ้านำไปต่อยอด กรุณาคงไฟล์ [NOTICE](NOTICE) ไว้
+Copyright 2026 Suruch Chakrapeesirisuk ทุกอย่างนอก `ee/` ใช้ [Apache License 2.0](LICENSE) ส่วนไดเรกทอรี
+`ee/` ใช้ [Elastic License 2.0](ee/LICENSE) และยังไม่มีโค้ดใน v1 (ADR-0015) ทุกไฟล์ซอร์สระบุ license ด้วย SPDX
+identifier ซึ่ง CI ตรวจ pull request จาก fork ต้อง sign off ตาม Developer Certificate of Origin ดู
+[CONTRIBUTING.md](CONTRIBUTING.md) ถ้านำไปต่อยอด กรุณาคงไฟล์ [NOTICE](NOTICE) ไว้

@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 import { createContext } from 'react';
 import type { Language, MessageKey, MessageParams } from './catalogue';
 

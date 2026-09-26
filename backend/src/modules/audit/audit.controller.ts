@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 // Adapted from Cwork (backend/src/modules/audit/audit.controller.ts), see NOTICE.
 import { Controller, Get, Query } from '@nestjs/common';
 import type { Page } from '../../core/http/pagination.dto';
