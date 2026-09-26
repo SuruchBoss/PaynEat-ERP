@@ -46,13 +46,15 @@ export function normaliseFactor(factor: string): string {
 
 export type ConversionProblem = FactorProblem | 'QUANTITY_NOT_A_NUMBER' | 'QUANTITY_TOO_PRECISE';
 
+// No parameter property: the web console's demo build imports this file (ADR-0021), and its
+// compiler accepts only syntax that erases to plain JavaScript.
 export class ConversionError extends Error {
-  constructor(
-    readonly problem: ConversionProblem,
-    message: string,
-  ) {
+  readonly problem: ConversionProblem;
+
+  constructor(problem: ConversionProblem, message: string) {
     super(message);
     this.name = 'ConversionError';
+    this.problem = problem;
   }
 }
 

@@ -172,6 +172,7 @@ using a new domain concept anywhere else.
 | First-run setup | การตั้งค่าครั้งแรก | The console's guided setup on an empty database: company, first admin with a second factor, first locations. No command line (ADR-0020, post-v1). |
 | PaynEat Cloud | PaynEat Cloud | The paid hosting service that runs the same Community software for a chain (ADR-0015, ADR-0020). A chain can always export and move to its own server. |
 | Demo installation | ระบบเดโม | An installation started with `ERP_DEMO=1`: the only kind where the demo seed runs and demo accounts sign in. Says so in the log at every start and on every console screen. Without the flag, a production API refuses to start while a demo account is enabled. |
+| Public demo | เดโมสาธารณะ | The console built with an in-browser demo API and published on GitHub Pages (ADR-0021): the demo chain, held in the visitor's browser for one visit, with no server and no database, answered by the backend's own rules. Covers the screens that existed when it was published; a screen it does not serve says so. Not an installation: nothing is kept, and a reload starts again. |
 | Approval threshold | เกณฑ์วงเงินที่ต้องอนุมัติ | The document value above which a second person must approve. Configuration, not code. |
 | Segregation of duties | การแยกหน้าที่ | Nobody approves a document they created, whatever roles they hold. |
 

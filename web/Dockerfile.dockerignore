@@ -1,0 +1,16 @@
+# Copyright 2026 Suruch Chakrapeesirisuk
+# SPDX-License-Identifier: Apache-2.0
+
+# The web image is built from the repository root (docker-compose.yml, ADR-0021). It needs
+# web/ and the backend files the public demo imports; nothing else goes into the context.
+*
+!web
+!backend/src
+!backend/prisma/demo-data.ts
+web/node_modules
+web/dist
+web/dist-demo
+web/coverage
+web/.vite
+**/*.log
+**/*.tsbuildinfo

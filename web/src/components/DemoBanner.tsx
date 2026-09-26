@@ -26,6 +26,8 @@ export function DemoBanner() {
     <aside className="demo-banner" aria-labelledby="demo-banner-title">
       <strong id="demo-banner-title">{t('demo.banner.title')}</strong>{' '}
       <span>{t('demo.banner.body')}</span>
+      {/* The public demo (#41) has no server at all; any other build compiles this away. */}
+      {__ERP_DEMO__ && <span> {t('demo.banner.inBrowser')}</span>}
     </aside>
   );
 }

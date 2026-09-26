@@ -137,7 +137,9 @@ NestJS 11 + Prisma + PostgreSQL 16 in `backend/`, React 19 + Vite in `web/`, sha
 [ADR-0010](docs/adr/0010-backend-and-web-stack.md). In short:
 
 - Business rules are pure functions in `modules/<name>/domain/`: no Prisma, no NestJS, no clock
-  unless injected.
+  unless injected. The console's public demo imports them (ADR-0021), so they also use only
+  TypeScript that erases to JavaScript (no parameter properties, no enums), and the demo data lives
+  in `backend/prisma/demo-data.ts`, which imports nothing.
 - A module owns its tables; other modules call its service, never its repository or Prisma models.
 - **Only the ledger module writes ledger and balance tables, and only with raw SQL inside one
   transaction.** Everything else may use Prisma normally.
@@ -167,6 +169,7 @@ Run inside `web/` (the admin console), after `npm ci`:
 | Typecheck | `npm run typecheck` |
 | Tests: Vitest + Testing Library + axe, the TH/EN catalogue parity check and the scan for hard-coded UI text | `npm test` |
 | Production build | `npm run build` |
+| No demo code in it, and a working public demo build | `node scripts/check-demo-build.mjs dist`, then `VITE_ERP_DEMO=1 VITE_BASE_PATH=/PaynEat-ERP/ npx vite build --outDir dist-demo && node scripts/check-demo-build.mjs --demo dist-demo` |
 
 - The end-to-end run migrates, **wipes** and seeds its database first, so it refuses a database
   whose name has no `test` in it (`E2E_ALLOW_NON_TEST_DB=1` overrides, deliberately).
@@ -187,6 +190,13 @@ Run inside `web/` (the admin console), after `npm ci`:
   in their controller's comment (items, units and the master data change log, #5; locations and
   suppliers, #6; stock on hand and opening balances, #7). A new permission goes into `core/security/permissions.ts`, is given
   to the roles ADR-0008 says should have it, and is mirrored in `web/src/lib/access.ts`.
+- **The public demo** (`web/src/demo`, ADR-0021) answers the console from the browser, on GitHub
+  Pages. It imports the backend's `domain/` rules, `core/security/permissions.ts` and
+  `prisma/demo-data.ts` (eslint fences which), and writes only what the services do around them.
+  When the behaviour behind an existing screen changes, change `web/src/demo` in the same pull
+  request. A new screen may extend the demo but need not; the demo answers any path it does not
+  serve with `NOT_IN_DEMO`, and the console says "not in the demo yet". CI builds both the normal
+  console (which must carry none of it) and the demo (`web/scripts/check-demo-build.mjs`).
 - Stock is written only through `LedgerService` (#7): a document type keeps its own lines and hands the
   ledger a plan to post. Scripts that run without the API (the demo seed, `npm run
   ledger:rebuild-balances`) wire the same services by hand in `prisma/ledger-services.ts` rather than
