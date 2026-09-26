@@ -1,0 +1,52 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
+// Units and the item master — owned by the items module (#5, ADR-0005, ADR-0019).
+
+/// A unit of measure. A fixed catalogue in v1, written by migration.
+model Unit {
+  code     String @id
+  nameTh   String @map("name_th")
+  nameEn   String @map("name_en")
+  /// Decimal places a quantity in this unit carries: kg 3 (to the gram), piece 0 (ADR-0019).
+  decimals Int
+
+  baseOf     Item[]             @relation("ItemBaseUnit")
+  purchaseOf ItemPurchaseUnit[]
+
+  @@map("units")
+}
+
+/// Anything the company stocks (docs/GLOSSARY.md). Deactivated, never deleted.
+model Item {
+  id             String   @id @default(uuid()) @db.Uuid
+  /// Unique and stable: set once, never changed.
+  code           String   @unique
+  nameTh         String   @map("name_th")
+  nameEn         String   @map("name_en")
+  baseUnitCode   String   @map("base_unit_code")
+  baseUnit       Unit     @relation("ItemBaseUnit", fields: [baseUnitCode], references: [code])
+  variableWeight Boolean  @default(false) @map("variable_weight")
+  shelfLifeDays  Int      @map("shelf_life_days")
+  active         Boolean  @default(true)
+  /// The master data version of this item's latest change.
+  version        BigInt
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  purchaseUnits ItemPurchaseUnit[]
+
+  @@map("items")
+}
+
+/// A unit the item is bought in, and how many base units one of it is (1 case = 20 kg).
+model ItemPurchaseUnit {
+  itemId   String  @map("item_id") @db.Uuid
+  item     Item    @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  unitCode String  @map("unit_code")
+  unit     Unit    @relation(fields: [unitCode], references: [code])
+  factor   Decimal @db.Decimal(18, 6)
+
+  @@id([itemId, unitCode])
+  @@map("item_purchase_units")
+}

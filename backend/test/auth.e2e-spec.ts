@@ -222,7 +222,7 @@ describe('signing in', () => {
       expect(ok.body.user).toMatchObject({
         email: ADMIN,
         roles: ['admin'],
-        permissions: ['user:read', 'user:manage', 'audit:read'],
+        permissions: ['user:read', 'user:manage', 'audit:read', 'item:manage'],
         mfaEnabled: true,
       });
       const [entry] = await auditFor('e2e-admin-mfa-ok-01');

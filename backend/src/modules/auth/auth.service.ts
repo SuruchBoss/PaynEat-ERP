@@ -28,6 +28,7 @@ import type { AuthenticatedUser } from '../../core/security/current-user';
 import { MetricsService } from '../../core/telemetry/metrics.service';
 import { GENERIC_EVENT, TelemetryLogger } from '../../core/telemetry/telemetry-logger';
 import { AuditService } from '../audit/audit.service';
+import { demoSignInAllowed } from './domain/demo-mode';
 import { passwordProblems } from './domain/password-policy';
 import type {
   AuthTokens,
@@ -65,7 +66,7 @@ export class AuthService {
   async login(dto: LoginDto, meta: ClientMeta): Promise<LoginSession | MfaChallenge> {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
-      select: { id: true, passwordHash: true, status: true, lockedUntil: true },
+      select: { id: true, passwordHash: true, status: true, lockedUntil: true, demo: true },
     });
 
     // Burn roughly the same time whether or not the account exists, so response timing
@@ -84,6 +85,7 @@ export class AuthService {
     }
 
     await this.refuseIfDisabled(user.id, user.status, meta);
+    await this.refuseIfDemoAccount(user.id, user.demo, meta);
 
     // A correct password is not a session when the account owes a second factor. An
     // account that must have one but has not enrolled gets a challenge too, so it can
@@ -106,7 +108,7 @@ export class AuthService {
     const payload = await this.tokens.verifyChallenge(challengeToken);
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
-      select: { id: true, status: true, mfaEnabled: true, lockedUntil: true },
+      select: { id: true, status: true, mfaEnabled: true, lockedUntil: true, demo: true },
     });
     if (!user)
       throw new AuthenticationError('SIGN_IN_EXPIRED', 'Sign-in has expired. Start again.');
@@ -130,6 +132,7 @@ export class AuthService {
     }
 
     await this.refuseIfDisabled(user.id, user.status, meta);
+    await this.refuseIfDemoAccount(user.id, user.demo, meta);
     return this.completeLogin(user.id, meta, 'Signed in with a second factor');
   }
 
@@ -146,10 +149,11 @@ export class AuthService {
     if (subject.viaChallenge) {
       const user = await this.prisma.user.findUniqueOrThrow({
         where: { id: subject.userId },
-        select: { status: true, lockedUntil: true },
+        select: { status: true, lockedUntil: true, demo: true },
       });
       await this.refuseIfLocked(subject.userId, user.lockedUntil, meta);
       await this.refuseIfDisabled(subject.userId, user.status, meta);
+      await this.refuseIfDemoAccount(subject.userId, user.demo, meta);
     }
 
     const codes = await this.mfa.activate(subject.userId, code, meta);
@@ -361,6 +365,24 @@ export class AuthService {
     if (status === UserStatus.ACTIVE) return;
     await this.signInFailed(userId, 'the account is disabled', meta);
     throw new AuthenticationError('ACCOUNT_DISABLED', 'Account is disabled');
+  }
+
+  /**
+   * A demo seed account (published password) signs in only where ERP_DEMO=1 (#5). Checked
+   * at every sign-in, not only at start, because an API that was already running when
+   * someone seeded would otherwise let them straight in until its next restart.
+   */
+  private async refuseIfDemoAccount(
+    userId: string,
+    isDemoAccount: boolean,
+    meta: ClientMeta,
+  ): Promise<void> {
+    if (demoSignInAllowed(isDemoAccount, this.config.app.demo)) return;
+    await this.signInFailed(userId, 'a demo account, and this installation is not a demo', meta);
+    throw new AuthenticationError(
+      'DEMO_ACCOUNTS_OFF',
+      'Demo accounts sign in only on a demo installation (ERP_DEMO=1)',
+    );
   }
 
   /** Counts a wrong password or code, locking the account once it reaches the limit. */

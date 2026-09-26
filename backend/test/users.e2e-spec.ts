@@ -121,7 +121,7 @@ describe('user administration', () => {
     expect(res.body.map((r: Body) => r.key)).toEqual(ROLES);
     expect(res.body[0]).toEqual({
       key: 'admin',
-      permissions: ['user:read', 'user:manage', 'audit:read'],
+      permissions: ['user:read', 'user:manage', 'audit:read', 'item:manage'],
       requiresSecondFactor: true,
     });
     for (const role of res.body.slice(1)) {

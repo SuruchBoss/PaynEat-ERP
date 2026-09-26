@@ -24,12 +24,13 @@ describe('roles and permissions (ADR-0008)', () => {
     expect(Object.keys(ROLE_PERMISSIONS).sort()).toEqual([...ROLE_KEYS].sort());
   });
 
-  it('lets only admin manage users and read the audit trail', () => {
+  it('lets only admin manage users and items and read the audit trail', () => {
     for (const role of ROLE_KEYS) {
       const held = permissionsFor([role]);
       const isAdmin = role === 'admin';
       expect(held.includes(Permission.USER_MANAGE)).toBe(isAdmin);
       expect(held.includes(Permission.AUDIT_READ)).toBe(isAdmin);
+      expect(held.includes(Permission.ITEM_MANAGE)).toBe(isAdmin);
     }
   });
 
@@ -38,6 +39,7 @@ describe('roles and permissions (ADR-0008)', () => {
       Permission.USER_READ,
       Permission.USER_MANAGE,
       Permission.AUDIT_READ,
+      Permission.ITEM_MANAGE,
     ]);
     expect(permissionsFor([])).toEqual([]);
   });

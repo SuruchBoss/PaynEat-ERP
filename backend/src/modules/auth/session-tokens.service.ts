@@ -18,6 +18,9 @@ import type { RootConfig } from '../../core/config/configuration';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { CryptoService } from '../../core/security/crypto.service';
 import type { AuthTokens } from './dto/auth.dto';
+import type { ClientMeta } from '../../core/http/client-meta';
+
+export type { ClientMeta };
 
 export interface AccessTokenPayload {
   sub: string;
@@ -40,11 +43,6 @@ export interface MfaChallengePayload {
   typ: typeof MFA_CHALLENGE_TOKEN_TYPE;
   /** Whether the holder has a second factor to present, or still has to enrol. */
   enrolled: boolean;
-}
-
-export interface ClientMeta {
-  ipAddress?: string;
-  userAgent?: string;
 }
 
 /** Why a session ended. Only `ROTATED` leaves its last access token usable until expiry. */

@@ -16,6 +16,8 @@ export const Permission = {
   USER_READ: 'user:read',
   USER_MANAGE: 'user:manage',
   AUDIT_READ: 'audit:read',
+  /** Create, edit, deactivate and reactivate items (#5). Reading needs no permission. */
+  ITEM_MANAGE: 'item:manage',
 } as const;
 
 export type PermissionKey = (typeof Permission)[keyof typeof Permission];
@@ -40,7 +42,13 @@ export type Role = (typeof ROLE_KEYS)[number];
 /** What each role may do today. Grows with every issue that adds endpoints. */
 export const ROLE_PERMISSIONS: Record<Role, readonly PermissionKey[]> = {
   // ADR-0008: manage users, roles, locations, configuration; reopen closed periods.
-  admin: [Permission.USER_READ, Permission.USER_MANAGE, Permission.AUDIT_READ],
+  // Master data is configuration: only the admin maintains items (#5).
+  admin: [
+    Permission.USER_READ,
+    Permission.USER_MANAGE,
+    Permission.AUDIT_READ,
+    Permission.ITEM_MANAGE,
+  ],
   // ADR-0008: create and send purchase orders; manage suppliers (from #6 and #10).
   purchasing: [],
   // ADR-0008: approve purchase orders above the approval threshold (from #10).

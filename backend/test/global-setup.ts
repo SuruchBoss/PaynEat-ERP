@@ -26,6 +26,9 @@ export default async function globalSetup(): Promise<void> {
   // tested by booting an app with a low one (auth.e2e-spec.ts).
   process.env.THROTTLE_LIMIT = '100000';
   process.env.AUTH_THROTTLE_LIMIT = '100000';
+  // On purpose: the suite seeds the demo chain and signs in with its accounts, which only
+  // a demo installation allows (#5). Specs that test the refusals boot with ERP_DEMO=0.
+  process.env.ERP_DEMO = '1';
 
   execFileSync('npx', ['prisma', 'migrate', 'deploy'], {
     cwd: process.cwd(),

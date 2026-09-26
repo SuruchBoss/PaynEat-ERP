@@ -8,6 +8,8 @@ import { PassportModule } from '@nestjs/passport';
 import { CryptoService } from '../../core/security/crypto.service';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { DemoInstallationService } from './demo-installation.service';
+import { InstallationController } from './installation.controller';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { JwtStrategy } from './jwt.strategy';
 import { MfaService } from './mfa.service';
@@ -25,9 +27,10 @@ import { UsersService } from './users.service';
     PassportModule.register({ defaultStrategy: 'jwt', session: false }),
     JwtModule.register({}),
   ],
-  controllers: [AuthController, UsersController],
+  controllers: [AuthController, UsersController, InstallationController],
   providers: [
     AuthService,
+    DemoInstallationService,
     MfaService,
     SessionTokensService,
     UserContextService,

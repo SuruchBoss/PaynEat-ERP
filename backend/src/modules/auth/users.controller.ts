@@ -18,7 +18,7 @@ import type { Request } from 'express';
 import { CurrentUser, type AuthenticatedUser } from '../../core/security/current-user';
 import { RequirePermissions } from '../../core/security/decorators';
 import { Permission } from '../../core/security/permissions';
-import { clientMeta } from './client-meta';
+import { clientMeta } from '../../core/http/client-meta';
 import { CreateUserDto, UserRoleParamsDto, type RoleView, type UserView } from './dto/users.dto';
 import { UsersService } from './users.service';
 

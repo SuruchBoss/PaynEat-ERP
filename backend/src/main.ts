@@ -3,6 +3,7 @@
 
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { StartRefusedError } from './core/errors/start-refused.error';
 import { configureHttp } from './core/http/http-setup';
 import { TelemetryLogger, GENERIC_EVENT } from './core/telemetry/telemetry-logger';
 
@@ -20,4 +21,8 @@ async function bootstrap(): Promise<void> {
   });
 }
 
-void bootstrap();
+bootstrap().catch((error: unknown) => {
+  // A refusal has already been written as a CRITICAL line saying how to fix it.
+  if (error instanceof StartRefusedError) process.exit(1);
+  throw error;
+});

@@ -23,6 +23,12 @@ describe('validateEnv', () => {
     expect(env.AUTH_THROTTLE_LIMIT).toBe(10);
     expect(env.AUTH_MAX_FAILED_ATTEMPTS).toBe(5);
     expect(env.PASSWORD_MIN_LENGTH).toBe(12);
+    expect(env.ERP_DEMO).toBe('0');
+  });
+
+  it('accepts only 0 or 1 for ERP_DEMO', () => {
+    expect(validateEnv({ ...base, ERP_DEMO: '1' }).ERP_DEMO).toBe('1');
+    expect(() => validateEnv({ ...base, ERP_DEMO: 'yes' })).toThrow(/ERP_DEMO must be 0 or 1/);
   });
 
   it('refuses to boot without a database', () => {

@@ -41,6 +41,20 @@ export interface CreateTestAppOptions {
   controllers?: Type<unknown>[];
 }
 
+/** The app refused to start (or failed to); carries every line it wrote before that. */
+export class TestAppStartError extends Error {
+  constructor(
+    readonly cause: unknown,
+    readonly rawLogs: string[],
+  ) {
+    super(`the app did not start: ${cause instanceof Error ? cause.message : String(cause)}`);
+  }
+
+  logs(): LogLine[] {
+    return this.rawLogs.map((line) => JSON.parse(line) as LogLine);
+  }
+}
+
 export async function createTestApp(options: CreateTestAppOptions = {}): Promise<TestContext> {
   const previous: Record<string, string | undefined> = {};
   for (const [key, value] of Object.entries(options.env ?? {})) {
@@ -65,7 +79,13 @@ export async function createTestApp(options: CreateTestAppOptions = {}): Promise
 
   const app = moduleRef.createNestApplication({ bufferLogs: true });
   configureHttp(app);
-  await app.init();
+  try {
+    await app.init();
+  } catch (error) {
+    await app.close().catch(() => undefined);
+    restoreEnv();
+    throw new TestAppStartError(error, rawLogs);
+  }
 
   return {
     app,

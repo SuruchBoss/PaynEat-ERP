@@ -6,6 +6,9 @@
  *
  * EVALUATION ONLY — never a real installation. The chain is invented and refers to no
  * real company (CLAUDE.md), and every credential below is published in this repository.
+ * So it runs only with ERP_DEMO=1 and never under NODE_ENV=production, and it marks every
+ * account it creates as a demo account: a production API refuses to start while one is
+ * enabled without ERP_DEMO=1, and refuses their sign-in (#5, `domain/demo-mode.ts`).
  * Today it creates the company and one user per role (#4); later tickets extend it with
  * the plant, three branches, two suppliers, items and the whole supplier-to-plate path,
  * so that one command still builds everything.
@@ -18,7 +21,8 @@
 import 'dotenv/config';
 import { createCipheriv, createHash, randomBytes } from 'node:crypto';
 import { hash as argonHash } from '@node-rs/argon2';
-import { PrismaClient, type RoleKey } from '@prisma/client';
+import { AuditAction, MasterDataAction, Prisma, PrismaClient, type RoleKey } from '@prisma/client';
+import { seedRefusal } from '../src/modules/auth/domain/demo-mode';
 import { normaliseRecoveryCode } from '../src/modules/auth/domain/totp';
 
 export const DEMO_COMPANY = {
@@ -69,6 +73,85 @@ export const DEMO_USERS: readonly DemoUser[] = [
     displayName: 'Demo branch manager',
   },
   { role: 'finance', email: 'finance@demo-chicken.example', displayName: 'Demo finance' },
+];
+
+export interface DemoItem {
+  code: string;
+  nameTh: string;
+  nameEn: string;
+  baseUnitCode: string;
+  variableWeight: boolean;
+  shelfLifeDays: number;
+  purchaseUnits: Array<{ unitCode: string; factor: string }>;
+}
+
+/**
+ * The chain's items (#5): whole birds bought by the case and weighed, the pieces the
+ * plant cuts them into, the frame left over, and what the branches fry them in. Codes
+ * and figures follow the ExcelToGo draft template (docs/integrations/exceltogo).
+ */
+export const DEMO_ITEMS: readonly DemoItem[] = [
+  {
+    code: 'WHOLE-CHICKEN',
+    nameTh: 'ไก่ทั้งตัว',
+    nameEn: 'Whole chicken',
+    baseUnitCode: 'kg',
+    variableWeight: true,
+    shelfLifeDays: 5,
+    purchaseUnits: [{ unitCode: 'case', factor: '20' }],
+  },
+  ...(
+    [
+      ['CHICKEN-BREAST', 'อกไก่', 'Chicken breast'],
+      ['CHICKEN-THIGH', 'สะโพกไก่', 'Chicken thigh'],
+      ['CHICKEN-DRUMSTICK', 'น่องไก่', 'Chicken drumstick'],
+      ['CHICKEN-WING', 'ปีกไก่', 'Chicken wing'],
+    ] as const
+  ).map(([code, nameTh, nameEn]) => ({
+    code,
+    nameTh,
+    nameEn,
+    baseUnitCode: 'piece',
+    variableWeight: false,
+    shelfLifeDays: 4,
+    purchaseUnits: [],
+  })),
+  {
+    code: 'CHICKEN-FRAME',
+    nameTh: 'โครงไก่',
+    nameEn: 'Chicken frame',
+    baseUnitCode: 'kg',
+    variableWeight: true,
+    shelfLifeDays: 3,
+    purchaseUnits: [],
+  },
+  {
+    code: 'FLOUR',
+    nameTh: 'แป้งชุบทอด',
+    nameEn: 'Batter flour',
+    baseUnitCode: 'kg',
+    variableWeight: false,
+    shelfLifeDays: 180,
+    purchaseUnits: [{ unitCode: 'bag', factor: '25' }],
+  },
+  {
+    code: 'FRYING-OIL',
+    nameTh: 'น้ำมันทอด',
+    nameEn: 'Frying oil',
+    baseUnitCode: 'l',
+    variableWeight: false,
+    shelfLifeDays: 365,
+    purchaseUnits: [{ unitCode: 'tin', factor: '18' }],
+  },
+  {
+    code: 'SEASONING',
+    nameTh: 'ผงปรุงรส',
+    nameEn: 'Seasoning',
+    baseUnitCode: 'kg',
+    variableWeight: false,
+    shelfLifeDays: 365,
+    purchaseUnits: [{ unitCode: 'bag', factor: '5' }],
+  },
 ];
 
 /** A refusal, not a crash: printed as a message with no stack trace. (Cwork.) */
@@ -148,6 +231,7 @@ async function seedUsers(prisma: PrismaClient, key: Buffer): Promise<void> {
           };
     const state = {
       displayName: demo.displayName,
+      demo: true,
       passwordHash,
       status: 'ACTIVE' as const,
       locale: 'th',
@@ -170,7 +254,83 @@ async function seedUsers(prisma: PrismaClient, key: Buffer): Promise<void> {
   }
 }
 
+/**
+ * Creates the demo items, or puts back any an evaluator changed. Like the API, every
+ * create or update takes the next master data version and appends its change, so a POS
+ * pulling from version 0 sees the demo items; an item already as described is left alone
+ * and keeps its version. (Mirrors ItemsService, which a script cannot boot.)
+ */
+async function seedItems(prisma: PrismaClient): Promise<number> {
+  let changed = 0;
+  for (const demo of DEMO_ITEMS) {
+    const wanted = {
+      nameTh: demo.nameTh,
+      nameEn: demo.nameEn,
+      baseUnitCode: demo.baseUnitCode,
+      variableWeight: demo.variableWeight,
+      shelfLifeDays: demo.shelfLifeDays,
+      active: true,
+    };
+    await prisma.$transaction(async (tx) => {
+      const existing = await tx.item.findUnique({
+        where: { code: demo.code },
+        include: { purchaseUnits: { orderBy: { unitCode: 'asc' } } },
+      });
+      const same =
+        existing &&
+        Object.entries(wanted).every(([k, v]) => existing[k as keyof typeof wanted] === v) &&
+        JSON.stringify(existing.purchaseUnits.map((p) => [p.unitCode, p.factor.toFixed()])) ===
+          JSON.stringify(demo.purchaseUnits.map((p) => [p.unitCode, p.factor]));
+      if (same) return;
+
+      const [{ version }] = await tx.$queryRaw<{ version: bigint }[]>`
+        INSERT INTO master_data_version (id, version) VALUES (1, 1)
+        ON CONFLICT (id) DO UPDATE SET version = master_data_version.version + 1
+        RETURNING version
+      `;
+      const item = existing
+        ? await tx.item.update({ where: { id: existing.id }, data: { ...wanted, version } })
+        : await tx.item.create({ data: { code: demo.code, ...wanted, version } });
+      await tx.itemPurchaseUnit.deleteMany({ where: { itemId: item.id } });
+      await tx.itemPurchaseUnit.createMany({
+        data: demo.purchaseUnits.map((p) => ({ itemId: item.id, ...p })),
+      });
+
+      const snapshot = {
+        id: item.id,
+        itemCode: item.code,
+        ...wanted,
+        purchaseUnits: demo.purchaseUnits,
+      };
+      await tx.masterDataChange.create({
+        data: {
+          version,
+          entityType: 'item',
+          entityId: item.id,
+          entityCode: item.code,
+          action: existing ? MasterDataAction.updated : MasterDataAction.created,
+          data: { ...snapshot, version: Number(version) } as Prisma.InputJsonValue,
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          action: existing ? AuditAction.UPDATE : AuditAction.CREATE,
+          entityType: 'Item',
+          entityId: item.id,
+          summary: `Demo seed ${existing ? 'restored' : 'created'} item ${item.code} (${item.nameEn})`,
+          changes: snapshot as Prisma.InputJsonValue,
+        },
+      });
+      changed += 1;
+    });
+  }
+  return changed;
+}
+
 async function main(): Promise<void> {
+  const refusal = seedRefusal({ erpDemo: process.env.ERP_DEMO, nodeEnv: process.env.NODE_ENV });
+  if (refusal) throw new SeedRefused(`${refusal}\nNothing has been written.`);
+
   console.log('Seeding PaynEat ERP with DEMO DATA — evaluation only, never a real installation.');
   const prisma = new PrismaClient();
   try {
@@ -185,6 +345,12 @@ async function main(): Promise<void> {
     console.log(`Demo company ready: ${company.code} — ${company.name}`);
 
     await seedUsers(prisma, key);
+    const changedItems = await seedItems(prisma);
+    console.log(
+      changedItems === 0
+        ? `Demo items ready: ${DEMO_ITEMS.length}, already as described (no new master data version)`
+        : `Demo items ready: ${DEMO_ITEMS.length}, ${changedItems} created or put back (one master data version each)`,
+    );
     console.log(`\nDemo accounts (password for all: ${DEMO_PASSWORD}):`);
     for (const demo of DEMO_USERS) {
       console.log(`  ${demo.role.padEnd(20)} ${demo.email}`);

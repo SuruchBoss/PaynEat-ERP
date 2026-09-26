@@ -1,0 +1,39 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
+// The master data change log — owned by the master-data module (#5). Every create and update
+// of master data (items now; locations, menu and recipes later) appends one change with the
+// next company-wide version. A POS instance pulls the changes since the last version it
+// applied (ADR-0002).
+
+enum MasterDataAction {
+  created
+  updated
+}
+
+/// A single row (id = 1) holding the latest version handed out. A writer increments it with
+/// `UPDATE … RETURNING` inside its own transaction, which holds the row lock until commit: the
+/// next writer waits, so versions are committed in the order they are handed out and a reader
+/// never sees version N while an earlier version is still uncommitted.
+model MasterDataVersion {
+  id      Int    @id @default(1)
+  version BigInt @default(0)
+
+  @@map("master_data_version")
+}
+
+/// Append-only (a trigger refuses UPDATE and DELETE).
+model MasterDataChange {
+  version    BigInt           @id
+  /// `item` for now; later master data adds its own kinds.
+  entityType String           @map("entity_type")
+  entityId   String           @map("entity_id") @db.Uuid
+  entityCode String           @map("entity_code")
+  action     MasterDataAction
+  /// The whole record after the change, so a reader never needs a second request.
+  data       Json
+  changedAt  DateTime         @default(now()) @map("changed_at") @db.Timestamptz(3)
+
+  @@index([entityType, entityId])
+  @@map("master_data_changes")
+}
