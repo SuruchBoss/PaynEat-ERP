@@ -162,6 +162,9 @@ using a new domain concept anywhere else.
 | Recovery code | รหัสกู้คืน | A single-use code that works in place of the second factor when the phone is lost. Shown once, stored only as a digest. |
 | Audit trail | บันทึกการตรวจสอบ | The append-only record of who did what and when — user and role changes, sign-ins and refused sign-ins — each with the request's correlation id. Never updated or deleted. |
 | Demo account | บัญชีเดโม | A user the demo seed creates with a published password (and, for `admin`, a published second-factor secret), marked as a demo account by the seed — never recognised by its email. Signs in only on a demo installation. Evaluation only. |
+| Installable console | console ที่ติดตั้งลงเครื่องได้ | The web console installed from the browser as a Progressive Web App on a phone, tablet or PC. Caches only the application shell, never data (ADR-0020). |
+| First-run setup | การตั้งค่าครั้งแรก | The console's guided setup on an empty database: company, first admin with a second factor, first locations. No command line (ADR-0020, post-v1). |
+| PaynEat Cloud | PaynEat Cloud | The paid hosting service that runs the same Community software for a chain (ADR-0015, ADR-0020). A chain can always export and move to its own server. |
 | Demo installation | ระบบเดโม | An installation started with `ERP_DEMO=1`: the only kind where the demo seed runs and demo accounts sign in. Says so in the log at every start and on every console screen. Without the flag, a production API refuses to start while a demo account is enabled. |
 | Approval threshold | เกณฑ์วงเงินที่ต้องอนุมัติ | The document value above which a second person must approve. Configuration, not code. |
 | Segregation of duties | การแยกหน้าที่ | Nobody approves a document they created, whatever roles they hold. |

@@ -90,6 +90,7 @@ The "why" matters more than the "what" in an ERP, so every decision is written d
 | [0017](docs/adr/0017-stock-counts.md) | Stock counts are blind and compared as of a count time; plants count per lot, branches per item, and a branch difference is allocated to lots by a rule you can check by hand |
 | [0018](docs/adr/0018-period-close-and-business-time.md) | Periods close by business date per location; a sale that arrives after its period closed still posts, on the first open day and marked late; reopening is audited and re-exports are revisions |
 | [0019](docs/adr/0019-exact-quantities-and-conversion-rounding.md) | Quantities and factors are exact decimals, never floating point; a factor is always above zero; converting to the base unit rounds once, half away from zero, to that unit's decimals; an item's base unit never changes |
+| [0020](docs/adr/0020-distribution-and-installation.md) | The console installs from the browser on phones, tablets and PCs (v1, caches no data); after v1 a chain installs the server without a developer (first-run setup, one-command installer, backups and upgrades from the console); PaynEat Cloud hosting after the pilot; self-hosting always supported |
 
 Domain vocabulary, in English and Thai: [`docs/GLOSSARY.md`](docs/GLOSSARY.md).
 
@@ -112,10 +113,15 @@ The boundaries between them are in [ADR-0011](docs/adr/0011-ecosystem-and-sherwh
 3. Transfers and requisitions
 4. POS side: outbox, connected mode, read-only master data (in the POS repository)
 5. Traceability and recall, stock counts, period close
-6. Quality: tests, demo data, documentation, a walkthrough video
+6. Quality: tests, demo data, documentation, a walkthrough video, and a console that installs from the
+   browser on phones, tablets and PCs
 
-After the first release: a versioned public API, scoped API tokens and outbound webhooks, so chains
-can build their own add-ons as separate services ([ADR-0013](docs/adr/0013-extension-by-integration.md)).
+After the first release, in order: a branch stock-balance feed to the POS; installing the server
+without a developer (first-run setup in the console, a one-command installer, backups and upgrades from
+the console, [ADR-0020](docs/adr/0020-distribution-and-installation.md)); import templates for moving a
+chain's data in; a versioned public API, scoped API tokens and outbound webhooks, so chains can build
+their own add-ons as separate services ([ADR-0013](docs/adr/0013-extension-by-integration.md)); then a
+pilot chain, and PaynEat Cloud hosting for chains without IT staff.
 
 Progress is tracked in [GitHub Issues](https://github.com/SuruchBoss/PaynEat-ERP/issues).
 

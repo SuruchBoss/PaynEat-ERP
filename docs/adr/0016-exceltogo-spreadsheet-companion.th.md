@@ -1,6 +1,6 @@
 # ADR-0016: ExcelToGo เข้าร่วมระบบนิเวศในฐานะเครื่องมือสเปรดชีต
 
-- **สถานะ:** ยอมรับแล้ว
+- **สถานะ:** ยอมรับแล้ว — ข้อ 6 (รูปแบบการติดตั้ง) ถูกขยายโดย [ADR-0020](0020-distribution-and-installation.th.md)
 - **วันที่:** 2026-09-26
 - **English:** [0016-exceltogo-spreadsheet-companion.md](0016-exceltogo-spreadsheet-companion.md)
 
