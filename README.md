@@ -1,6 +1,11 @@
 <div align="center">
 
-# PaynEat ERP
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/payneat-erp-logo-dark.svg">
+    <img src="docs/brand/payneat-erp-logo.svg" alt="PaynEat ERP" height="56">
+  </picture>
+</h1>
 
 **Open-source supply-side ERP for a restaurant chain that runs its own supply chain —
 from supplier to plant to branch to plate, with every lot traceable.**
@@ -22,8 +27,10 @@ from supplier to plant to branch to plate, with every lot traceable.**
 > own in-transit location), suppliers, and the versioned master data change log a POS will pull
 > from — and the **stock ledger**: lots, ledger entries nothing can change, opening balances that post
 > in one transaction and are corrected only by reversal, and stock on hand as of any date, with its
-> value. No purchasing, production or transfer document exists yet; they are being built in public,
-> one GitHub issue at a time. This README says only what is true today and will grow as things work.
+> value. The console works on a desktop, a tablet (the menu narrows to icons) and a phone (each table
+> row becomes a card), in light and dark mode. No purchasing, production or transfer document exists
+> yet; they are being built in public, one GitHub issue at a time. This README says only what is true
+> today and will grow as things work.
 
 ## What this is
 

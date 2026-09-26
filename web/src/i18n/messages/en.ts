@@ -5,6 +5,8 @@ import type { Messages } from './th';
 
 export const en: Messages = {
   'app.name': 'PaynEat ERP',
+  'app.name.product': 'PaynEat',
+  'app.name.module': 'ERP',
 
   'shell.skipToContent': 'Skip to main content',
   'shell.mainNavigation': 'Main navigation',
@@ -59,6 +61,12 @@ export const en: Messages = {
     'Something unexpected went wrong. Try again; if it keeps happening, tell your administrator and quote the correlation ID below.',
   'signIn.title': 'Sign in',
   'signIn.intro': 'Use the email and password your administrator gave you.',
+  'signIn.aside.lede':
+    "The back office of a restaurant chain — from purchasing and the plant to every branch's stock.",
+  'signIn.aside.audit': 'Every change is recorded in the audit log, with who made it and when.',
+  'signIn.aside.mfa': 'Administrators sign in with a second factor.',
+  'signIn.aside.exact':
+    'Quantities are kept exact, so stock and costs never drift through rounding.',
   'signIn.email': 'Email',
   'signIn.password': 'Password',
   'signIn.submit': 'Sign in',
@@ -123,6 +131,7 @@ export const en: Messages = {
   'users.column.actions': 'Actions',
   'users.noRoles': 'No roles yet',
   'users.never': 'Never',
+  'users.status.disabled': 'Disabled',
   'users.mfa.on': 'On',
   'users.mfa.off': 'Not used',
   'users.mfa.pending': 'To be set up at next sign-in',

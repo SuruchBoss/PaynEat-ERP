@@ -10,6 +10,8 @@
  */
 export const th = {
   'app.name': 'PaynEat ERP',
+  'app.name.product': 'PaynEat',
+  'app.name.module': 'ERP',
 
   'shell.skipToContent': 'ข้ามไปยังเนื้อหาหลัก',
   'shell.mainNavigation': 'เมนูหลัก',
@@ -60,6 +62,11 @@ export const th = {
     'เกิดข้อผิดพลาดที่ไม่คาดคิด ลองอีกครั้ง หากยังไม่ได้ ให้แจ้งผู้ดูแลระบบพร้อมรหัสอ้างอิงด้านล่าง',
   'signIn.title': 'เข้าสู่ระบบ',
   'signIn.intro': 'ใช้อีเมลและรหัสผ่านที่ผู้ดูแลระบบให้ไว้',
+  'signIn.aside.lede':
+    'ระบบหลังบ้านของเชนร้านอาหาร ตั้งแต่จัดซื้อวัตถุดิบ โรงงาน ไปจนถึงสต๊อกของทุกสาขา',
+  'signIn.aside.audit': 'ทุกการเปลี่ยนแปลงถูกบันทึกในบันทึกการตรวจสอบ ว่าใครทำและทำเมื่อไร',
+  'signIn.aside.mfa': 'ผู้ดูแลระบบต้องยืนยันตัวตนสองขั้นตอนทุกครั้งที่เข้าสู่ระบบ',
+  'signIn.aside.exact': 'เก็บปริมาณแบบตรงตัว สต๊อกและต้นทุนจึงไม่คลาดเพราะการปัดเศษ',
   'signIn.email': 'อีเมล',
   'signIn.password': 'รหัสผ่าน',
   'signIn.submit': 'เข้าสู่ระบบ',
@@ -120,6 +127,7 @@ export const th = {
   'users.column.actions': 'การจัดการ',
   'users.noRoles': 'ยังไม่มีบทบาท',
   'users.never': 'ยังไม่เคย',
+  'users.status.disabled': 'ปิดใช้งาน',
   'users.mfa.on': 'เปิดแล้ว',
   'users.mfa.off': 'ไม่ได้ใช้',
   'users.mfa.pending': 'ต้องตั้งค่าตอนเข้าสู่ระบบครั้งถัดไป',
