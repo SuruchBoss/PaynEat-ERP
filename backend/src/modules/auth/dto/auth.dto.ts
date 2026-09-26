@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 // Adapted from Cwork (backend/src/modules/auth/dto/auth.dto.ts), see NOTICE. The ERP has
 // no Swagger module yet, so Cwork's @ApiProperty annotations are left out.
 import { Transform } from 'class-transformer';

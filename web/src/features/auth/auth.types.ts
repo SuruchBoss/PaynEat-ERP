@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 // The shapes of the API's authentication answers (backend `modules/auth/dto/auth.dto.ts`).
 import type { Role } from '@/lib/access';
 import type { AuthTokens } from '@/lib/api-client';

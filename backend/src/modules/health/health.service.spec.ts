@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { HealthService } from './health.service';
 

@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 // Adapted from Cwork (web/eslint.config.js), see NOTICE.
 import js from '@eslint/js';
 import globals from 'globals';

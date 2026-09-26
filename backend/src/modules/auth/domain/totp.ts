@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 /**
  * TOTP (RFC 6238) over HOTP (RFC 4226), and the base32 alphabet authenticator
  * apps expect (RFC 4648, unpadded).

@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 import { Injectable } from '@nestjs/common';
 import { AuditAction, Prisma, UserStatus, type RoleKey } from '@prisma/client';
 import { ConflictError, NotFoundError } from '../../core/errors/domain.errors';

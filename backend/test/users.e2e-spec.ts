@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 /**
  * User administration (#4), end to end: the permissions guard proven on every route
  * (401 without a session, 403 with the wrong role, success with the right one), the

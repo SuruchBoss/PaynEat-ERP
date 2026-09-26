@@ -1,8 +1,14 @@
 PaynEat ERP
-Copyright 2026 SuruchBoss
+Copyright 2026 Suruch Chakrapeesirisuk
 
-This product includes software developed by SuruchBoss
+This product includes software developed by Suruch Chakrapeesirisuk
 (https://github.com/SuruchBoss).
+
+The codebase follows an open-core model (ADR-0015):
+- Everything outside the "ee/" directory is licensed under the Apache License,
+  Version 2.0 (see LICENSE).
+- The "ee/" directory is licensed under the Elastic License 2.0 (see ee/LICENSE).
+  It holds no code in v1.
 
 Original project repository: https://github.com/SuruchBoss/PaynEat-ERP
 Companion projects: https://github.com/SuruchBoss/PaynEat (point of sale)

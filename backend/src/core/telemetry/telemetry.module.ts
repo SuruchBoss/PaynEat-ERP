@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 import { Global, Module } from '@nestjs/common';
 import { MetricsService } from './metrics.service';
 import { LOG_SINK, stdoutSink, TelemetryLogger } from './telemetry-logger';

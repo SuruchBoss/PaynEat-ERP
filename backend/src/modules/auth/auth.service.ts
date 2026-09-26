@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 // Adapted from Cwork (backend/src/modules/auth/auth.service.ts), see NOTICE. Differences,
 // each deliberate:
 //  - One company, no organisation claim; no devices or session listing (not in #4).

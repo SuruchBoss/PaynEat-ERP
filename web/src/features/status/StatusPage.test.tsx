@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { LANGUAGE_STORAGE_KEY } from '@/i18n/catalogue';

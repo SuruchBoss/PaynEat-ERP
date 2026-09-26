@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 // Adapted from Cwork, see NOTICE: `issueTokens` (auth.service.ts), the challenge token
 // (mfa.service.ts) and the access-token checks (jwt.strategy.ts), gathered in one place
 // because three callers need them. One behaviour differs, on purpose: Cwork refuses

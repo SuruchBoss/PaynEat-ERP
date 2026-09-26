@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 import { useAuthStore } from '@/stores/auth.store';
 import { jsonResponse, mockApi, mockFetch, sentHeaders } from '@/test/render';
 import { api } from './api-client';

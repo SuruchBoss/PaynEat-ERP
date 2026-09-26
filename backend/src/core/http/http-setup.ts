@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 import { INestApplication, ValidationPipe, VersioningType } from '@nestjs/common';
 import compression from 'compression';
 import helmet from 'helmet';

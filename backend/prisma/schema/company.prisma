@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 // The company: the restaurant chain that owns this installation (docs/GLOSSARY.md).
 // One installation serves exactly one company (ADR-0001), so the table holds at
 // most one row: `singleton` is unique and a CHECK in the migration pins it to true.

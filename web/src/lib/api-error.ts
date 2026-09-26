@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 // Adapted from Cwork (web/src/lib/api-error.ts), see NOTICE. The ERP's error body is
 // `{ statusCode, code, message, details, path, requestId, timestamp }`.
 

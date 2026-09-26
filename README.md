@@ -236,5 +236,9 @@ to AI agents).
 
 ## License
 
-[Apache License 2.0](LICENSE), except the `ee/` directory once it exists, which will carry its own
-license (ADR-0015). If you build on this, keep the [NOTICE](NOTICE).
+Copyright 2026 Suruch Chakrapeesirisuk. Everything outside `ee/` is licensed under the
+[Apache License 2.0](LICENSE). The `ee/` directory is licensed under the
+[Elastic License 2.0](ee/LICENSE) and holds no code in v1 (ADR-0015). Every source file names its license
+with an SPDX identifier, which CI checks. Pull requests from forks are signed off under the Developer
+Certificate of Origin; see [CONTRIBUTING.md](CONTRIBUTING.md). If you build on this, keep the
+[NOTICE](NOTICE).

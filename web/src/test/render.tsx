@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 import { QueryClient } from '@tanstack/react-query';
 import { render } from '@testing-library/react';
 import axe from 'axe-core';

@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 // Adapted from Cwork (web/src/app/query-client.ts), see NOTICE.
 import { QueryClient } from '@tanstack/react-query';
 import { ApiError } from '@/lib/api-error';

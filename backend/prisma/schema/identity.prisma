@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 // Users, their roles and their sessions — owned by the auth module (#4).
 // Adapted from Cwork (backend/prisma/schema/identity.prisma), see NOTICE. The ERP serves
 // one company per installation (ADR-0001), so Cwork's organisation column is gone, and

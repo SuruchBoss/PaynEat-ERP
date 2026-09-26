@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 // Adapted from Cwork (backend/src/core/config/config.token.ts), see NOTICE.
 /**
  * The injection token, on its own, with nothing else in the file.

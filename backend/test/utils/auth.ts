@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 /**
  * Signing in from the end-to-end suite, through the real HTTP API only. The one thing
  * read from the database directly is the demo admin's last spent second-factor step, so

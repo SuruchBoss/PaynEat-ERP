@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 // @ts-check
 // Adapted from Cwork (backend/eslint.config.mjs), see NOTICE.
 import eslint from '@eslint/js';

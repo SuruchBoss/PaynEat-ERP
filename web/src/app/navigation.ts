@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 // Adapted from Cwork (web/src/app/navigation.ts), see NOTICE. Labels are message keys, so
 // navigation follows the chosen language; an item with a permission is shown only to
 // people who hold it.

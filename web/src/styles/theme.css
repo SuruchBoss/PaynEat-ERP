@@ -1,4 +1,9 @@
 /*
+ * Copyright 2026 Suruch Chakrapeesirisuk
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*
  * Design tokens. Adapted from Cwork (web/src/styles/theme.css), see NOTICE: the same
  * token names and dark-mode structure, with the ERP's own brand colour and a font stack
  * that needs no web-font download (the console makes no third-party requests).

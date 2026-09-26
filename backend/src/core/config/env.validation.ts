@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 // Adapted from Cwork (backend/src/core/config/env.validation.ts), see NOTICE.
 // Only the variables the ERP reads today are here; later tickets add their own
 // (the outbox arrives with #9).

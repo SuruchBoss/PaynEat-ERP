@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 // Adapted from Cwork (backend/src/modules/audit/audit.service.ts), see NOTICE. The
 // correlation id is taken from the request context rather than passed by every caller,
 // and there is a transactional variant for changes that must not exist without their entry.

@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 import type { Request } from 'express';
 import type { ClientMeta } from './session-tokens.service';
 

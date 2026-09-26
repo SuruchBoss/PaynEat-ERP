@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 // Adapted from Cwork (backend/src/core/http/request-context.middleware.ts), see NOTICE.
 // Cwork's version assigns the correlation id; this one also makes it ambient for
 // every log line of the request and writes `http.request.completed` with metrics.

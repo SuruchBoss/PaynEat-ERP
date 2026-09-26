@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 // Adapted from Cwork (backend/src/core/config/configuration.ts), see NOTICE.
 import type { LogFormat, Severity } from '../telemetry/domain/log-record';
 import { EnvironmentVariables } from './env.validation';

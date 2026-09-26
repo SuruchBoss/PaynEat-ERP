@@ -1,3 +1,6 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
 // Adapted from Cwork (web/src/stores/auth.store.ts), see NOTICE. Without Cwork's device
 // fields, and with enrolment steps: activation mid-sign-in returns the session together
 // with the recovery codes, and the sign-in page adopts it once the codes are shown.
