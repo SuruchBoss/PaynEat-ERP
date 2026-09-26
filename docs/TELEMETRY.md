@@ -19,6 +19,9 @@ SherWhyve after building lab stand-ins, where each point was a behaviour it had 
   failures, and that a request refused at authentication is still a `sales_event.rejected`.
 - `erp_master_data_last_pull_timestamp_seconds` is read from the database, not held in process memory.
 - New reason `credential_unknown`.
+- `app.log` added for lines that are not one of the catalogue's events (proposed by the ERP's first
+  implementation, #2).
+- On Kubernetes, the metrics port is named `metrics`, not `http`, because `/metrics` has its own port.
 - `sales_event.processed` and `sales_event.failed` added to the catalogue now, rather than by the ticket
   that implements them (ERP #17), so the investigator's playbooks can be written against them.
 
@@ -94,6 +97,7 @@ way with the same reasons. Nothing from the credential itself is logged.
 
 | Event | Emitted by | Severity |
 |---|---|---|
+| `app.log` | every service | Any line that is not one of the events below (start-up, shutdown, configuration). Never used for something the catalogue names |
 | `http.request.completed` | every API | `INFO`; `WARNING` for 4xx except 401/404; `ERROR` for 5xx |
 | `auth.sign_in.failed` | ERP, Cwork | `WARNING` |
 | `ledger.posting.succeeded` | ERP | `INFO` |
@@ -149,7 +153,8 @@ by Managed Service for Prometheus through a `PodMonitoring` resource. For that t
 
 - its pods carry the label `app: <app>`, with the same value as the `app` log label (`payneat-erp-api`,
   `payneat-pos-api`, `cwork-api`, …);
-- the container port that serves `/metrics` is named `http`.
+- the container port that serves `/metrics` is named `metrics`. Services serve `/metrics` on a port of
+  their own (the ERP uses `METRICS_PORT`, 9464), so it is never published with the API.
 
 This is a deployment convention, not a change to what services emit; a pod without it is simply not
 scraped, and an investigator then reports its metrics as missing, never as zero.
