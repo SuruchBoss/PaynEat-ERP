@@ -6,6 +6,7 @@ import clsx from 'clsx';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Brand } from '@/components/Brand';
 import { DemoBanner } from '@/components/DemoBanner';
 import { Icon } from '@/components/Icon';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
@@ -62,10 +63,7 @@ export function AppLayout() {
             {navOpen ? t('shell.closeNavigation') : t('shell.openNavigation')}
           </span>
         </button>
-        <span className="brand topbar__brand">
-          <img className="brand__logo" src="/favicon.svg" alt="" width={28} height={28} />
-          <span>{t('app.name')}</span>
-        </span>
+        <Brand className="topbar__brand" />
         {here && (
           <p className="topbar__trail">
             <span className="topbar__section">{t(here.section.headingKey)}</span>
@@ -84,10 +82,7 @@ export function AppLayout() {
         className={clsx('sidebar', navOpen && 'sidebar--open')}
         aria-label={t('shell.mainNavigation')}
       >
-        <span className="brand sidebar__brand">
-          <img className="brand__logo" src="/favicon.svg" alt="" width={30} height={30} />
-          <span>{t('app.name')}</span>
-        </span>
+        <Brand className="sidebar__brand" size={30} />
 
         <div className="sidebar__groups">
           {sections.map((section) => (

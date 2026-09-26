@@ -7,6 +7,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import QRCode from 'qrcode';
+import { Brand } from '@/components/Brand';
 import { DemoBanner } from '@/components/DemoBanner';
 import { Icon } from '@/components/Icon';
 import { ErrorCallout } from '@/components/ErrorCallout';
@@ -151,10 +152,7 @@ export function SignInPage() {
 
       <div className="auth-form">
         <header className="auth-screen__top">
-          <span className="brand">
-            <img className="brand__logo" src="/favicon.svg" alt="" width={28} height={28} />
-            <span>{t('app.name')}</span>
-          </span>
+          <Brand />
           <LanguageSwitcher />
         </header>
 
@@ -273,10 +271,7 @@ export function SignInPage() {
           not marketing: every change audited (ADR-0008), a second factor for administrators,
           quantities kept exact (ADR-0019). */}
       <aside className="auth-aside" aria-labelledby="auth-aside-lede">
-        <span className="brand">
-          <img className="brand__logo" src="/favicon.svg" alt="" width={30} height={30} />
-          <span>{t('app.name')}</span>
-        </span>
+        <Brand size={30} />
         <p className="auth-aside__lede" id="auth-aside-lede">
           {t('signIn.aside.lede')}
         </p>

@@ -10,6 +10,8 @@
  */
 export const th = {
   'app.name': 'PaynEat ERP',
+  'app.name.product': 'PaynEat',
+  'app.name.module': 'ERP',
 
   'shell.skipToContent': 'ข้ามไปยังเนื้อหาหลัก',
   'shell.mainNavigation': 'เมนูหลัก',
