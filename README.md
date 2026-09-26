@@ -18,7 +18,9 @@ from supplier to plant to branch to plate, with every lot traceable.**
 > [ADRs](docs/adr/README.md). The backend runs — health, structured logs and metrics — and so does
 > the web console, in Thai and English, with sign-in (a second factor for administrators), users,
 > the seven roles, an audit trail, and the item master: items, units, purchase units with exact
-> conversion factors, and the versioned master data change log a POS will pull from. No stock or
+> conversion factors, and the versioned master data change log a POS will pull from. The console
+> works on a desktop, a tablet (the menu narrows to icons) and a phone (each table row becomes a card),
+> in light and dark mode. No stock or
 > purchasing document exists yet; they are being built in public, one GitHub issue at a time. This README says only what is true today and will
 > grow as things work.
 

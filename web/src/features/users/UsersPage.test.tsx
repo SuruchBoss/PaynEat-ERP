@@ -75,6 +75,25 @@ describe('users and roles', () => {
     expect(await axeViolations()).toEqual([]);
   });
 
+  it('marks a disabled account on its row, in both languages', async () => {
+    const disabled = user({
+      id: '00000000-0000-4000-8000-00000000000c',
+      email: 'old.staff@demo-chicken.example',
+      displayName: 'Former staff',
+      roles: ['plant'],
+      status: 'DISABLED',
+    });
+    mockApi({ 'GET /users': () => jsonResponse(200, [ADMIN_ROW, disabled]) });
+    renderApp('/users', { as: ADMIN });
+
+    await screen.findByText('Former staff');
+    expect(rowOf('Former staff').getByText('ปิดใช้งาน')).toBeVisible();
+    expect(rowOf('Demo admin').queryByText('ปิดใช้งาน')).not.toBeInTheDocument();
+
+    await userEvent.setup().click(screen.getByRole('button', { name: 'English' }));
+    expect(rowOf('Former staff').getByText('Disabled')).toBeVisible();
+  });
+
   it('creates a user with roles, then shows them in the list', async () => {
     let created: UserView | null = null;
     const api = mockApi({
