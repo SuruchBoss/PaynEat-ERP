@@ -10,6 +10,11 @@ names**. A deployment on Google Cloud — where SherWhyve's live connectors run 
 metrics are identical everywhere; on Google Cloud, Managed Service for Prometheus collects them into
 Cloud Monitoring.
 
+## Clarification to v1.2 (2026-09-26, no change to what any service emits)
+
+- The label values of `erp_postings_total` are now written down (see "Metrics"). The ERP's first
+  implementation (#7) already emits exactly these; nothing is renamed.
+
 ## Changes in v1.2 (2026-09-26)
 
 All additive; nothing in v1.1 is renamed, so the ERP walking skeleton (#2) needs no change. Proposed by
@@ -142,6 +147,14 @@ Prometheus exposition at `GET /metrics` on each API, not exposed publicly.
 | `outbox_oldest_pending_age_seconds` | gauge | `app`, `destination` | POS, Cwork |
 
 `route` is the route template (`/documents/:id`), never the concrete path.
+
+`erp_postings_total` label values:
+
+- `document_type`: the ERP's stock document type, as stored: `opening_balance` and `reversal` so far.
+  Each ticket that adds a document type adds its value here.
+- `outcome`: `succeeded` or `refused`.
+- `rule`: the rule that refused the posting (for example `negative_stock_plant`, `expired_lot`,
+  `period_closed`); empty when `outcome` is `succeeded`.
 
 Values that describe the system rather than one process are **read from the database at scrape time**,
 never held in process memory. `erp_master_data_last_pull_timestamp_seconds` is the stored time of each

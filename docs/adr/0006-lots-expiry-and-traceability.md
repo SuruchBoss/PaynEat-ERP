@@ -1,6 +1,6 @@
 # ADR-0006: Lots, expiry, and honest traceability
 
-- **Status:** Accepted
+- **Status:** Accepted; decision 1 clarified 2026-09-26 (opening balances, #7)
 - **Date:** 2026-09-25
 - **ภาษาไทย:** [0006-lots-expiry-and-traceability.th.md](0006-lots-expiry-and-traceability.th.md)
 
@@ -16,6 +16,12 @@ the POS is deliberately lot-unaware so that it still works on its own (ADR-0002)
 1. **Lots are created only by goods receipts and production outputs.** Each lot has an item, an
    origin document, a unit cost (ADR-0004), and an expiry date computed as receipt or production date
    plus the item's shelf life.
+
+   *Clarification (2026-09-26, #7):* the **opening balance** that brings existing stock into the system
+   once, at go-live, also creates lots. That stock was received before the system existed, so its
+   receipt cannot be recorded, and the opening balance is its origin document. Its cost and expiry are
+   entered per line, because they are already known. After go-live, receipts and production outputs
+   remain the only documents that create lots.
 2. **Production records lot genealogy.** Every production output lot is linked to the input lots it
    consumed, with quantities. Forward and backward traces walk these links.
 3. **Expired lots are blocked.** A lot past its expiry date cannot be issued, consumed by production,
