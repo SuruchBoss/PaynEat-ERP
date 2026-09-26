@@ -5,6 +5,8 @@ import type { Messages } from './th';
 
 export const en: Messages = {
   'app.name': 'PaynEat ERP',
+  'app.name.product': 'PaynEat',
+  'app.name.module': 'ERP',
 
   'shell.skipToContent': 'Skip to main content',
   'shell.mainNavigation': 'Main navigation',

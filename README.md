@@ -1,6 +1,11 @@
 <div align="center">
 
-# PaynEat ERP
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/payneat-erp-logo-dark.svg">
+    <img src="docs/brand/payneat-erp-logo.svg" alt="PaynEat ERP" height="56">
+  </picture>
+</h1>
 
 **Open-source supply-side ERP for a restaurant chain that runs its own supply chain —
 from supplier to plant to branch to plate, with every lot traceable.**

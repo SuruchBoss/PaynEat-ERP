@@ -192,9 +192,38 @@ code {
   letter-spacing: -0.005em;
 }
 
-.brand__logo {
+/* The lot-tag mark (components/Brand.tsx): rust on the workspace, the accent on the rail. */
+.brand-mark {
   display: block;
-  border-radius: var(--radius-sm);
+  flex: none;
+}
+
+.brand-mark__tag {
+  fill: var(--brand);
+}
+
+.brand-mark__lines {
+  stroke: var(--surface);
+}
+
+.sidebar .brand-mark__tag,
+.auth-aside .brand-mark__tag {
+  fill: var(--rail-accent);
+}
+
+.sidebar .brand-mark__lines,
+.auth-aside .brand-mark__lines {
+  stroke: var(--rail);
+}
+
+.brand__module {
+  font-weight: 500;
+  color: var(--text-subtle);
+}
+
+.sidebar .brand__module,
+.auth-aside .brand__module {
+  color: var(--rail-muted);
 }
 
 /* On a desktop the rail carries the brand; the top bar shows it only on a phone. */

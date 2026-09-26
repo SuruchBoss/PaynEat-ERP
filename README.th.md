@@ -1,6 +1,11 @@
 <div align="center">
 
-# PaynEat ERP
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/payneat-erp-logo-dark.svg">
+    <img src="docs/brand/payneat-erp-logo.svg" alt="PaynEat ERP" height="56">
+  </picture>
+</h1>
 
 **ERP ฝั่งซัพพลายแบบ open source สำหรับเชนร้านอาหารที่คุมห่วงโซ่อุปทานเอง —
 ตั้งแต่ ซัพพลายเออร์ → โรงงาน → สาขา → จานบนโต๊ะลูกค้า และย้อนรอยได้ทุก lot**
