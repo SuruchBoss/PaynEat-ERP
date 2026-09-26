@@ -25,8 +25,12 @@ using a new domain concept anywhere else.
 | Term | ไทย | Meaning |
 |---|---|---|
 | Item | รายการสินค้า | Anything the company stocks: raw material, intermediate, or finished portion. |
+| Item code | รหัสสินค้า | The identifier of an item, in the same shape as a location code: uppercase letters, digits and hyphens, 2–32 characters. **Fixed once the item exists**: a POS mirrors items by it. A wrong code is replaced by creating a new item and deactivating the old one. |
+| Deactivated item | สินค้าที่ปิดใช้งาน | An item no longer offered for new documents. It keeps its history and can be reactivated; **items are never deleted**. |
+| Unit | หน่วยนับ | A unit of measure from the catalogue every installation ships with (kilogram, piece, case…). Each keeps its quantities to a fixed number of decimals: 3 for kg (grams), 0 for pieces and cases. |
 | Base unit | หน่วยหลัก | The single unit an item is **valued and balanced** in (e.g. kg for whole chicken, piece for a drumstick). |
 | Purchase unit | หน่วยซื้อ | A unit a supplier sells in, with a fixed conversion to the base unit (e.g. case = 10 kg). |
+| Conversion factor | ตัวคูณแปลงหน่วย | How many base units one purchase unit holds (case → 20 kg: factor 20). An exact decimal, **always greater than zero**, at most 6 decimals. Converting rounds once, half away from zero, to the base unit's decimals (ADR-0019). |
 | Variable-weight item | รายการน้ำหนักแปรผัน | An item whose pieces differ in weight (whole birds, fish, primal cuts). Movements record both weight and count. |
 | Secondary quantity | จำนวนหน่วยที่สอง | The count recorded alongside the base-unit weight for a variable-weight item (e.g. 12 birds = 21.6 kg). Informational for planning; never used for valuation. |
 | Shelf life | อายุการเก็บ | Days an item stays usable from receipt or production. Determines a lot's expiry date. |
@@ -134,7 +138,8 @@ using a new domain concept anywhere else.
 | Integration token | token ของการเชื่อมต่อ | An API token that belongs to an integration, not a person, and carries explicit scopes; it can never post or approve (ADR-0013). |
 | Webhook | webhook | An event the ERP sends to an add-on's URL from the outbox: signed, retried, with an idempotency key (ADR-0013). |
 | Add-on | ส่วนเสริม | A separate service that extends the ERP through the public API and webhooks; never code loaded into the ERP (ADR-0013). |
-| Master data version | เวอร์ชัน master data | A monotonically increasing number a POS instance uses to pull only what changed. |
+| Master data version | เวอร์ชัน master data | A company-wide number that strictly increases, with no gaps, by one for every create or update of master data. A POS instance uses it to pull only what changed. |
+| Master data change | รายการเปลี่ยนแปลง master data | One entry of the append-only change log: its version, the record's type, id and code, created or updated, and the whole record as it stood after the change. A POS instance replays them in version order. |
 
 ## Analysis · การวิเคราะห์
 
@@ -153,7 +158,8 @@ using a new domain concept anywhere else.
 | Second factor | การยืนยันตัวตนขั้นที่สอง | A time-based code from an authenticator app (TOTP), asked for after the password. Required for every account holding `admin`. |
 | Recovery code | รหัสกู้คืน | A single-use code that works in place of the second factor when the phone is lost. Shown once, stored only as a digest. |
 | Audit trail | บันทึกการตรวจสอบ | The append-only record of who did what and when — user and role changes, sign-ins and refused sign-ins — each with the request's correlation id. Never updated or deleted. |
-| Demo account | บัญชีเดโม | A user the demo seed creates with a published password (and, for `admin`, a published second-factor secret). Evaluation only. |
+| Demo account | บัญชีเดโม | A user the demo seed creates with a published password (and, for `admin`, a published second-factor secret), marked as a demo account by the seed — never recognised by its email. Signs in only on a demo installation. Evaluation only. |
+| Demo installation | ระบบเดโม | An installation started with `ERP_DEMO=1`: the only kind where the demo seed runs and demo accounts sign in. Says so in the log at every start and on every console screen. Without the flag, a production API refuses to start while a demo account is enabled. |
 | Approval threshold | เกณฑ์วงเงินที่ต้องอนุมัติ | The document value above which a second person must approve. Configuration, not code. |
 | Segregation of duties | การแยกหน้าที่ | Nobody approves a document they created, whatever roles they hold. |
 

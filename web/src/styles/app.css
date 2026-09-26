@@ -687,6 +687,12 @@ h1:focus {
   min-width: 220px;
 }
 
+.data-table code {
+  /* An item code is one word: the table scrolls sideways rather than breaking it. */
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+
 .badge--inline {
   margin-left: 8px;
   font-size: 0.8rem;

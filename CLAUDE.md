@@ -170,7 +170,10 @@ Run inside `web/` (the admin console), after `npm ci`:
 
 - The end-to-end run migrates, **wipes** and seeds its database first, so it refuses a database
   whose name has no `test` in it (`E2E_ALLOW_NON_TEST_DB=1` overrides, deliberately).
-- The demo seed is `npm run db:seed`; it is idempotent, and the end-to-end suite runs it.
+- The demo seed is `npm run db:seed`; it is idempotent, and the end-to-end suite runs it. It runs
+  only with `ERP_DEMO=1` and never under `NODE_ENV=production`, and it marks the accounts it creates
+  as demo accounts; the API refuses their sign-in without `ERP_DEMO=1`, and a production API refuses
+  to start while one is enabled (#5). CI, the e2e setup and README "Try it" set the flag on purpose.
 - CI also runs `docker compose up` exactly as the README's "Try it" section tells a person to, and
   checks `/health` (directly and through the console's nginx), the console's page and security
   headers, the logs and that metrics are not published.
@@ -180,7 +183,8 @@ Run inside `web/` (the admin console), after `npm ci`:
 - Logging goes through `TelemetryLogger` only (`console.*` is a lint error in `src/`); new flows add
   their events and metrics per `docs/TELEMETRY.md`.
 - Every route is authenticated unless it says `@Public()`, and every route that touches data declares
-  `@RequirePermissions(...)` (#4). A new permission goes into `core/security/permissions.ts`, is given
+  `@RequirePermissions(...)` (#4), except reads the issue opens to any signed-in user, which say so
+  in their controller's comment (items, units and the master data change log, #5). A new permission goes into `core/security/permissions.ts`, is given
   to the roles ADR-0008 says should have it, and is mirrored in `web/src/lib/access.ts`.
 - The end-to-end suite supplies its own test-only JWT secrets and encryption key when the environment
   has none; signing in as the demo admin uses the published second-factor secret

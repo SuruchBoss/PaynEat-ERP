@@ -54,10 +54,13 @@ function unitName(units: readonly UnitView[], code: string, language: Language):
   return language === 'th' ? unit.nameTh : unit.nameEn;
 }
 
-/** A factor as a person reads it: the API's exact string, trimmed of trailing zeros. */
+/**
+ * A typed factor as a person reads it, trimmed of trailing zeros, or null while it is not
+ * a positive decimal: the preview never shows a conversion the API would refuse.
+ */
 function readableFactor(factor: string): string | null {
   const trimmed = factor.trim();
-  if (!/^\d+(\.\d+)?$/.test(trimmed)) return null;
+  if (!/^\d+(\.\d+)?$/.test(trimmed) || !/[1-9]/.test(trimmed)) return null;
   return trimmed.includes('.') ? trimmed.replace(/\.?0+$/, '') : trimmed;
 }
 

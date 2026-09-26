@@ -164,6 +164,13 @@ describe('items and units', () => {
     await u.selectOptions(within(form).getByLabelText('หน่วยซื้อแถวที่ 1'), 'bag');
     await u.type(within(form).getByLabelText('กิโลกรัม ต่อ 1 หน่วยซื้อ (แถวที่ 1)'), '22.50');
     expect(within(form).getByText('1 ถุง = 22.5 กิโลกรัม')).toBeInTheDocument();
+    // No preview for a factor the API would refuse.
+    const factor = within(form).getByLabelText('กิโลกรัม ต่อ 1 หน่วยซื้อ (แถวที่ 1)');
+    await u.clear(factor);
+    await u.type(factor, '0.00');
+    expect(within(form).queryByText(/1 ถุง =/)).not.toBeInTheDocument();
+    await u.clear(factor);
+    await u.type(factor, '22.50');
     expect(await axeViolations()).toEqual([]);
 
     await u.click(within(form).getByRole('button', { name: 'สร้างสินค้า' }));
