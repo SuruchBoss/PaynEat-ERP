@@ -227,9 +227,20 @@ describe('signing in', () => {
 
       const replay = await request(ctx.server)
         .post(`${API}/auth/mfa/verify`)
+        .set('x-request-id', 'e2e-admin-replay-01')
         .send({ challengeToken: login.body.challengeToken, code });
       expect(replay.status).toBe(401);
       expect(replay.body.code).toBe('SECOND_FACTOR_REJECTED');
+
+      // One catalogue line says what happened; no extra app.log line about it (v1.2).
+      const lines = ctx
+        .logs()
+        .filter((l) => l.labels?.correlation_id === 'e2e-admin-replay-01')
+        .map((l) => [l.labels.event, l.message]);
+      expect(lines).toEqual([
+        ['auth.sign_in.failed', 'Sign-in refused: second-factor code already used'],
+        ['http.request.completed', 'POST /api/v1/auth/mfa/verify 401'],
+      ]);
     });
 
     it('signs in with a recovery code, once', async () => {

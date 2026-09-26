@@ -39,7 +39,7 @@ import { MfaService } from './mfa.service';
 import { SessionTokensService, type ClientMeta } from './session-tokens.service';
 import { UserContextService } from './user-context.service';
 
-/** The catalogue event for a refused sign-in (docs/TELEMETRY.md v1.1). */
+/** The catalogue event for a refused sign-in (docs/TELEMETRY.md v1.2). */
 export const SIGN_IN_FAILED_EVENT = 'auth.sign_in.failed';
 
 const invalidCredentials = () =>
@@ -116,8 +116,13 @@ export class AuthService {
       );
     }
 
-    if (!(await this.mfa.consumeFactor(user.id, code))) {
-      await this.registerFailedAttempt(user.id, 'wrong second-factor code', meta);
+    const outcome = await this.mfa.consumeFactor(user.id, code);
+    if (outcome !== 'accepted') {
+      await this.registerFailedAttempt(
+        user.id,
+        outcome === 'replayed' ? 'second-factor code already used' : 'wrong second-factor code',
+        meta,
+      );
       throw new AuthenticationError('SECOND_FACTOR_REJECTED', 'That code is not right');
     }
 

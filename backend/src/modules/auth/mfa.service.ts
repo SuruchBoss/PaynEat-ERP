@@ -8,7 +8,6 @@ import { BusinessRuleError } from '../../core/errors/domain.errors';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { CryptoService } from '../../core/security/crypto.service';
 import { requiresSecondFactor } from '../../core/security/permissions';
-import { GENERIC_EVENT, TelemetryLogger } from '../../core/telemetry/telemetry-logger';
 import { AuditService } from '../audit/audit.service';
 import {
   buildOtpauthUri,
@@ -23,6 +22,8 @@ import type { ClientMeta } from './session-tokens.service';
 /** Shown in authenticator apps above the account name. */
 export const TOTP_ISSUER = 'PaynEat ERP';
 
+export type FactorOutcome = 'accepted' | 'replayed' | 'rejected';
+
 export interface MfaRequirement {
   /** True when this account may not hold a session without a second factor. */
   required: boolean;
@@ -36,7 +37,6 @@ export class MfaService {
     private readonly prisma: PrismaService,
     private readonly crypto: CryptoService,
     private readonly audit: AuditService,
-    private readonly logger: TelemetryLogger,
   ) {}
 
   /** Whether this account needs a second factor, and whether it has one. */
@@ -149,11 +149,12 @@ export class MfaService {
   }
 
   /**
-   * Accepts a TOTP code or an unused recovery code, spending whichever matched. Returns
-   * false rather than throwing so the caller decides whether a failure counts towards
-   * the lockout. (Cwork.)
+   * Accepts a TOTP code or an unused recovery code, spending whichever matched. Answers
+   * rather than throws, so the caller decides whether a failure counts towards the
+   * lockout. (Cwork.) `replayed` is a right code already spent — what a relayed or
+   * shoulder-surfed code looks like — and is reported on the caller's refusal line.
    */
-  async consumeFactor(userId: string, code: string): Promise<boolean> {
+  async consumeFactor(userId: string, code: string): Promise<FactorOutcome> {
     const user = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
       select: { mfaSecretEnc: true, mfaLastUsedStep: true, mfaRecoveryCodes: true },
@@ -176,21 +177,14 @@ export class MfaService {
           },
           data: { mfaLastUsedStep: result.step },
         });
-        return count === 1;
+        return count === 1 ? 'accepted' : 'replayed';
       }
-      if (result.reason === 'replayed') {
-        // Worth saying out loud: the code was right but already spent, which is what a
-        // relayed or shoulder-surfed code looks like. No account or code in the line.
-        this.logger.write({
-          severity: 'WARNING',
-          event: GENERIC_EVENT,
-          message: 'A second-factor code that was already used was presented again',
-        });
-        return false;
-      }
+      if (result.reason === 'replayed') return 'replayed';
     }
 
-    return this.consumeRecoveryCode(userId, code, user.mfaRecoveryCodes);
+    return (await this.consumeRecoveryCode(userId, code, user.mfaRecoveryCodes))
+      ? 'accepted'
+      : 'rejected';
   }
 
   /** Single-use by construction: the digest is removed as it is spent. (Cwork.) */
