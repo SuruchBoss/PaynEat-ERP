@@ -42,7 +42,12 @@ using a new domain concept anywhere else.
 | Draft | ร่าง | A document not yet posted. Freely editable; affects nothing. |
 | Post | post (ลงรายการ) | The irreversible act that turns a draft into ledger entries, atomically. Written as "post" in Thai text too, because ลงบัญชี would be confused with accounting entries, which this system does not make. |
 | Reversal | เอกสารกลับรายการ | A new document that exactly negates a posted one. The only way to correct a posting. |
+| Business time | เวลาที่เกิดรายการ | When a movement actually happened: a document's business date, or a sale's sale time. Stock as of a date, counts and period close all use it (ADR-0018). |
+| Posting time | เวลาที่ post | When the ERP wrote a ledger entry. Kept alongside business time on every entry; never used to decide which period an entry belongs to. |
 | Period close | ปิดงวด | A per-location date before which nothing may be posted. |
+| Closed-until date | วันที่ปิดงวดถึง | A location's period close: no entry with a business date on or before it can be posted there. Moves forward by closing, backward only by an audited reopen (ADR-0018). |
+| Reopen | เปิดงวดใหม่ | An `admin` moving a closed-until date backward, with a reason, audited. Supersedes any export of the reopened range. |
+| Late for a closed period | มาช้าสำหรับงวดที่ปิดแล้ว | Branch consumption from a sale whose time falls in a closed period, posted on the first open day and marked, keeping its original sale time (ADR-0018). |
 | Supplier | ซัพพลายเออร์ | A company the chain buys from. Owned by the ERP. |
 | Purchase order (PO) | ใบสั่งซื้อ | Commitment to buy from a supplier. Writes no stock. |
 | Goods receipt (GRN) | ใบรับสินค้า | Receiving supplier goods into a location, creating lots. |
@@ -55,6 +60,9 @@ using a new domain concept anywhere else.
 | Issue | การเบิกจ่าย | Taking stock out of a location for use (for example into a production order). |
 | Write-off | ตัดจำหน่าย | An adjustment that removes stock that is expired, damaged or lost, with a reason and an approver. |
 | Stock count | ใบตรวจนับ (เอกสาร) / การตรวจนับสต๊อก (กิจกรรม) | A physical count of a location, compared to the balance. |
+| Count time | เวลาตรวจนับ | The moment a stock count is compared at: its book quantities are balances as of that business time (ADR-0017). |
+| Book quantity | ยอดตามระบบ | The balance the ledger holds for a count line as of the count time. Hidden from the counter until the count is submitted (blind count). |
+| Blind count | การนับแบบไม่เห็นยอด | Counting without seeing the book quantity, so the count is not steered towards it (ADR-0017). |
 | Adjustment | ใบปรับยอด | Posts the difference between counted and recorded stock, or writes off waste, with a reason and an approver. |
 | Opening balance | ยอดยกมา | The adjustment used once to bring existing stock into the system at go-live. |
 
@@ -68,6 +76,9 @@ using a new domain concept anywhere else.
 | Lot genealogy | ผังความสัมพันธ์ lot | The recorded links from each production output lot back to the input lots it consumed. |
 | Candidate lots | lot ที่เป็นไปได้ | In a recall: every lot that **could** have been in use at a branch during a time window. The ERP never claims a single lot it cannot know. |
 | Recall report | รายงาน recall | Traces forwards (supplier lot → where it went) or backwards (a sale → candidate supplier lots). |
+| Forward trace | การย้อนรอยไปข้างหน้า | From a supplier lot to every production order, output lot, transfer, branch and consumption it reached. |
+| Backward trace | การย้อนรอยย้อนกลับ | From a sale at a branch to the candidate branch lots and, through transfers and genealogy, to the supplier lots they came from. |
+| Certain / inferred link | ความเชื่อมโยงที่แน่นอน / ที่อนุมาน | A trace step backed by a posted document (receipt, genealogy, transfer) is certain; a step from branch FEFO allocation is inferred. Every trace labels each step as one or the other (ADR-0006). |
 
 ## Production and cost · การผลิตและต้นทุน
 
@@ -84,6 +95,7 @@ using a new domain concept anywhere else.
 | Lot cost | ต้นทุนราย lot | The actual unit cost carried by a lot. Consumption takes the cost of the lot FEFO picks. |
 | Standard cost | ต้นทุนมาตรฐาน | A predetermined cost per item with variances reported against it. **Not used in v1** (ADR-0004). |
 | Three-way match | การจับคู่สามทาง (3-way match) | Checking a supplier invoice against its purchase order and goods receipt. Stretch goal for v1. |
+| Supplier invoice | ใบแจ้งหนี้ซัพพลายเออร์ | The supplier's bill for goods received, recorded to match against its purchase order and goods receipts. Writes no stock and does not revalue lots in v1 (ADR-0004). |
 | Theoretical usage | การใช้ตามทฤษฎี | What sales say should have been consumed, via recipes in effect at the time of sale. |
 | Actual usage | การใช้จริง | What the ledger and stock counts say was consumed. |
 
@@ -109,6 +121,8 @@ using a new domain concept anywhere else.
 | Term | ไทย | Meaning |
 |---|---|---|
 | Export | export (ส่งออกข้อมูล) | Producing a file of figures for another system, such as accounting software. Not to be confused with dispatch. |
+| Period export | ไฟล์ export รายงวด | A file of stock value and movement value by location for a closed date range, for the accounting software (story 36, ADR-0018). |
+| Export revision | ฉบับแก้ไขของไฟล์ export | A re-export of a range after it was reopened; names the revision it replaces, which is marked superseded (ADR-0018). |
 | System of record | ระบบที่เป็นเจ้าของข้อมูล | The one system allowed to create and change a kind of data. The other only mirrors it. |
 | POS instance | POS instance | One installation of PaynEat POS registered with the ERP. May serve one branch or several. |
 | Connected mode | โหมดเชื่อมต่อ ERP | A POS instance registered with the ERP. Master data becomes read-only on the POS. |
