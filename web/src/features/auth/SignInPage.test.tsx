@@ -74,6 +74,9 @@ describe('sign-in', () => {
     });
     // The sign-in request itself carries no credentials of a previous session.
     expect(sentHeaders(api, 0).get('authorization')).toBeNull();
+    // The status page asks for /health after it renders, so on a slow runner the heading can
+    // appear before that request is sent: wait for it before reading its headers.
+    await waitFor(() => expect(api).toHaveBeenCalledTimes(2));
     expect(sentHeaders(api, 1).get('authorization')).toBe('Bearer access-after-sign-in');
     expect(screen.getByText('Demo finance')).toBeVisible();
     expect(window.localStorage.getItem(SESSION_STORAGE_KEY)).toContain('refresh-after-sign-in');
