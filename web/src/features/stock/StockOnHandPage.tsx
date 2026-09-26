@@ -122,8 +122,8 @@ export function StockOnHandPage() {
                 </caption>
                 <thead>
                   <tr>
-                    <th scope="col">{t('stock.column.location')}</th>
                     <th scope="col">{t('stock.column.item')}</th>
+                    <th scope="col">{t('stock.column.location')}</th>
                     <th scope="col">{t('stock.column.lot')}</th>
                     <th scope="col" className="numeric">
                       {t('stock.column.quantity')}
@@ -144,47 +144,59 @@ export function StockOnHandPage() {
                     const negative = row.quantity.startsWith('-');
                     return (
                       <tr key={`${row.lot.id}|${row.location.id}`}>
-                        <td>
-                          <span className="cell-title">{nameOf(row.location)}</span>
-                          <span className="subtle">
-                            <code>{row.location.code}</code>
-                          </span>
-                        </td>
                         <th scope="row">
                           <span className="cell-title">{nameOf(row.item)}</span>
                           <span className="subtle">
                             <code>{row.item.code}</code>
                           </span>
                         </th>
-                        <td>
-                          <code>{row.lot.number}</code>
-                          <span className="subtle">
-                            {t('stock.expires', {
-                              date: formatBusinessDate(row.lot.expiryDate, language),
-                            })}
-                            {row.expired && (
-                              <span className="badge badge--down badge--inline">
-                                {t('stock.expired')}
-                              </span>
-                            )}
+                        <td data-label={t('stock.column.location')}>
+                          <span>
+                            <span className="cell-title">{nameOf(row.location)}</span>
+                            <span className="subtle">
+                              <code>{row.location.code}</code>
+                            </span>
                           </span>
                         </td>
-                        <td className="numeric nowrap">
-                          {groupDigits(row.quantity)}{' '}
-                          {unitName(unitList, row.item.baseUnitCode, language)}
+                        <td data-label={t('stock.column.lot')}>
+                          <span>
+                            <code>{row.lot.number}</code>
+                            <span className="subtle">
+                              {t('stock.expires', {
+                                date: formatBusinessDate(row.lot.expiryDate, language),
+                              })}
+                              {row.expired && (
+                                <span className="badge badge--down badge--inline">
+                                  {t('stock.expired')}
+                                </span>
+                              )}
+                            </span>
+                          </span>
+                        </td>
+                        <td className="numeric nowrap" data-label={t('stock.column.quantity')}>
+                          <span>
+                            {groupDigits(row.quantity)}{' '}
+                            {unitName(unitList, row.item.baseUnitCode, language)}
+                          </span>
                           {negative && (
                             <span className="badge badge--down badge--inline">
                               {t('stock.negative')}
                             </span>
                           )}
                         </td>
-                        <td className="numeric nowrap">
-                          {row.secondaryQuantity === null
-                            ? t('stock.noPieces')
-                            : t('stock.pieces', { count: groupDigits(row.secondaryQuantity) })}
+                        <td className="numeric nowrap" data-label={t('stock.column.pieces')}>
+                          <span>
+                            {row.secondaryQuantity === null
+                              ? t('stock.noPieces')
+                              : t('stock.pieces', { count: groupDigits(row.secondaryQuantity) })}
+                          </span>
                         </td>
-                        <td className="numeric nowrap">{groupDigits(row.unitCost)}</td>
-                        <td className="numeric nowrap">{groupDigits(row.value)}</td>
+                        <td className="numeric nowrap" data-label={t('stock.column.unitCost')}>
+                          <span>{groupDigits(row.unitCost)}</span>
+                        </td>
+                        <td className="numeric nowrap" data-label={t('stock.column.value')}>
+                          <span>{groupDigits(row.value)}</span>
+                        </td>
                       </tr>
                     );
                   })}

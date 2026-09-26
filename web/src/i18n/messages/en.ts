@@ -430,7 +430,8 @@ export const en: Messages = {
   'openingBalances.open.label': 'Open {number}',
   'openingBalances.status.draft': 'Draft',
   'openingBalances.status.posted': 'Posted',
-  'openingBalances.status.reversed': 'Reversed by {number}',
+  'openingBalances.status.reversed': 'Reversed',
+  'openingBalances.status.reversedBy': 'by {number}',
   'openingBalances.error.changed':
     'Someone changed this document after you opened it. Reload the page and try again.',
   'openingBalances.error.posted':

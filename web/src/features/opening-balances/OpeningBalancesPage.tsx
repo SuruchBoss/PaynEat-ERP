@@ -111,9 +111,12 @@ function StatusBadge({ doc }: { doc: DocumentHeader }) {
   const { t } = useI18n();
   if (doc.reversedBy) {
     return (
-      <span className="badge badge--down">
-        {t('openingBalances.status.reversed', { number: doc.reversedBy.number })}
-      </span>
+      <>
+        <span className="badge badge--down">{t('openingBalances.status.reversed')}</span>{' '}
+        <span className="subtle nowrap">
+          {t('openingBalances.status.reversedBy', { number: doc.reversedBy.number })}
+        </span>
+      </>
     );
   }
   return doc.status === 'posted' ? (
@@ -226,20 +229,28 @@ export function OpeningBalancesPage() {
                 </thead>
                 <tbody>
                   {documents.data.map((doc) => (
-                    <tr key={doc.id}>
+                    <tr key={doc.id} className={doc.reversedBy ? 'row--off' : undefined}>
                       <th scope="row">
                         <code>{doc.number}</code>
                       </th>
-                      <td>
-                        <span className="cell-title">{nameOf(doc.location)}</span>
-                        <span className="subtle">
-                          <code>{doc.location.code}</code>
+                      <td data-label={t('openingBalances.column.location')}>
+                        <span>
+                          <span className="cell-title">{nameOf(doc.location)}</span>
+                          <span className="subtle">
+                            <code>{doc.location.code}</code>
+                          </span>
                         </span>
                       </td>
-                      <td className="nowrap">{formatBusinessDate(doc.businessDate, language)}</td>
-                      <td className="numeric">{doc.lineCount}</td>
-                      <td className="numeric nowrap">{groupDigits(doc.totalValue)}</td>
-                      <td>
+                      <td className="nowrap" data-label={t('openingBalances.column.businessDate')}>
+                        <span>{formatBusinessDate(doc.businessDate, language)}</span>
+                      </td>
+                      <td className="numeric" data-label={t('openingBalances.column.lines')}>
+                        <span>{doc.lineCount}</span>
+                      </td>
+                      <td className="numeric nowrap" data-label={t('openingBalances.column.value')}>
+                        <span>{groupDigits(doc.totalValue)}</span>
+                      </td>
+                      <td data-label={t('openingBalances.column.status')}>
                         <StatusBadge doc={doc} />
                       </td>
                       <td>
@@ -749,23 +760,33 @@ function PostedDocument({
                     <code>{line.item.code}</code>
                   </span>
                 </th>
-                <td>
-                  {line.lot ? <code>{line.lot.number}</code> : t('openingBalances.view.noLot')}
-                  <span className="subtle">
-                    {t('stock.expires', { date: formatBusinessDate(line.expiryDate, language) })}
+                <td data-label={t('openingBalances.column.lot')}>
+                  <span>
+                    {line.lot ? <code>{line.lot.number}</code> : t('openingBalances.view.noLot')}
+                    <span className="subtle">
+                      {t('stock.expires', { date: formatBusinessDate(line.expiryDate, language) })}
+                    </span>
                   </span>
                 </td>
-                <td className="numeric nowrap">
-                  {groupDigits(line.quantity)}{' '}
-                  {unitName(units.data ?? [], line.item.baseUnitCode, language)}
+                <td className="numeric nowrap" data-label={t('stock.column.quantity')}>
+                  <span>
+                    {groupDigits(line.quantity)}{' '}
+                    {unitName(units.data ?? [], line.item.baseUnitCode, language)}
+                  </span>
                 </td>
-                <td className="numeric nowrap">
-                  {line.secondaryQuantity === null
-                    ? t('stock.noPieces')
-                    : t('stock.pieces', { count: groupDigits(line.secondaryQuantity) })}
+                <td className="numeric nowrap" data-label={t('stock.column.pieces')}>
+                  <span>
+                    {line.secondaryQuantity === null
+                      ? t('stock.noPieces')
+                      : t('stock.pieces', { count: groupDigits(line.secondaryQuantity) })}
+                  </span>
                 </td>
-                <td className="numeric nowrap">{groupDigits(line.unitCost)}</td>
-                <td className="numeric nowrap">{groupDigits(line.value)}</td>
+                <td className="numeric nowrap" data-label={t('stock.column.unitCost')}>
+                  <span>{groupDigits(line.unitCost)}</span>
+                </td>
+                <td className="numeric nowrap" data-label={t('stock.column.value')}>
+                  <span>{groupDigits(line.value)}</span>
+                </td>
               </tr>
             ))}
           </tbody>

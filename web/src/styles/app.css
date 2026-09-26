@@ -1467,11 +1467,48 @@ h1:focus {
 .data-table tfoot td {
   border-top: 2px solid var(--border);
   border-bottom: 0;
+  font-weight: 600;
 }
 
 .data-table td .subtle,
 .data-table th .subtle {
   display: block;
+}
+
+/* On a phone each row is a card (see "small screens"): figures sit in the value column like
+   any other field, and the total becomes one more card with its figure at the right. */
+@media (max-width: 760px) {
+  .data-table td.numeric {
+    text-align: left;
+  }
+
+  .data-table tfoot {
+    display: block;
+    margin-top: 12px;
+  }
+
+  .data-table tfoot tr {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+  }
+
+  .data-table tfoot th,
+  .data-table tfoot th[scope='row'],
+  .data-table tfoot td {
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  /* The last card's fields keep the same spacing as every other card's. */
+  .data-table tbody tr:last-child td[data-label] {
+    padding: 5px 0;
+  }
 }
 
 .document-lines {

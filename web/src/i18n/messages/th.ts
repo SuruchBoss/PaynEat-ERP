@@ -423,7 +423,8 @@ export const th = {
   'openingBalances.open.label': 'เปิด {number}',
   'openingBalances.status.draft': 'ร่าง',
   'openingBalances.status.posted': 'post แล้ว',
-  'openingBalances.status.reversed': 'กลับรายการแล้วด้วย {number}',
+  'openingBalances.status.reversed': 'กลับรายการแล้ว',
+  'openingBalances.status.reversedBy': 'ด้วย {number}',
   'openingBalances.error.changed':
     'มีคนแก้เอกสารนี้ไปแล้วหลังจากที่คุณเปิด โหลดหน้าใหม่แล้วลองอีกครั้ง',
   'openingBalances.error.posted': 'เอกสารนี้ post แล้ว แก้ไม่ได้ ให้กลับรายการแล้วสร้างใหม่',
