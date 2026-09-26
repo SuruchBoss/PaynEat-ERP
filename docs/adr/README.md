@@ -23,6 +23,7 @@ edited to change their meaning; a new ADR supersedes them.
 | 0013 | [Extension by integration, not in-process plugins](0013-extension-by-integration.md) | [ต่อยอดผ่านการเชื่อมต่อ ไม่ใช่ plugin ภายใน](0013-extension-by-integration.th.md) | Accepted |
 | 0014 | [A lot's expiry is never later than the supplier's date](0014-lot-expiry-never-later-than-supplier-date.md) | [วันหมดอายุของ lot ต้องไม่เกินวันที่ซัพพลายเออร์ระบุ](0014-lot-expiry-never-later-than-supplier-date.th.md) | Accepted |
 | 0015 | [Editions: Community and Enterprise](0015-editions-community-and-enterprise.md) | [รุ่นของระบบ: Community และ Enterprise](0015-editions-community-and-enterprise.th.md) | Accepted |
+| 0016 | [ExcelToGo joins the ecosystem as the spreadsheet companion](0016-exceltogo-spreadsheet-companion.md) | [ExcelToGo เข้าร่วมระบบนิเวศในฐานะเครื่องมือสเปรดชีต](0016-exceltogo-spreadsheet-companion.th.md) | Accepted |
 
 ## Template
 
