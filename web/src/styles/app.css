@@ -833,3 +833,77 @@ h1:focus {
 .field input[readonly] {
   background: var(--surface-2);
 }
+
+/* ---------------------------------------------------------------- stock (#7) */
+
+/* A select is as wide as its longest option (a long location name) unless told otherwise;
+   on a phone that pushed the whole page sideways. */
+.field select {
+  max-width: 100%;
+}
+
+.filters .field {
+  max-width: 100%;
+}
+
+.field-grid > .field {
+  min-width: 0;
+}
+
+/* Figures line up on the decimal side; the API's strings are shown as they are. */
+.data-table .numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.data-table tfoot th,
+.data-table tfoot td {
+  border-top: 2px solid var(--border);
+  border-bottom: 0;
+}
+
+.data-table td .subtle,
+.data-table th .subtle {
+  display: block;
+}
+
+.document-lines {
+  margin: 8px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.document-lines legend {
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.document-line {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0 12px;
+  align-items: end;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.document-line .button {
+  margin-bottom: 18px;
+  justify-self: start;
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 32px;
+  margin: 0 0 16px;
+}
+
+.facts dt {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.facts dd {
+  margin: 0;
+}

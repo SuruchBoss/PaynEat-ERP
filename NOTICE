@@ -45,6 +45,12 @@ Adapted from Cwork commit 6e520ed for sign-in, users and roles (#4):
   web/src/stores/auth.store.ts    session store; web/src/lib/api-client.ts token refresh
   web/src/features/auth/          sign-in steps (password, second factor, enrolment)
 
+Adapted from Cwork commit 6e520ed for the stock ledger (#7):
+
+  backend/src/core/sequence/      document numbers (Cwork's sequence service, taken inside the
+                                  caller's transaction so numbers have no gaps)
+  backend/prisma/schema/sequence.prisma
+
 
 Licensed under the Apache License, Version 2.0 (see LICENSE).
 If you fork, redistribute, or build a derivative work of this project,

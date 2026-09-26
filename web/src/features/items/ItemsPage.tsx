@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { qk } from '@/app/query-client';
 import { ErrorCallout } from '@/components/ErrorCallout';
-import type { Language, MessageKey, MessageParams } from '@/i18n/catalogue';
+import type { MessageKey, MessageParams } from '@/i18n/catalogue';
 import { useI18n } from '@/i18n/useI18n';
 import { Permission } from '@/lib/access';
 import { ApiError } from '@/lib/api-error';
@@ -14,6 +14,7 @@ import {
   createItem,
   listItems,
   listUnits,
+  unitName,
   updateItem,
   type ItemView,
   type PurchaseUnit,
@@ -53,12 +54,6 @@ const FILTERS: Record<StatusFilter, MessageKey> = {
   inactive: 'items.filter.inactive',
   all: 'items.filter.all',
 };
-
-function unitName(units: readonly UnitView[], code: string, language: Language): string {
-  const unit = units.find((u) => u.code === code);
-  if (!unit) return code;
-  return language === 'th' ? unit.nameTh : unit.nameEn;
-}
 
 /**
  * A typed factor as a person reads it, trimmed of trailing zeros, or null while it is not

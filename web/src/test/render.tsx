@@ -50,6 +50,17 @@ export const PURCHASING: SessionUser = {
   mfaEnabled: false,
 };
 
+/** Plant: drafts, posts and reverses opening balances (#7). */
+export const PLANT: SessionUser = {
+  id: '6c1d0a52-6d8e-4c52-9a55-3d7f0b3a0004',
+  email: 'plant@demo-chicken.example',
+  displayName: 'Demo plant',
+  locale: 'th',
+  roles: ['plant'],
+  permissions: ['opening_balance:manage'],
+  mfaEnabled: false,
+};
+
 export const TOKENS = { accessToken: 'test-access-token', refreshToken: 'test-refresh-token' };
 
 /**

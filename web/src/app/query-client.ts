@@ -38,4 +38,8 @@ export const qk = {
   units: ['units'] as const,
   locations: ['locations'] as const,
   suppliers: ['suppliers'] as const,
+  stockOnHand: (query: Readonly<Record<string, string>>) => ['stock-on-hand', query] as const,
+  stockOnHandAll: ['stock-on-hand'] as const,
+  openingBalances: ['opening-balances'] as const,
+  openingBalance: (id: string) => ['opening-balances', id] as const,
 };
