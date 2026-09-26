@@ -127,4 +127,78 @@ describe('architecture rules (ADR-0010)', () => {
       ).toEqual([]);
     });
   });
+
+  describe('ledger-writes (#7)', () => {
+    it('fails when another module writes a ledger table through Prisma', () => {
+      const v = checkArchitecture([
+        file(
+          'src/modules/purchasing/receipts.service.ts',
+          'await tx.ledgerEntry.create({ data });',
+          'await this.prisma.stockBalance.update({ where, data });',
+          'await tx.lot.createMany({ data: lots });',
+          'await tx.stockDocument.update({ where, data });',
+        ),
+      ]);
+      expect(v.map((x) => [x.rule, x.specifier])).toEqual([
+        ['ledger-writes', '.ledgerEntry.create('],
+        ['ledger-writes', '.stockBalance.update('],
+        ['ledger-writes', '.lot.createMany('],
+        ['ledger-writes', '.stockDocument.update('],
+      ]);
+    });
+
+    it('fails when anything outside the ledger module writes a ledger table in SQL', () => {
+      const v = checkArchitecture([
+        file(
+          'src/modules/counts/counts.service.ts',
+          'await tx.$executeRaw`INSERT INTO "ledger_entries" ("id") VALUES (${id})`;',
+          "await tx.$executeRawUnsafe('update stock_balances set quantity = 0');",
+          'await tx.$executeRaw`DELETE FROM public.lots`;',
+        ),
+        file('src/core/jobs/cleanup.ts', 'await db.$executeRaw`TRUNCATE TABLE "stock_documents"`;'),
+      ]);
+      expect(v.map((x) => [x.rule, x.file])).toEqual([
+        ['ledger-writes', 'src/modules/counts/counts.service.ts'],
+        ['ledger-writes', 'src/modules/counts/counts.service.ts'],
+        ['ledger-writes', 'src/modules/counts/counts.service.ts'],
+        ['ledger-writes', 'src/core/jobs/cleanup.ts'],
+      ]);
+    });
+
+    it('passes reads elsewhere, lookalike names, and the ledger module itself', () => {
+      expect(
+        checkArchitecture([
+          file(
+            'src/modules/reports/reports.service.ts',
+            'await tx.ledgerEntry.findMany({ where });',
+            'await tx.$queryRaw`SELECT * FROM "stock_balances" FOR UPDATE`;',
+            'await tx.$executeRaw`UPDATE "lots_archive" SET x = 1`;',
+            'await tx.lotSize.update({ where, data });',
+          ),
+          file(
+            'src/modules/ledger/ledger.service.ts',
+            'await tx.$executeRaw`INSERT INTO "ledger_entries" ("id") VALUES (${id})`;',
+            'await tx.$executeRaw`LOCK TABLE "stock_balances" IN EXCLUSIVE MODE`;',
+            'await tx.stockDocument.create({ data });',
+          ),
+        ]),
+      ).toEqual([]);
+    });
+  });
+
+  describe('ledger-raw-sql (#7)', () => {
+    it('fails when the ledger module writes lots, entries or balances through Prisma', () => {
+      const v = checkArchitecture([
+        file(
+          'src/modules/ledger/ledger.service.ts',
+          'await tx.ledgerEntry.createMany({ data });',
+          'await tx.stockBalance.upsert({ where, create, update });',
+        ),
+      ]);
+      expect(v.map((x) => [x.rule, x.specifier])).toEqual([
+        ['ledger-raw-sql', '.ledgerEntry.createMany('],
+        ['ledger-raw-sql', '.stockBalance.upsert('],
+      ]);
+    });
+  });
 });

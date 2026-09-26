@@ -52,6 +52,18 @@ export function multiply(a: ExactDecimal, b: ExactDecimal): ExactDecimal {
   return { units: a.units * b.units, scale: a.scale + b.scale };
 }
 
+/** Exact sum, at the larger of the two scales: 0.1 + 0.2 is 0.3. */
+export function add(a: ExactDecimal, b: ExactDecimal): ExactDecimal {
+  const scale = Math.max(a.scale, b.scale);
+  return { units: rescale(a, scale) + rescale(b, scale), scale };
+}
+
+export function negate(value: ExactDecimal): ExactDecimal {
+  return { units: -value.units, scale: value.scale };
+}
+
+export const ZERO: ExactDecimal = { units: 0n, scale: 0 };
+
 /**
  * Rounds to `places` decimals, half away from zero: 0.0125 → 0.013 and -0.0125 → -0.013,
  * exactly as PostgreSQL's `round(numeric, places)` does, so the API and the database
@@ -82,6 +94,10 @@ export function formatFixed(value: ExactDecimal, places: number): string {
 /** The shortest exact spelling: 10.000000 → "10", 22.500 → "22.5". */
 export function formatMinimal(value: ExactDecimal): string {
   return formatFixed(value, decimalPlaces(value));
+}
+
+function rescale(value: ExactDecimal, scale: number): bigint {
+  return value.units * 10n ** BigInt(scale - value.scale);
 }
 
 function abs(n: bigint): bigint {

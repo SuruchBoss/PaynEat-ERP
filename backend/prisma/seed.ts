@@ -9,9 +9,9 @@
  * So it runs only with ERP_DEMO=1 and never under NODE_ENV=production, and it marks every
  * account it creates as a demo account: a production API refuses to start while one is
  * enabled without ERP_DEMO=1, and refuses their sign-in (#5, `domain/demo-mode.ts`).
- * Today it creates the company and one user per role (#4); later tickets extend it with
- * the plant, three branches, two suppliers, items and the whole supplier-to-plate path,
- * so that one command still builds everything.
+ * Today it creates the company, one user per role (#4), the items (#5), the plant, three
+ * branches and two suppliers (#6), and the plant's opening balance (#7); later tickets extend
+ * it along the supplier-to-plate path, so that one command still builds everything.
  *
  * Safe to re-run: every write is an upsert keyed on a natural key, and re-running puts
  * the demo accounts back as described (password, role, second factor, no lockout).
@@ -25,6 +25,8 @@ import { AuditAction, MasterDataAction, Prisma, PrismaClient, type RoleKey } fro
 import { seedRefusal } from '../src/modules/auth/domain/demo-mode';
 import { inTransitCode } from '../src/modules/locations/domain/location-rules';
 import { normaliseRecoveryCode } from '../src/modules/auth/domain/totp';
+import { addDays } from '../src/core/time/domain/business-date';
+import { ledgerServices } from './ledger-services';
 
 export const DEMO_COMPANY = {
   code: 'DEMO-CHICKEN',
@@ -191,6 +193,43 @@ export const DEMO_SUPPLIERS = [
     address: 'ถนนสมมติ 2 จังหวัดตัวอย่าง (ที่อยู่สมมติ)',
   },
 ] as const;
+
+/**
+ * The stock the plant held when it started using the ERP (#7), posted as one opening balance
+ * dated yesterday, so "stock as of" the day before shows nothing and yesterday shows it all.
+ * Flour and oil for months; whole chickens in three lots that expire on different days, each
+ * weighed with its bird count. Expiry dates count from the day the seed first runs; costs are
+ * invented.
+ */
+export const DEMO_OPENING_BALANCE = {
+  locationCode: 'PLANT-01',
+  note: 'Demo seed: stock on hand at go-live (fictional)',
+  lines: [
+    { itemCode: 'FLOUR', quantity: '250.000', unitCost: '32.5', expiresInDays: 150 },
+    { itemCode: 'FRYING-OIL', quantity: '180.000', unitCost: '48', expiresInDays: 300 },
+    {
+      itemCode: 'WHOLE-CHICKEN',
+      quantity: '21.600',
+      secondaryQuantity: '12',
+      unitCost: '72.5',
+      expiresInDays: 1,
+    },
+    {
+      itemCode: 'WHOLE-CHICKEN',
+      quantity: '43.200',
+      secondaryQuantity: '24',
+      unitCost: '71',
+      expiresInDays: 2,
+    },
+    {
+      itemCode: 'WHOLE-CHICKEN',
+      quantity: '18.000',
+      secondaryQuantity: '10',
+      unitCost: '73.25',
+      expiresInDays: 3,
+    },
+  ],
+} as const;
 
 /** A refusal, not a crash: printed as a message with no stack trace. (Cwork.) */
 class SeedRefused extends Error {}
@@ -483,6 +522,54 @@ async function seedSuppliers(prisma: PrismaClient): Promise<void> {
   }
 }
 
+/**
+ * Posts the demo opening balance through the same services the API uses, as the demo plant
+ * user. Once: a plant that already has an opening balance (posted, reversed or still a draft)
+ * is left as it is. Returns its number, or null when there was one already.
+ */
+async function seedOpeningBalance(prisma: PrismaClient): Promise<string | null> {
+  const plant = await prisma.location.findUniqueOrThrow({
+    where: { code: DEMO_OPENING_BALANCE.locationCode },
+  });
+  if (await prisma.openingBalance.findFirst({ where: { locationId: plant.id } })) return null;
+
+  const plantUser = await prisma.user.findUniqueOrThrow({
+    where: { email: DEMO_USERS.find((u) => u.role === 'plant')!.email },
+  });
+  const actor = {
+    userId: plantUser.id,
+    email: plantUser.email,
+    displayName: plantUser.displayName,
+    roles: ['plant' as const],
+    permissions: [],
+    sessionId: 'demo-seed',
+  };
+  const items = await prisma.item.findMany({
+    where: { code: { in: DEMO_OPENING_BALANCE.lines.map((l) => l.itemCode) } },
+  });
+  const itemId = (code: string) => items.find((i) => i.code === code)!.id;
+
+  const { ledger, openingBalances } = ledgerServices(prisma, { quiet: true });
+  const today = ledger.today();
+  const draft = await openingBalances.create(
+    {
+      locationId: plant.id,
+      businessDate: addDays(today, -1),
+      note: DEMO_OPENING_BALANCE.note,
+      lines: DEMO_OPENING_BALANCE.lines.map((line) => ({
+        itemId: itemId(line.itemCode),
+        quantity: line.quantity,
+        secondaryQuantity: 'secondaryQuantity' in line ? line.secondaryQuantity : null,
+        unitCost: line.unitCost,
+        expiryDate: addDays(today, line.expiresInDays),
+      })),
+    },
+    actor,
+  );
+  const posted = await openingBalances.post(draft.id, { revision: draft.revision }, actor);
+  return `${posted.number} (${posted.lines.length} lots, value ${posted.totalValue})`;
+}
+
 async function main(): Promise<void> {
   const refusal = seedRefusal({ erpDemo: process.env.ERP_DEMO, nodeEnv: process.env.NODE_ENV });
   if (refusal) throw new SeedRefused(`${refusal}\nNothing has been written.`);
@@ -513,6 +600,12 @@ async function main(): Promise<void> {
       changedItems === 0
         ? `Demo items ready: ${DEMO_ITEMS.length}, already as described (no new master data version)`
         : `Demo items ready: ${DEMO_ITEMS.length}, ${changedItems} created or put back (one master data version each)`,
+    );
+    const openingBalance = await seedOpeningBalance(prisma);
+    console.log(
+      openingBalance
+        ? `Demo opening balance posted at ${DEMO_OPENING_BALANCE.locationCode}: ${openingBalance}`
+        : `Demo opening balance at ${DEMO_OPENING_BALANCE.locationCode}: already there, left as it is`,
     );
     console.log(`\nDemo accounts (password for all: ${DEMO_PASSWORD}):`);
     for (const demo of DEMO_USERS) {

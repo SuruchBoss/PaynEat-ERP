@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Items and units (backend `modules/items/items.controller.ts`).
+import type { Language } from '@/i18n/catalogue';
 import { api } from '@/lib/api-client';
 
 export interface UnitView {
@@ -58,6 +59,13 @@ export interface PurchaseUnitIssue {
 }
 
 export const listUnits = () => api.get<UnitView[]>('/units');
+
+/** A unit's name in the person's language; its code when the catalogue has not loaded. */
+export function unitName(units: readonly UnitView[], code: string, language: Language): string {
+  const unit = units.find((u) => u.code === code);
+  if (!unit) return code;
+  return language === 'th' ? unit.nameTh : unit.nameEn;
+}
 
 /** Every item, active or not: the list filters on screen, so searching needs no round trip. */
 export const listItems = () => api.get<ItemView[]>('/items', { query: { status: 'all' } });

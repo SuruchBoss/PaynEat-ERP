@@ -136,7 +136,14 @@ describe('user administration', () => {
       permissions: ['supplier:manage'],
       requiresSecondFactor: false,
     });
-    for (const role of res.body.slice(2)) {
+    expect(res.body[3]).toEqual({
+      key: 'plant',
+      permissions: ['opening_balance:manage'],
+      requiresSecondFactor: false,
+    });
+    for (const role of res.body.filter(
+      (r: Body) => !['admin', 'purchasing', 'plant'].includes(r.key),
+    )) {
       expect(role).toMatchObject({ permissions: [], requiresSecondFactor: false });
     }
   });

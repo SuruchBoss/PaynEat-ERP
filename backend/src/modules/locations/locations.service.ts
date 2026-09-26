@@ -56,6 +56,16 @@ type Tx = Prisma.TransactionClient;
 /** The master data entity type branches are logged under (#5, ADR-0002). */
 export const LOCATION_ENTITY = 'location';
 
+/** What another module needs to know about a location to move stock there (#7). */
+export interface LocationFacts {
+  id: string;
+  code: string;
+  type: LocationType;
+  nameTh: string;
+  nameEn: string;
+  active: boolean;
+}
+
 const EDIT_ERRORS: Record<EditProblem, [string, string]> = {
   SYSTEM_MANAGED: [
     'LOCATION_SYSTEM_MANAGED',
@@ -334,6 +344,22 @@ export class LocationsService {
    * or the first POS pull of a branch, calls this in its own transaction. Idempotent: a
    * location already in use keeps its first use.
    */
+  /**
+   * The facts other modules need about these locations, keyed by id; unknown ids are absent.
+   * Pass the caller's transaction to read inside it.
+   */
+  async describe(
+    ids: readonly string[],
+    tx: Tx = this.prisma,
+  ): Promise<Map<string, LocationFacts>> {
+    if (ids.length === 0) return new Map();
+    const rows = await tx.location.findMany({
+      where: { id: { in: [...new Set(ids)] } },
+      select: { id: true, code: true, type: true, nameTh: true, nameEn: true, active: true },
+    });
+    return new Map(rows.map((row) => [row.id, row]));
+  }
+
   async markFirstUse(tx: Tx, locationIds: string[], use: string): Promise<void> {
     if (locationIds.length === 0) return;
     await tx.location.updateMany({

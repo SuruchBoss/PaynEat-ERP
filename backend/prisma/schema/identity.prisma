@@ -57,6 +57,10 @@ model User {
   sessions     Session[]
   auditLogs    AuditLog[]
 
+  stockDocumentsCreated StockDocument[] @relation("StockDocumentCreatedBy")
+  stockDocumentsPosted  StockDocument[] @relation("StockDocumentPostedBy")
+  ledgerEntriesPosted   LedgerEntry[]   @relation("LedgerEntryPostedBy")
+
   @@map("users")
 }
 

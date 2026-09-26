@@ -185,8 +185,12 @@ Run inside `web/` (the admin console), after `npm ci`:
 - Every route is authenticated unless it says `@Public()`, and every route that touches data declares
   `@RequirePermissions(...)` (#4), except reads the issue opens to any signed-in user, which say so
   in their controller's comment (items, units and the master data change log, #5; locations and
-  suppliers, #6). A new permission goes into `core/security/permissions.ts`, is given
+  suppliers, #6; stock on hand and opening balances, #7). A new permission goes into `core/security/permissions.ts`, is given
   to the roles ADR-0008 says should have it, and is mirrored in `web/src/lib/access.ts`.
+- Stock is written only through `LedgerService` (#7): a document type keeps its own lines and hands the
+  ledger a plan to post. Scripts that run without the API (the demo seed, `npm run
+  ledger:rebuild-balances`) wire the same services by hand in `prisma/ledger-services.ts` rather than
+  writing stock themselves.
 - The end-to-end suite supplies its own test-only JWT secrets and encryption key when the environment
   has none; signing in as the demo admin uses the published second-factor secret
   (`test/utils/auth.ts`).

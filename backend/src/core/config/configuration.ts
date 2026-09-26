@@ -13,6 +13,8 @@ export interface AppConfig {
   corsOrigins: string[];
   /** ERP_DEMO=1: an evaluation installation whose demo accounts may be used. */
   demo: boolean;
+  /** The company's time zone: what "today" is for business dates (ADR-0018). */
+  timeZone: string;
 }
 
 export interface AuthConfig {
@@ -61,6 +63,7 @@ export function buildConfig(env: EnvironmentVariables): RootConfig {
         .map((o) => o.trim())
         .filter(Boolean),
       demo: env.ERP_DEMO === '1',
+      timeZone: env.COMPANY_TIME_ZONE,
     },
     auth: {
       accessSecret: env.JWT_ACCESS_SECRET,

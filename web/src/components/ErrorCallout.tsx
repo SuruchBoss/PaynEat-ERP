@@ -1,7 +1,7 @@
 // Copyright 2026 Suruch Chakrapeesirisuk
 // SPDX-License-Identifier: Apache-2.0
 
-import type { MessageKey } from '@/i18n/catalogue';
+import type { MessageKey, MessageParams } from '@/i18n/catalogue';
 import { useI18n } from '@/i18n/useI18n';
 import { ApiError } from '@/lib/api-error';
 
@@ -13,13 +13,24 @@ import { ApiError } from '@/lib/api-error';
 export function ErrorCallout({
   error,
   messages = {},
+  describe,
 }: {
   error: unknown;
   /** Message for each API error code this screen explains. */
   messages?: Readonly<Record<string, MessageKey>>;
+  /** For errors whose message depends on their details (a rule, a line), not only the code. */
+  describe?: (error: ApiError) => { key: MessageKey; params?: MessageParams } | undefined;
 }) {
   const { t } = useI18n();
   const apiError = error instanceof ApiError ? error : undefined;
+  const described = apiError && describe ? describe(apiError) : undefined;
+  if (described) {
+    return (
+      <div className="callout callout--danger" role="alert">
+        <p>{t(described.key, described.params)}</p>
+      </div>
+    );
+  }
   const known = apiError ? messages[apiError.code] : undefined;
   const key: MessageKey =
     known ??

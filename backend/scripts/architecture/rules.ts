@@ -16,8 +16,12 @@
  *     directory, by relative path or by a package name containing `ee` as a segment
  *     (ADR-0015: the Community core must build and run with `ee/` deleted).
  *
- * From #7 another rule joins them: nothing outside the ledger module writes ledger or
- * balance tables.
+ *  4. ledger-writes — nothing outside `src/modules/ledger/` writes the ledger's tables
+ *     (lots, ledger entries, balances, and the document headers the ledger numbers and
+ *     posts), through Prisma or in SQL (#7, ADR-0010 decision 4).
+ *  5. ledger-raw-sql — inside the ledger module, lots, ledger entries and balances are
+ *     written only in raw SQL, never through Prisma's model methods: the locks and the
+ *     single transaction must be visible in the code that does them (ADR-0010).
  */
 import { posix } from 'node:path';
 
@@ -27,7 +31,12 @@ export interface SourceFile {
   content: string;
 }
 
-export type RuleName = 'domain-purity' | 'module-boundary' | 'core-never-imports-ee';
+export type RuleName =
+  | 'domain-purity'
+  | 'module-boundary'
+  | 'core-never-imports-ee'
+  | 'ledger-writes'
+  | 'ledger-raw-sql';
 
 export interface Violation {
   rule: RuleName;
@@ -59,6 +68,34 @@ const reachesEnterprise = (target: string | undefined, specifier: string): boole
   (target !== undefined && /^\.\.\/ee(\/|$)/.test(target)) || /(^|\/)ee(\/|$)/.test(specifier);
 
 const inDomainFolder = (path: string): boolean => path.split('/').includes('domain');
+
+/** Written in raw SQL only, and only by the ledger module. */
+const STOCK_TABLES = ['lots', 'ledger_entries', 'stock_balances'];
+const STOCK_MODELS = ['lot', 'ledgerEntry', 'stockBalance'];
+/** Owned by the ledger module, which may write it through Prisma. */
+const HEADER_TABLES = ['stock_documents'];
+const HEADER_MODELS = ['stockDocument'];
+
+const PRISMA_WRITES =
+  'create|createMany|createManyAndReturn|update|updateMany|updateManyAndReturn|upsert|delete|deleteMany';
+const prismaWrite = (models: string[]) =>
+  new RegExp(`\\.(${models.join('|')})\\s*\\.\\s*(${PRISMA_WRITES})\\s*\\(`, 'g');
+const sqlWrite = (tables: string[]) =>
+  new RegExp(
+    `\\b(INSERT\\s+INTO|UPDATE|DELETE\\s+FROM|TRUNCATE(?:\\s+TABLE)?|MERGE\\s+INTO|COPY|LOCK\\s+TABLE)\\s+(?:ONLY\\s+)?(?:"?public"?\\.)?"?(${tables.join('|')})\\b"?`,
+    'gi',
+  );
+
+const LEDGER_WRITES_OUTSIDE = [
+  prismaWrite([...STOCK_MODELS, ...HEADER_MODELS]),
+  sqlWrite([...STOCK_TABLES, ...HEADER_TABLES]),
+];
+const PRISMA_STOCK_WRITE = prismaWrite(STOCK_MODELS);
+
+/** Every write to a ledger table the pattern finds, as the text that matched. */
+function writesIn(content: string, patterns: RegExp[]): string[] {
+  return patterns.flatMap((pattern) => [...content.matchAll(pattern)].map((m) => m[0].trim()));
+}
 
 /** `src/modules/<name>/...` → `<name>`; anything else → undefined. */
 function moduleOf(path: string): string | undefined {
@@ -110,6 +147,27 @@ export function checkArchitecture(files: SourceFile[]): Violation[] {
     }
 
     const owner = moduleOf(file.path);
+    if (file.path.startsWith('src/') && owner !== 'ledger') {
+      for (const write of writesIn(file.content, LEDGER_WRITES_OUTSIDE)) {
+        violations.push({
+          rule: 'ledger-writes',
+          file: file.path,
+          specifier: write,
+          message: `"${write}" writes a ledger table outside the ledger module; post through LedgerService (ADR-0010)`,
+        });
+      }
+    }
+    if (owner === 'ledger') {
+      for (const write of writesIn(file.content, [PRISMA_STOCK_WRITE])) {
+        violations.push({
+          rule: 'ledger-raw-sql',
+          file: file.path,
+          specifier: write,
+          message: `"${write}" writes lots, entries or balances through Prisma; the ledger writes them only in raw SQL inside the posting transaction (ADR-0010)`,
+        });
+      }
+    }
+
     if (owner) {
       for (const specifier of specifiers) {
         const target = resolveRelative(file.path, specifier);

@@ -22,6 +22,11 @@ export const Permission = {
   LOCATION_MANAGE: 'location:manage',
   /** Create, edit and deactivate suppliers (#6). Reading needs no permission. */
   SUPPLIER_MANAGE: 'supplier:manage',
+  /**
+   * Draft, post and reverse opening balances (#7). Reading them, and stock on hand, needs no
+   * permission.
+   */
+  OPENING_BALANCE_MANAGE: 'opening_balance:manage',
 } as const;
 
 export type PermissionKey = (typeof Permission)[keyof typeof Permission];
@@ -59,8 +64,9 @@ export const ROLE_PERMISSIONS: Record<Role, readonly PermissionKey[]> = {
   purchasing: [Permission.SUPPLIER_MANAGE],
   // ADR-0008: approve purchase orders above the approval threshold (from #10).
   purchasing_approver: [],
-  // ADR-0008: receive goods, run production orders, manage plant stock.
-  plant: [],
+  // ADR-0008: receive goods, run production orders, manage plant stock. Bringing existing
+  // stock in with an opening balance is managing it (#7).
+  plant: [Permission.OPENING_BALANCE_MANAGE],
   // ADR-0008: dispatch transfers.
   logistics: [],
   // ADR-0008: raise requisitions, receive transfers, count branch stock.

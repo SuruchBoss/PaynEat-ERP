@@ -30,6 +30,8 @@ export const Permission = {
   LOCATION_MANAGE: 'location:manage',
   /** Create, edit and deactivate suppliers: admin and purchasing (#6). */
   SUPPLIER_MANAGE: 'supplier:manage',
+  /** Draft, post and reverse opening balances: the plant role (#7). Reading needs none. */
+  OPENING_BALANCE_MANAGE: 'opening_balance:manage',
 } as const;
 
 export type PermissionKey = (typeof Permission)[keyof typeof Permission];

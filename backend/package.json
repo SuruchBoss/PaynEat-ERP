@@ -24,6 +24,7 @@
     "prisma:deploy": "prisma migrate deploy",
     "db:seed": "ts-node --transpile-only prisma/seed.ts",
     "demo:disable": "ts-node --transpile-only prisma/disable-demo.ts",
+    "ledger:rebuild-balances": "ts-node --transpile-only prisma/rebuild-balances.ts",
     "db:reset": "prisma migrate reset --force"
   },
   "dependencies": {
