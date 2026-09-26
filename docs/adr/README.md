@@ -28,6 +28,7 @@ edited to change their meaning; a new ADR supersedes them.
 | 0018 | [Period close by business date, and sales that arrive after their period closed](0018-period-close-and-business-time.md) | [ปิดงวดตามวันที่เกิดรายการ และยอดขายที่มาถึงหลังงวดปิดไปแล้ว](0018-period-close-and-business-time.th.md) | Accepted |
 | 0019 | [Exact decimal quantities, and one rounding rule for unit conversion](0019-exact-quantities-and-conversion-rounding.md) | [ปริมาณเป็นทศนิยมแบบแม่นยำ และกฎการปัดเศษเดียวสำหรับการแปลงหน่วย](0019-exact-quantities-and-conversion-rounding.th.md) | Accepted |
 | 0020 | [Distribution and installation: installable console, no-developer server install, PaynEat Cloud later](0020-distribution-and-installation.md) | [การแจกจ่ายและการติดตั้ง: console ติดตั้งลงเครื่องได้ ติดตั้งเซิร์ฟเวอร์ได้โดยไม่ต้องมีนักพัฒนา และ PaynEat Cloud ในภายหลัง](0020-distribution-and-installation.th.md) | Accepted |
+| 0021 | [A public demo of the console that runs in the browser, on the backend's own rules](0021-public-demo-in-the-browser.md) | [เดโมสาธารณะของ console ที่ทำงานในเบราว์เซอร์ ด้วยกฎชุดเดียวกับ backend](0021-public-demo-in-the-browser.th.md) | Accepted |
 
 ## Template
 

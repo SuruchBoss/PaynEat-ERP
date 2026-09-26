@@ -56,6 +56,8 @@ export const en: Messages = {
     'None of your roles allows this page. If you think that is wrong, ask your company’s administrator.',
   'error.unreachable':
     'The API could not be reached. Check that the server is running, then try again.',
+  'error.notInDemo':
+    'This part is not in the demo yet: the demo covers the screens that existed when it was published. Try it on a real installation (docker compose).',
   'error.rateLimited': 'Too many requests from this device. Wait a moment, then try again.',
   'error.unexpected':
     'Something unexpected went wrong. Try again; if it keeps happening, tell your administrator and quote the correlation ID below.',
@@ -169,6 +171,19 @@ export const en: Messages = {
   'demo.banner.title': 'Demo installation.',
   'demo.banner.body':
     'The demo accounts use published passwords. Never put a company’s real data here.',
+  'demo.banner.inBrowser':
+    'This demo runs entirely in your browser: there is no server, and your changes are gone when you reload.',
+  'demo.accounts.title': 'Demo accounts',
+  'demo.accounts.intro':
+    'Pick a role to fill in its email and password. Every account uses the password',
+  'demo.accounts.admin':
+    'The administrator also needs a second factor; the next step shows codes that work.',
+  'demo.secondFactor.title': 'Codes for the demo',
+  'demo.secondFactor.body':
+    'Enter any recovery code below. Each works once (a reload brings them back).',
+  'demo.secondFactor.codes': 'The demo administrator’s recovery codes',
+  'demo.secondFactor.secret':
+    'Or add this secret to an authenticator app and enter its 6-digit code:',
   'signIn.error.demoOff':
     'Demo accounts only work on a demo installation (ERP_DEMO=1), and this one is not. Use the account your administrator created for you.',
   'items.title': 'Items and units',

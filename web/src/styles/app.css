@@ -835,6 +835,43 @@ h1:focus {
   list-style: none;
 }
 
+/* The public demo's sign-in help (#41): the demo accounts and the admin's codes. */
+.demo-help {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.demo-help h2 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+}
+
+.demo-help code {
+  overflow-wrap: anywhere;
+}
+
+.demo-help__accounts {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.demo-help__accounts li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  min-width: 0;
+}
+
+.demo-help__accounts .subtle {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 /* ---------------------------------------------------------------- tables */
 
 .page--wide {

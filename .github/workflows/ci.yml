@@ -119,6 +119,17 @@ jobs:
       - name: Production build
         run: npm run build
 
+      # The public demo (#41, ADR-0021): a normal build carries none of the in-browser demo
+      # API and none of its published credentials, and the demo build carries all of it.
+      - name: No demo code in the production build
+        run: node scripts/check-demo-build.mjs dist
+
+      - name: Public demo build
+        run: npx vite build --outDir dist-demo && node scripts/check-demo-build.mjs --demo dist-demo
+        env:
+          VITE_ERP_DEMO: '1'
+          VITE_BASE_PATH: /PaynEat-ERP/
+
   compose:
     name: docker compose up
     runs-on: ubuntu-latest

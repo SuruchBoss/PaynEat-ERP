@@ -4,7 +4,7 @@
 // Adapted from Cwork (web/src/features/auth/LoginPage.tsx), see NOTICE: the same steps —
 // password, then a code or, for an account that must have a second factor and has none,
 // enrolment and recovery codes — without Cwork's device fields.
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState, type FormEvent } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import QRCode from 'qrcode';
 import { Brand } from '@/components/Brand';
@@ -16,6 +16,9 @@ import type { MessageKey } from '@/i18n/catalogue';
 import { useI18n } from '@/i18n/useI18n';
 import { useAuthStore } from '@/stores/auth.store';
 import type { LoginSession, MfaEnrolmentOffer } from './auth.types';
+
+// The public demo's accounts and codes (#41). Any other build compiles this away.
+const DemoSignInHelp = __ERP_DEMO__ ? lazy(() => import('@/demo/DemoSignInHelp')) : null;
 
 type Step =
   | { kind: 'password' }
@@ -246,6 +249,18 @@ export function SignInPage() {
                 </button>
               </div>
             </form>
+          )}
+
+          {DemoSignInHelp && (step.kind === 'password' || step.kind === 'code') && (
+            <Suspense fallback={null}>
+              <DemoSignInHelp
+                step={step.kind}
+                onPick={(demoEmail, demoPassword) => {
+                  setEmail(demoEmail);
+                  setPassword(demoPassword);
+                }}
+              />
+            </Suspense>
           )}
 
           {step.kind === 'recovery' && (

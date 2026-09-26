@@ -34,11 +34,13 @@ export function ErrorCallout({
   const known = apiError ? messages[apiError.code] : undefined;
   const key: MessageKey =
     known ??
-    (apiError?.isUnreachable
-      ? 'error.unreachable'
-      : apiError?.status === 429
-        ? 'error.rateLimited'
-        : 'error.unexpected');
+    (apiError?.code === 'NOT_IN_DEMO'
+      ? 'error.notInDemo'
+      : apiError?.isUnreachable
+        ? 'error.unreachable'
+        : apiError?.status === 429
+          ? 'error.rateLimited'
+          : 'error.unexpected');
 
   return (
     <div className="callout callout--danger" role="alert">

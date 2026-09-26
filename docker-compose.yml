@@ -70,10 +70,13 @@ services:
       start_period: 10s
 
   # The admin console (#3): the built React app behind nginx, which also forwards `/api/`
-  # and `/health` to the API, so the browser sees one origin.
+  # and `/health` to the API, so the browser sees one origin. Built from the repository root:
+  # the console's public demo imports the backend's pure rules (ADR-0021), and the typecheck
+  # sees them; web/Dockerfile.dockerignore keeps everything else out of the build.
   web:
     build:
-      context: ./web
+      context: .
+      dockerfile: web/Dockerfile
     restart: unless-stopped
     depends_on:
       api:

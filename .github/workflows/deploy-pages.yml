@@ -1,0 +1,77 @@
+# Copyright 2026 Suruch Chakrapeesirisuk
+# SPDX-License-Identifier: Apache-2.0
+
+# The console's public demo on GitHub Pages (#41, ADR-0021): the console built with its
+# in-browser demo API (VITE_ERP_DEMO=1), served under /PaynEat-ERP/ with no server behind it.
+# Adapted from PaynEat POS's workflow of the same name.
+#
+# The owner switches Pages on once: Settings → Pages → Build and deployment → Source:
+# "GitHub Actions". A workflow cannot do it itself. After that, every push to main that
+# changes the console, or the backend rules and demo data the demo imports, deploys it.
+name: Deploy public demo
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - 'backend/src/**/domain/**'
+      - 'backend/src/core/security/permissions.ts'
+      - 'backend/prisma/demo-data.ts'
+      - '.github/workflows/deploy-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time, and never cancel one half-way: a half-finished deploy can break the
+# live site, so a newer one waits its turn (unlike CI, which cancels superseded runs).
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build and deploy the public demo
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - run: npm ci
+
+      # Published only from a console that passes its tests, demo API included.
+      - name: Tests
+        run: npm test
+
+      - name: Build the demo
+        run: npm run build
+        env:
+          VITE_ERP_DEMO: '1'
+          VITE_BASE_PATH: /PaynEat-ERP/
+
+      - name: The demo API, its policy and 404.html are in the build
+        run: node scripts/check-demo-build.mjs --demo dist
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/dist
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

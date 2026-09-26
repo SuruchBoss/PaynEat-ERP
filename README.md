@@ -14,6 +14,10 @@ from supplier to plant to branch to plate, with every lot traceable.**
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE)
 ![Status](https://img.shields.io/badge/status-walking%20skeleton-orange.svg)
+[![Public demo](https://img.shields.io/badge/demo-open%20in%20your%20browser-2ea44f.svg)](https://suruchboss.github.io/PaynEat-ERP/)
+
+**[Open the public demo](https://suruchboss.github.io/PaynEat-ERP/)**: the real console on the fictional chain's data, running
+entirely in your browser. No server, nothing kept, and a real installation is still `docker compose`.
 
 </div>
 
@@ -28,7 +32,8 @@ from supplier to plant to branch to plate, with every lot traceable.**
 > from — and the **stock ledger**: lots, ledger entries nothing can change, opening balances that post
 > in one transaction and are corrected only by reversal, and stock on hand as of any date, with its
 > value. The console works on a desktop, a tablet (the menu narrows to icons) and a phone (each table
-> row becomes a card), in light and dark mode. No purchasing, production or transfer document exists
+> row becomes a card), in light and dark mode, and anyone can try it in the browser on the
+[public demo](https://suruchboss.github.io/PaynEat-ERP/). No purchasing, production or transfer document exists
 > yet; they are being built in public, one GitHub issue at a time. This README says only what is true
 > today and will grow as things work.
 
@@ -93,6 +98,7 @@ The "why" matters more than the "what" in an ERP, so every decision is written d
 | [0018](docs/adr/0018-period-close-and-business-time.md) | Periods close by business date per location; a sale that arrives after its period closed still posts, on the first open day and marked late; reopening is audited and re-exports are revisions |
 | [0019](docs/adr/0019-exact-quantities-and-conversion-rounding.md) | Quantities and factors are exact decimals, never floating point; a factor is always above zero; converting to the base unit rounds once, half away from zero, to that unit's decimals; an item's base unit never changes |
 | [0020](docs/adr/0020-distribution-and-installation.md) | The console installs from the browser on phones, tablets and PCs (v1, caches no data); after v1 a chain installs the server without a developer (first-run setup, one-command installer, backups and upgrades from the console); PaynEat Cloud hosting after the pilot; self-hosting always supported |
+| [0021](docs/adr/0021-public-demo-in-the-browser.md) | A public demo of the console on GitHub Pages, answered inside the browser by the backend's own rules and demo data, never a copy of them; a screen the demo does not serve says so; a normal build carries none of it |
 
 Domain vocabulary, in English and Thai: [`docs/GLOSSARY.md`](docs/GLOSSARY.md).
 
@@ -151,8 +157,20 @@ and Cwork; suppliers — each change to an item or a branch a new master data ve
 the **stock ledger** — opening balances and stock on hand by item, lot and location, as of any date;
 and the skeleton under them — an API that reports its own health and its database's, writes every request as
 structured JSON (the ecosystem's [telemetry contract](docs/TELEMETRY.md)) and counts requests,
-failed sign-ins and postings in Prometheus metrics. You need [Docker](https://docs.docker.com/get-docker/) and,
-for the first step, `openssl`.
+failed sign-ins and postings in Prometheus metrics.
+
+### In your browser, with nothing to install
+
+Open **https://suruchboss.github.io/PaynEat-ERP/**. It is this console, built with an in-browser demo API in place of a server
+([ADR-0021](docs/adr/0021-public-demo-in-the-browser.md)). It holds the fictional chain and the demo
+accounts below, and it refuses what the API refuses, because it runs the backend's own rules. What you
+change lives in your browser for that visit, and a reload starts again. The sign-in screen lists the
+accounts and the admin's codes. Every screen in the tour below is there. A screen added later says
+when it is not in the demo yet. For the API itself, its logs and metrics, or your own data, install it:
+
+### On your machine, with Docker
+
+You need [Docker](https://docs.docker.com/get-docker/) and, for the first step, `openssl`.
 
 ```bash
 # Three secrets of your own, which compose refuses to start without (see .env.example)
@@ -219,6 +237,9 @@ check arrives with the first approval (#8, #10).
   `DEMOC-HICKE-NRCVR-YDDD5`, `DEMOC-HICKE-NRCVR-YEEE6`.
 
 ### A five-minute tour
+
+Every step works on the [public demo](https://suruchboss.github.io/PaynEat-ERP/) as well as on a Docker install; on the demo, a reload
+undoes them.
 
 1. Sign in as **admin**: password, then the code. A wrong code counts like a wrong password — five in
    a row lock the account for 15 minutes.
