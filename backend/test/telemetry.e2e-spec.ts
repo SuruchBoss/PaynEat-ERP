@@ -208,8 +208,12 @@ describe('telemetry contract v1.1 — default format', () => {
       expect(text).toMatch(
         /http_request_duration_seconds_bucket\{le="[^"]+",app="payneat-erp-api",method="GET",route="\/health"\}/,
       );
-      expect(text).not.toContain('12345');
-      expect(text).not.toContain('987654');
+      // Only labels can carry a path. Sample values are arbitrary numbers (memory in bytes,
+      // GC timings) that may contain any run of digits, so they are not searched.
+      const labels = [...text.matchAll(/\{([^}]*)\}/g)].map((m) => m[1]).join('\n');
+      expect(labels).toContain('route="/api/v1/test-only/items/:id"');
+      expect(labels).not.toContain('12345');
+      expect(labels).not.toContain('987654');
     });
 
     it('is not served on the public API port', async () => {
