@@ -81,7 +81,7 @@ The "why" matters more than the "what" in an ERP, so every decision is written d
 | [0016](docs/adr/0016-exceltogo-spreadsheet-companion.md) | ExcelToGo joins as the spreadsheet companion: onboarding by template file, finance reports through the public API |
 | [0017](docs/adr/0017-stock-counts.md) | Stock counts are blind and compared as of a count time; plants count per lot, branches per item, and a branch difference is allocated to lots by a rule you can check by hand |
 | [0018](docs/adr/0018-period-close-and-business-time.md) | Periods close by business date per location; a sale that arrives after its period closed still posts, on the first open day and marked late; reopening is audited and re-exports are revisions |
-| [0019](docs/adr/0019-exact-quantities-and-conversion-rounding.md) | *Proposed.* Quantities and factors are exact decimals, never floating point; a factor is always above zero; converting to the base unit rounds once, half away from zero, to that unit's decimals; an item's base unit never changes |
+| [0019](docs/adr/0019-exact-quantities-and-conversion-rounding.md) | Quantities and factors are exact decimals, never floating point; a factor is always above zero; converting to the base unit rounds once, half away from zero, to that unit's decimals; an item's base unit never changes |
 
 Domain vocabulary, in English and Thai: [`docs/GLOSSARY.md`](docs/GLOSSARY.md).
 

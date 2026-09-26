@@ -1,6 +1,6 @@
 # ADR-0019: ปริมาณเป็นทศนิยมแบบแม่นยำ และกฎการปัดเศษเดียวสำหรับการแปลงหน่วย
 
-- **สถานะ:** เสนอ
+- **สถานะ:** ยอมรับแล้ว
 - **วันที่:** 2026-09-26
 - **English:** [0019-exact-quantities-and-conversion-rounding.md](0019-exact-quantities-and-conversion-rounding.md)
 

@@ -1,6 +1,6 @@
 # ADR-0019: Exact decimal quantities, and one rounding rule for unit conversion
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-09-26
 - **ภาษาไทย:** [0019-exact-quantities-and-conversion-rounding.th.md](0019-exact-quantities-and-conversion-rounding.th.md)
 
