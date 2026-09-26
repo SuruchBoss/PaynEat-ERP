@@ -2,7 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import type { Request } from 'express';
-import type { ClientMeta } from './session-tokens.service';
+
+/** Where a request came from, as the audit trail keeps it. */
+export interface ClientMeta {
+  ipAddress?: string;
+  userAgent?: string;
+}
 
 /**
  * What the audit trail keeps about where a request came from. `req.ip` is the client's

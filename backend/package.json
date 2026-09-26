@@ -23,6 +23,7 @@
     "prisma:generate": "prisma generate",
     "prisma:deploy": "prisma migrate deploy",
     "db:seed": "ts-node --transpile-only prisma/seed.ts",
+    "demo:disable": "ts-node --transpile-only prisma/disable-demo.ts",
     "db:reset": "prisma migrate reset --force"
   },
   "dependencies": {

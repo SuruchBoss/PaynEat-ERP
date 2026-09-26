@@ -6,6 +6,7 @@ import clsx from 'clsx';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { DemoBanner } from '@/components/DemoBanner';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { useI18n } from '@/i18n/useI18n';
 import { ROLE_LABEL } from '@/lib/access';
@@ -33,6 +34,8 @@ export function AppLayout() {
       <a className="skip-link" href="#main">
         {t('shell.skipToContent')}
       </a>
+
+      <DemoBanner />
 
       <header className="topbar">
         <button

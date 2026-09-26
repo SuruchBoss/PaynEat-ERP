@@ -119,6 +119,12 @@ describe('users and roles', () => {
     });
     expect(await screen.findByText('สมศรี คลังดี')).toBeVisible();
     expect(screen.queryByRole('form', { name: 'เพิ่มผู้ใช้ใหม่' })).not.toBeInTheDocument();
+
+    // The notice follows a switch of language made after it appeared.
+    await u.click(screen.getByRole('button', { name: 'English' }));
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Created somsri@demo-chicken.example. Give the first password to its owner in person.',
+    );
   });
 
   it.each([

@@ -17,8 +17,9 @@ from supplier to plant to branch to plate, with every lot traceable.**
 > **Status: walking skeleton.** The domain model and architecture are decided and recorded as
 > [ADRs](docs/adr/README.md). The backend runs — health, structured logs and metrics — and so does
 > the web console, in Thai and English, with sign-in (a second factor for administrators), users,
-> the seven roles and an audit trail. No stock or purchasing feature exists yet; they are being
-> built in public, one GitHub issue at a time. This README says only what is true today and will
+> the seven roles, an audit trail, and the item master: items, units, purchase units with exact
+> conversion factors, and the versioned master data change log a POS will pull from. No stock or
+> purchasing document exists yet; they are being built in public, one GitHub issue at a time. This README says only what is true today and will
 > grow as things work.
 
 ## What this is
@@ -80,6 +81,7 @@ The "why" matters more than the "what" in an ERP, so every decision is written d
 | [0016](docs/adr/0016-exceltogo-spreadsheet-companion.md) | ExcelToGo joins as the spreadsheet companion: onboarding by template file, finance reports through the public API |
 | [0017](docs/adr/0017-stock-counts.md) | Stock counts are blind and compared as of a count time; plants count per lot, branches per item, and a branch difference is allocated to lots by a rule you can check by hand |
 | [0018](docs/adr/0018-period-close-and-business-time.md) | Periods close by business date per location; a sale that arrives after its period closed still posts, on the first open day and marked late; reopening is audited and re-exports are revisions |
+| [0019](docs/adr/0019-exact-quantities-and-conversion-rounding.md) | Quantities and factors are exact decimals, never floating point; a factor is always above zero; converting to the base unit rounds once, half away from zero, to that unit's decimals; an item's base unit never changes |
 
 Domain vocabulary, in English and Thai: [`docs/GLOSSARY.md`](docs/GLOSSARY.md).
 
@@ -127,8 +129,9 @@ upgrades, support and implementation are offered as paid services for either edi
 ## Try it
 
 What works today: signing in, with a second factor for administrators; users and the seven roles
-of [ADR-0008](docs/adr/0008-roles-and-segregation-of-duties.md); an append-only audit trail; and the
-skeleton under them — an API that reports its own health and its database's, writes every request as
+of [ADR-0008](docs/adr/0008-roles-and-segregation-of-duties.md); an append-only audit trail; the
+**item master** — items, units and purchase units, each change a new master data version a POS can
+pull; and the skeleton under them — an API that reports its own health and its database's, writes every request as
 structured JSON (the ecosystem's [telemetry contract](docs/TELEMETRY.md)) and counts requests and
 failed sign-ins in Prometheus metrics. You need [Docker](https://docs.docker.com/get-docker/) and,
 for the first step, `openssl`.
@@ -137,16 +140,35 @@ for the first step, `openssl`.
 # Three secrets of your own, which compose refuses to start without (see .env.example)
 printf 'JWT_ACCESS_SECRET=%s\nJWT_REFRESH_SECRET=%s\nFIELD_ENCRYPTION_KEY=%s\n' \
   "$(openssl rand -base64 48)" "$(openssl rand -base64 48)" "$(openssl rand -base64 32)" > .env
+# On purpose: this is an evaluation with the demo chain, whose passwords are published
+echo 'ERP_DEMO=1' >> .env
 
 docker compose up -d --build                        # PostgreSQL 16, the API and the web console
 docker compose run --rm --build migrate             # apply database migrations
-docker compose run --rm migrate npm run db:seed     # the fictional chain: the company and one user per role
+docker compose run --rm migrate npm run db:seed     # the fictional chain: company, one user per role, items
 curl http://localhost:3100/health                   # {"status":"ok","api":"up","database":"up"}
 docker compose logs api                             # one JSON object per line
 ```
 
 Then open **http://localhost:8180** and sign in with one of the demo accounts below. The console
 opens in Thai; **English** is one click away, top right, and the browser remembers the choice.
+
+### A demo installation, on purpose (`ERP_DEMO=1`)
+
+The demo accounts' passwords are in this README, so they only ever work where you asked for them:
+
+- **The seed refuses to run** without `ERP_DEMO=1`, and never under `NODE_ENV=production`.
+- **The API refuses their sign-in** without `ERP_DEMO=1` (a refused sign-in like any other), and ends
+  any session one of them already holds.
+- **A production API refuses to start** while any demo account is enabled and `ERP_DEMO=1` is not
+  set. Its last log line is a `CRITICAL` one saying how to fix it: disable them with
+  `docker compose run --rm migrate npm run demo:disable` (users are never deleted, only disabled),
+  or set `ERP_DEMO=1` if this really is an evaluation. Running the seed again turns them back on.
+- **With `ERP_DEMO=1`**, the API says so in a `WARNING` line at every start, and every console
+  screen, the sign-in screen included, carries a **demo installation** banner that cannot be closed.
+
+Demo accounts are the ones the seed marked as such, never recognised by their email. `.env.example`
+has the line commented out: a real installation never sets it.
 
 ### Demo accounts
 
@@ -157,13 +179,13 @@ The password of every demo account is **`demo-chicken-2026`**.
 
 | Role | Email | What the role is for (ADR-0008) | What it can do in the console today |
 |---|---|---|---|
-| `admin` | `admin@demo-chicken.example` | Manage users, roles, locations, configuration; reopen closed periods | Sign in with a second factor; **Users and roles**: list, create, give and take away roles; read the audit trail (API) |
-| `purchasing` | `purchasing@demo-chicken.example` | Create and send purchase orders; manage suppliers | Sign in; its screens arrive with #6 and #10 |
-| `purchasing_approver` | `approver@demo-chicken.example` | Approve purchase orders above the approval threshold | Sign in; its screen arrives with #10 |
-| `plant` | `plant@demo-chicken.example` | Receive goods, run production orders, manage plant stock | Sign in; its screens arrive with #11 and #13 |
-| `logistics` | `logistics@demo-chicken.example` | Dispatch transfers | Sign in; its screen arrives with #14 |
-| `branch_manager` | `branch.manager@demo-chicken.example` | Raise requisitions, receive transfers, count branch stock | Sign in; its screens arrive with #14 and #15 |
-| `finance` | `finance@demo-chicken.example` | View costs, variances and valuation; export financial data | Sign in; its screens arrive with the costing and period-close work of weeks 4–5 |
+| `admin` | `admin@demo-chicken.example` | Manage users, roles, locations, configuration; reopen closed periods | Sign in with a second factor; **Users and roles**: list, create, give and take away roles; **Items and units**: create, edit, deactivate; read the audit trail (API) |
+| `purchasing` | `purchasing@demo-chicken.example` | Create and send purchase orders; manage suppliers | Sign in; read **Items and units**; its screens arrive with #6 and #10 |
+| `purchasing_approver` | `approver@demo-chicken.example` | Approve purchase orders above the approval threshold | Sign in; read **Items and units**; its screen arrives with #10 |
+| `plant` | `plant@demo-chicken.example` | Receive goods, run production orders, manage plant stock | Sign in; read **Items and units**; its screens arrive with #11 and #13 |
+| `logistics` | `logistics@demo-chicken.example` | Dispatch transfers | Sign in; read **Items and units**; its screen arrives with #14 |
+| `branch_manager` | `branch.manager@demo-chicken.example` | Raise requisitions, receive transfers, count branch stock | Sign in; read **Items and units**; its screens arrive with #14 and #15 |
+| `finance` | `finance@demo-chicken.example` | View costs, variances and valuation; export financial data | Sign in; read **Items and units**; its screens arrive with the costing and period-close work of weeks 4–5 |
 
 A user may hold several roles; the API refuses anything none of them allows (403), and anything
 without a session (401). Nobody approves a document they created, whatever roles they hold — that
@@ -191,7 +213,21 @@ check arrives with the first approval (#8, #10).
    effective on that user's next request. Take **Administrator** from the user you created, then
    from yourself: the last active administrator keeps the role, and the console says why.
 5. Sign in as **purchasing**: no **Users and roles** in the menu, and `/users` says you cannot open it.
-6. Every one of those changes, and every refused sign-in, is in the audit trail with who, when and
+   **Items and units** is there, read-only: whole chicken in kg (variable weight, bought by the case,
+   `1 case = 20 kg`), the four cuts in pieces, the frame in kg, batter flour, frying oil and seasoning.
+6. Back as **admin**, open **Items and units** and **Add item**: a code (typed in any case, stored in
+   capitals), Thai and English names, a base unit, a shelf life, and a purchase unit, say a **bag** of
+   `25` kg — the form previews `1 bag = 25 kilograms`. Now try a factor of `0`, `-5` or the base unit
+   itself as a purchase unit: the API refuses, and each row says why. **Edit** an item: its code and
+   base unit cannot change (ADR-0019). **Deactivate** it: it leaves the default list, nothing is
+   deleted, and **Show: All** brings it back to reactivate.
+7. Every item change is a new **master data version**, the number a POS pulls by. Read the log with
+   any user's access token: `GET /api/v1/master-data/changes?since=0` returns each change in version
+   order, the whole item as it stood after it, and `latestVersion`; ask again with `since` set to the
+   last version you saw and only newer changes come back. Two admins saving at the same moment still
+   get consecutive versions, and the one who saved from a stale screen is told to reload rather than
+   silently undoing the other.
+8. Every one of those changes, and every refused sign-in, is in the audit trail with who, when and
    the request's correlation id. Read it through the API with the admin's access token:
    `GET /api/v1/audit-logs` (filters: `action`, `entityId`, `actorUserId`, `correlationId`, `from`,
    `to`). A refused sign-in is also a `WARNING` line with `"event":"auth.sign_in.failed"` in
@@ -212,7 +248,8 @@ To work on the backend itself (Node.js 22 and a PostgreSQL 16 you can reach):
 ```bash
 cd backend
 cp .env.example .env        # then point DATABASE_URL and E2E_DATABASE_URL at your PostgreSQL,
-                            # and set FIELD_ENCRYPTION_KEY (openssl rand -base64 32)
+                            # set FIELD_ENCRYPTION_KEY (openssl rand -base64 32), and uncomment
+                            # ERP_DEMO=1 to use the demo chain
 npm ci
 npx prisma migrate deploy && npm run db:seed
 npm run start:dev           # http://localhost:3000/health

@@ -39,6 +39,15 @@ export class EnvironmentVariables {
   @IsString()
   CORS_ORIGINS: string = '';
 
+  /**
+   * `1` marks an evaluation installation that carries the demo seed's accounts, whose
+   * passwords and second-factor secret are published (#5). Without it the seed refuses to
+   * run, demo accounts cannot sign in, and a production API refuses to start while any is
+   * enabled. One flag for the seed and the API, so nobody sets half of it.
+   */
+  @IsIn(['0', '1'], { message: 'ERP_DEMO must be 0 or 1' })
+  ERP_DEMO: string = '0';
+
   @IsString()
   @MinLength(1)
   DATABASE_URL!: string;

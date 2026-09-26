@@ -33,7 +33,13 @@ export function resolveDatabaseUrl(): string {
   return url;
 }
 
-/** Every table Prisma owns, minus its own migration bookkeeping. */
+/**
+ * Reference data the migrations themselves insert, the same on every installation: kept,
+ * because nothing else would put it back.
+ */
+const MIGRATION_DATA_TABLES = ['_prisma_migrations', 'units'];
+
+/** Every table Prisma owns, minus its own migration bookkeeping and migration-owned data. */
 export async function truncateAll(databaseUrl = resolveDatabaseUrl()): Promise<void> {
   // Imported lazily so a misconfigured URL fails the check above first.
   const { PrismaClient } = await import('@prisma/client');
@@ -42,7 +48,7 @@ export async function truncateAll(databaseUrl = resolveDatabaseUrl()): Promise<v
   try {
     const tables = await prisma.$queryRaw<{ tablename: string }[]>`
       SELECT tablename FROM pg_tables
-      WHERE schemaname = current_schema() AND tablename <> '_prisma_migrations'
+      WHERE schemaname = current_schema() AND tablename <> ALL(${MIGRATION_DATA_TABLES})
     `;
     if (tables.length === 0) return;
 

@@ -11,6 +11,8 @@ export interface AppConfig {
   port: number;
   apiPrefix: string;
   corsOrigins: string[];
+  /** ERP_DEMO=1: an evaluation installation whose demo accounts may be used. */
+  demo: boolean;
 }
 
 export interface AuthConfig {
@@ -58,6 +60,7 @@ export function buildConfig(env: EnvironmentVariables): RootConfig {
       corsOrigins: env.CORS_ORIGINS.split(',')
         .map((o) => o.trim())
         .filter(Boolean),
+      demo: env.ERP_DEMO === '1',
     },
     auth: {
       accessSecret: env.JWT_ACCESS_SECRET,

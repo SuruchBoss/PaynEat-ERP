@@ -7,6 +7,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import QRCode from 'qrcode';
+import { DemoBanner } from '@/components/DemoBanner';
 import { ErrorCallout } from '@/components/ErrorCallout';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import type { MessageKey } from '@/i18n/catalogue';
@@ -24,6 +25,7 @@ const PASSWORD_ERRORS: Record<string, MessageKey> = {
   INVALID_CREDENTIALS: 'signIn.error.credentials',
   ACCOUNT_LOCKED: 'signIn.error.locked',
   ACCOUNT_DISABLED: 'signIn.error.disabled',
+  DEMO_ACCOUNTS_OFF: 'signIn.error.demoOff',
   VALIDATION_FAILED: 'signIn.error.credentials',
 };
 
@@ -33,6 +35,7 @@ const CODE_ERRORS: Record<string, MessageKey> = {
   SIGN_IN_EXPIRED: 'signIn.error.expired',
   ACCOUNT_LOCKED: 'signIn.error.locked',
   ACCOUNT_DISABLED: 'signIn.error.disabled',
+  DEMO_ACCOUNTS_OFF: 'signIn.error.demoOff',
 };
 
 /** The otpauth URI as an SVG data URL: no canvas, nothing loaded from elsewhere (CSP). */
@@ -143,6 +146,7 @@ export function SignInPage() {
 
   return (
     <div className="auth-screen">
+      <DemoBanner />
       <header className="auth-screen__top">
         <span className="brand">
           <img className="brand__logo" src="/favicon.svg" alt="" width={28} height={28} />

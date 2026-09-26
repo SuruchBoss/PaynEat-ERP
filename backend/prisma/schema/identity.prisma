@@ -30,6 +30,10 @@ model User {
   passwordHash      String     @map("password_hash")
   passwordChangedAt DateTime   @default(now()) @map("password_changed_at") @db.Timestamptz(3)
   status            UserStatus @default(ACTIVE)
+  /// Set only by the demo seed: an account with a published password (#5). Such an account
+  /// signs in only when the installation runs with ERP_DEMO=1, and a production API refuses
+  /// to start while one is enabled without it. Never inferred from the email.
+  demo              Boolean    @default(false)
   /// `th` or `en`: the console's language for this person.
   locale            String     @default("th")
 

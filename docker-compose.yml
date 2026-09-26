@@ -2,9 +2,10 @@
 # installations. Adapted from Cwork's docker-compose.yml, see NOTICE.
 #
 #   cp .env.example .env                                # then fill in the three secrets it asks for
+#   echo ERP_DEMO=1 >> .env                             # only to evaluate with the demo chain
 #   docker compose up -d --build                        # PostgreSQL 16, the API and the console
 #   docker compose run --rm --build migrate             # apply database migrations
-#   docker compose run --rm migrate npm run db:seed     # the fictional demo chain
+#   docker compose run --rm migrate npm run db:seed     # the fictional demo chain (needs ERP_DEMO=1)
 #   open http://localhost:8180                          # the web console (Thai; English one click away)
 #   curl http://localhost:3100/health
 #
@@ -50,6 +51,10 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_FORMAT: ${LOG_FORMAT:-default}
       METRICS_PORT: 9464
+      # 1 only for an evaluation with the demo chain, whose accounts have published
+      # passwords (#5). Without it the API refuses their sign-in, and refuses to start at
+      # all while one is enabled: `docker compose run --rm migrate npm run demo:disable`.
+      ERP_DEMO: ${ERP_DEMO:-0}
       # No defaults, on purpose: a published secret would sign every installation's
       # sessions. Compose refuses to start until .env has them (see .env.example).
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?set JWT_ACCESS_SECRET in .env (see .env.example)}
@@ -92,6 +97,8 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-erp}:${POSTGRES_PASSWORD:-erp-local}@postgres:5432/${POSTGRES_DB:-payneat_erp}?schema=public
       # The demo seed stores the demo admin's second factor encrypted with the API's key.
       FIELD_ENCRYPTION_KEY: ${FIELD_ENCRYPTION_KEY:?set FIELD_ENCRYPTION_KEY in .env (see .env.example)}
+      # The demo seed refuses to run without it (#5); migrations ignore it.
+      ERP_DEMO: ${ERP_DEMO:-0}
     command: ["npx", "prisma", "migrate", "deploy"]
     restart: "no"
 

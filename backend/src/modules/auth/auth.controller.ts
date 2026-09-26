@@ -19,7 +19,7 @@ import type { Request } from 'express';
 import { CurrentUser, type AuthenticatedUser } from '../../core/security/current-user';
 import { Public } from '../../core/security/decorators';
 import { AuthService } from './auth.service';
-import { clientMeta } from './client-meta';
+import { clientMeta } from '../../core/http/client-meta';
 import {
   ChangePasswordDto,
   LoginDto,
