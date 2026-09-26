@@ -135,7 +135,8 @@ def build(path, item_codes, balance_rows):
         rule = DataValidation(type="decimal", operator=op, formula1="0", allow_blank=True)
         rule.add(f"{col}2:{col}{last_b}")
         balances.add_data_validation(rule)
-    expiry = DataValidation(type="date", operator="greaterThan", formula1="DATE(2020,1,1)", allow_blank=True)
+    # 43831 is 2020-01-01 as an Excel date serial, which is how Excel itself stores a rule set in its UI.
+    expiry = DataValidation(type="date", operator="greaterThan", formula1="43831", allow_blank=True)
     expiry.add(f"F2:F{last_b}")
     balances.add_data_validation(expiry)
     for row in balances.iter_rows(min_row=2, min_col=6, max_col=6):

@@ -54,7 +54,8 @@ two, which are reflected below.
    private network or on a cloud VM. Both are supported. ExcelToGo is self-hosted for this purpose too
    (the public demo cannot store sources). Reaching an ERP on a private network is ExcelToGo's decision:
    it chose an operator-listed set of exact private hosts, with loopback, link-local and metadata
-   addresses still always blocked.
+   addresses still always blocked. That is a decision, not yet a feature; installation guides refer to it
+   only once ExcelToGo confirms it has shipped (decision 7).
 7. **Timing.**
    - Import templates: designed now, built **after v1 and before a pilot chain starts**. ExcelToGo has
      fixes of its own to make first (cross-sheet list references and their round-trip).

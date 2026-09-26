@@ -12,3 +12,16 @@ ERP ticket that builds the importer is written. · ฉบับร่าง 0 �
 What a correct round-trip keeps: the cross-sheet list references as references (not a frozen list), the
 `Ref` sheet hidden and protected, the data sheets protected with only the input cells unlocked, and the
 other rules (`whole`, `decimal`, `textLength`, `date`).
+
+**Input rows are part of the template's contract.** Draft 0 unlocks and validates rows 2–200 of `Items`,
+rows 2–50 of `Locations`, and rows 2 to `max(200, pre-filled rows + 1)` of `OpeningBalance`. The importer
+ticket will fix the rule the ERP generates templates by (likely: pre-filled rows plus a stated number of
+blank rows), and a consumer can test that every unlocked, validated row survives a round-trip.
+
+Date rules use an Excel date serial (`43831` = 2020-01-01), the form Excel itself writes, rather than a
+`DATE(...)` formula that some libraries cannot read.
+
+**Measured by ExcelToGo on draft 0 (2026-09-26):** the small file opens, saves and exports; the large one
+does not yet, because cross-sheet list rules are currently copied into every cell. The fixes are on
+ExcelToGo's side and are tracked there (`docs/payneat-erp.md` in that repository); the layout itself needs
+no change.
