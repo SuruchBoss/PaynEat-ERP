@@ -17,8 +17,10 @@ from supplier to plant to branch to plate, with every lot traceable.**
 > **Status: walking skeleton.** The domain model and architecture are decided and recorded as
 > [ADRs](docs/adr/README.md). The backend runs — health, structured logs and metrics — and so does
 > the web console, in Thai and English, with sign-in (a second factor for administrators), users,
-> the seven roles, an audit trail, and the item master: items, units, purchase units with exact
-> conversion factors, and the versioned master data change log a POS will pull from. No stock or
+> the seven roles, an audit trail, and the master data: items, units, purchase units with exact
+> conversion factors, locations (plants, warehouses and branches, each plant and warehouse with its
+> own in-transit location), suppliers, and the versioned master data change log a POS will pull
+> from. No stock or
 > purchasing document exists yet; they are being built in public, one GitHub issue at a time. This README says only what is true today and will
 > grow as things work.
 
@@ -130,8 +132,9 @@ upgrades, support and implementation are offered as paid services for either edi
 
 What works today: signing in, with a second factor for administrators; users and the seven roles
 of [ADR-0008](docs/adr/0008-roles-and-segregation-of-duties.md); an append-only audit trail; the
-**item master** — items, units and purchase units, each change a new master data version a POS can
-pull; and the skeleton under them — an API that reports its own health and its database's, writes every request as
+**master data** — items, units and purchase units; locations, whose codes are shared with the POS
+and Cwork; suppliers — each change to an item or a branch a new master data version a POS can pull;
+and the skeleton under them — an API that reports its own health and its database's, writes every request as
 structured JSON (the ecosystem's [telemetry contract](docs/TELEMETRY.md)) and counts requests and
 failed sign-ins in Prometheus metrics. You need [Docker](https://docs.docker.com/get-docker/) and,
 for the first step, `openssl`.
@@ -145,7 +148,7 @@ echo 'ERP_DEMO=1' >> .env
 
 docker compose up -d --build                        # PostgreSQL 16, the API and the web console
 docker compose run --rm --build migrate             # apply database migrations
-docker compose run --rm migrate npm run db:seed     # the fictional chain: company, one user per role, items
+docker compose run --rm migrate npm run db:seed     # the fictional chain: users, items, sites, suppliers
 curl http://localhost:3100/health                   # {"status":"ok","api":"up","database":"up"}
 docker compose logs api                             # one JSON object per line
 ```
@@ -179,13 +182,13 @@ The password of every demo account is **`demo-chicken-2026`**.
 
 | Role | Email | What the role is for (ADR-0008) | What it can do in the console today |
 |---|---|---|---|
-| `admin` | `admin@demo-chicken.example` | Manage users, roles, locations, configuration; reopen closed periods | Sign in with a second factor; **Users and roles**: list, create, give and take away roles; **Items and units**: create, edit, deactivate; read the audit trail (API) |
-| `purchasing` | `purchasing@demo-chicken.example` | Create and send purchase orders; manage suppliers | Sign in; read **Items and units**; its screens arrive with #6 and #10 |
-| `purchasing_approver` | `approver@demo-chicken.example` | Approve purchase orders above the approval threshold | Sign in; read **Items and units**; its screen arrives with #10 |
-| `plant` | `plant@demo-chicken.example` | Receive goods, run production orders, manage plant stock | Sign in; read **Items and units**; its screens arrive with #11 and #13 |
-| `logistics` | `logistics@demo-chicken.example` | Dispatch transfers | Sign in; read **Items and units**; its screen arrives with #14 |
-| `branch_manager` | `branch.manager@demo-chicken.example` | Raise requisitions, receive transfers, count branch stock | Sign in; read **Items and units**; its screens arrive with #14 and #15 |
-| `finance` | `finance@demo-chicken.example` | View costs, variances and valuation; export financial data | Sign in; read **Items and units**; its screens arrive with the costing and period-close work of weeks 4–5 |
+| `admin` | `admin@demo-chicken.example` | Manage users, roles, locations, configuration; reopen closed periods | Sign in with a second factor; **Users and roles**: list, create, give and take away roles; **Items and units**: create, edit, deactivate; **Locations**: create, correct a code, deactivate, supersede; **Suppliers**; read the audit trail (API) |
+| `purchasing` | `purchasing@demo-chicken.example` | Create and send purchase orders; manage suppliers | Sign in; **Suppliers**: create, edit, deactivate; read items and locations; its purchase-order screens arrive with #10 |
+| `purchasing_approver` | `approver@demo-chicken.example` | Approve purchase orders above the approval threshold | Sign in; read items, locations and suppliers; its screen arrives with #10 |
+| `plant` | `plant@demo-chicken.example` | Receive goods, run production orders, manage plant stock | Sign in; read items, locations and suppliers; its screens arrive with #11 and #13 |
+| `logistics` | `logistics@demo-chicken.example` | Dispatch transfers | Sign in; read items, locations and suppliers; its screen arrives with #14 |
+| `branch_manager` | `branch.manager@demo-chicken.example` | Raise requisitions, receive transfers, count branch stock | Sign in; read items, locations and suppliers; its screens arrive with #14 and #15 |
+| `finance` | `finance@demo-chicken.example` | View costs, variances and valuation; export financial data | Sign in; read items, locations and suppliers; its screens arrive with the costing and period-close work of weeks 4–5 |
 
 A user may hold several roles; the API refuses anything none of them allows (403), and anything
 without a session (401). Nobody approves a document they created, whatever roles they hold — that
@@ -227,7 +230,18 @@ check arrives with the first approval (#8, #10).
    last version you saw and only newer changes come back. Two admins saving at the same moment still
    get consecutive versions, and the one who saved from a stale screen is told to reload rather than
    silently undoing the other.
-8. Every one of those changes, and every refused sign-in, is in the audit trail with who, when and
+8. Open **Locations**: the Bang Na plant `PLANT-01`, its in-transit location `IN-TRANSIT:PLANT-01`
+   (made by the system, not editable), and three branches. **Add location**: a warehouse `wh-01`
+   (stored as `WH-01`) gets its own `IN-TRANSIT:WH-01` at once. Try a code with a space or in Thai:
+   refused, with the rule. **Edit** a branch and correct its code: allowed, because no document has
+   used it yet — it arrives in `GET /api/v1/master-data/changes` like an item. Once a posted document
+   or a POS pull uses a code (from #8), it is fixed; a wrong code in use is fixed by creating the right
+   branch and **Supersede by another location** on the old one, which deactivates it with a link the
+   POS receives. Every request about a location logs `"location_code"` on its line.
+9. Sign in as **purchasing**: **Suppliers** can be added and edited here (the only thing this role
+   changes so far). The tax identification number takes dashes or not, and a mistyped digit is caught
+   by its check digit. Suppliers stay in the ERP and never reach a POS.
+10. Every one of those changes, and every refused sign-in, is in the audit trail with who, when and
    the request's correlation id. Read it through the API with the admin's access token:
    `GET /api/v1/audit-logs` (filters: `action`, `entityId`, `actorUserId`, `correlationId`, `from`,
    `to`). A refused sign-in is also a `WARNING` line with `"event":"auth.sign_in.failed"` in

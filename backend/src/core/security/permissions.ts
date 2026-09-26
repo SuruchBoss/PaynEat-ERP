@@ -18,6 +18,10 @@ export const Permission = {
   AUDIT_READ: 'audit:read',
   /** Create, edit, deactivate and reactivate items (#5). Reading needs no permission. */
   ITEM_MANAGE: 'item:manage',
+  /** Create, correct, deactivate and supersede locations (#6). Reading needs no permission. */
+  LOCATION_MANAGE: 'location:manage',
+  /** Create, edit and deactivate suppliers (#6). Reading needs no permission. */
+  SUPPLIER_MANAGE: 'supplier:manage',
 } as const;
 
 export type PermissionKey = (typeof Permission)[keyof typeof Permission];
@@ -48,9 +52,11 @@ export const ROLE_PERMISSIONS: Record<Role, readonly PermissionKey[]> = {
     Permission.USER_MANAGE,
     Permission.AUDIT_READ,
     Permission.ITEM_MANAGE,
+    Permission.LOCATION_MANAGE,
+    Permission.SUPPLIER_MANAGE,
   ],
-  // ADR-0008: create and send purchase orders; manage suppliers (from #6 and #10).
-  purchasing: [],
+  // ADR-0008: create and send purchase orders (from #10); manage suppliers (#6).
+  purchasing: [Permission.SUPPLIER_MANAGE],
   // ADR-0008: approve purchase orders above the approval threshold (from #10).
   purchasing_approver: [],
   // ADR-0008: receive goods, run production orders, manage plant stock.

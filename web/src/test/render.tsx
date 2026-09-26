@@ -28,8 +28,26 @@ export const ADMIN: SessionUser = {
   displayName: 'Demo admin',
   locale: 'th',
   roles: ['admin'],
-  permissions: ['user:read', 'user:manage', 'audit:read', 'item:manage'],
+  permissions: [
+    'user:read',
+    'user:manage',
+    'audit:read',
+    'item:manage',
+    'location:manage',
+    'supplier:manage',
+  ],
   mfaEnabled: true,
+};
+
+/** Purchasing: manages suppliers, and nothing else yet (#6). */
+export const PURCHASING: SessionUser = {
+  id: '6c1d0a52-6d8e-4c52-9a55-3d7f0b3a0003',
+  email: 'purchasing@demo-chicken.example',
+  displayName: 'Demo purchasing',
+  locale: 'th',
+  roles: ['purchasing'],
+  permissions: ['supplier:manage'],
+  mfaEnabled: false,
 };
 
 export const TOKENS = { accessToken: 'test-access-token', refreshToken: 'test-refresh-token' };

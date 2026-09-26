@@ -8,6 +8,11 @@ import { randomUUID } from 'node:crypto';
 export interface RequestContext {
   correlationId: string;
   traceId?: string;
+  /**
+   * The location the request acts on, once the handler knows it: every line the request
+   * writes from then on carries it as `location_code` (docs/TELEMETRY.md).
+   */
+  locationCode?: string;
 }
 
 const storage = new AsyncLocalStorage<RequestContext>();
@@ -25,4 +30,10 @@ export function runWithRequestContext<T>(context: RequestContext, fn: () => T): 
 
 export function currentRequestContext(): RequestContext | undefined {
   return storage.getStore();
+}
+
+/** Labels the rest of this request's lines with the location it acts on. */
+export function labelRequestLocation(locationCode: string): void {
+  const context = storage.getStore();
+  if (context) context.locationCode = locationCode;
 }

@@ -16,7 +16,9 @@ import { AuthModule } from './modules/auth/auth.module';
 import { JwtAuthGuard } from './modules/auth/jwt-auth.guard';
 import { HealthModule } from './modules/health/health.module';
 import { ItemsModule } from './modules/items/items.module';
+import { LocationsModule } from './modules/locations/locations.module';
 import { MasterDataModule } from './modules/master-data/master-data.module';
+import { SuppliersModule } from './modules/suppliers/suppliers.module';
 
 /**
  * Modular monolith (ADR-0010). Each feature module owns its tables and exposes a
@@ -47,6 +49,8 @@ import { MasterDataModule } from './modules/master-data/master-data.module';
     HealthModule,
     MasterDataModule,
     ItemsModule,
+    LocationsModule,
+    SuppliersModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: AllExceptionsFilter },

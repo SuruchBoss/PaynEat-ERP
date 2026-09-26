@@ -26,6 +26,10 @@ export const Permission = {
   AUDIT_READ: 'audit:read',
   /** Create, edit, deactivate items (#5). Reading them needs no permission. */
   ITEM_MANAGE: 'item:manage',
+  /** Create, correct, deactivate and supersede locations (#6). */
+  LOCATION_MANAGE: 'location:manage',
+  /** Create, edit and deactivate suppliers: admin and purchasing (#6). */
+  SUPPLIER_MANAGE: 'supplier:manage',
 } as const;
 
 export type PermissionKey = (typeof Permission)[keyof typeof Permission];
