@@ -49,6 +49,10 @@ A ticket is done only when all of these hold:
 - The demo seed (the fictional fried-chicken chain: one plant, three branches, two suppliers) still
   builds the whole scenario with one command, extended if the ticket adds something demo-able.
 - `README.md` **and** `README.th.md` describe what now works, in the same commit.
+  Their section "The problems it solves today" and the product page (`docs/landing/`, #45) are
+  generated from `docs/landing/content.mjs`: when a ticket changes what works, change that file (and
+  re-capture a pictured screen that changed, `docs/landing/capture.mjs`), then run
+  `node docs/landing/build.mjs`. Claim nothing `main` cannot do; planned work names its issue.
 - Any new domain decision is recorded as an ADR in **both** languages (`NNNN-slug.md` and
   `NNNN-slug.th.md`) and indexed in `docs/adr/README.md`.
 - CI is green. Never skip, disable or weaken a test to get there.
@@ -170,6 +174,7 @@ Run inside `web/` (the admin console), after `npm ci`:
 | Tests: Vitest + Testing Library + axe, the TH/EN catalogue parity check and the scan for hard-coded UI text | `npm test` |
 | Production build | `npm run build` |
 | No demo code in it, and a working public demo build | `node scripts/check-demo-build.mjs dist`, then `VITE_ERP_DEMO=1 VITE_BASE_PATH=/PaynEat-ERP/ npx vite build --outDir dist-demo && node scripts/check-demo-build.mjs --demo dist-demo` |
+| The product page and the README section match their source (#45) | `node ../docs/landing/build.mjs --check` |
 
 - The end-to-end run migrates, **wipes** and seeds its database first, so it refuses a database
   whose name has no `test` in it (`E2E_ALLOW_NON_TEST_DB=1` overrides, deliberately).
