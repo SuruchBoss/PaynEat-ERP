@@ -1,0 +1,26 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
+// The companies the chain buys from — owned by the suppliers module (#6). Suppliers stay
+// inside the ERP (ADR-0002): they are not master data a POS pulls.
+
+/// Deactivated, never deleted.
+model Supplier {
+  id          String  @id @default(uuid()) @db.Uuid
+  code        String  @unique
+  name        String
+  /// The Thai tax identification number: 13 digits with a check digit.
+  taxId       String  @map("tax_id")
+  contactName String? @map("contact_name")
+  phone       String?
+  email       String?
+  address     String?
+  active      Boolean @default(true)
+  /// Bumped by every change: an edit made from an older revision is refused.
+  revision    Int     @default(1)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("suppliers")
+}

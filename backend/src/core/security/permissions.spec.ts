@@ -31,6 +31,15 @@ describe('roles and permissions (ADR-0008)', () => {
       expect(held.includes(Permission.USER_MANAGE)).toBe(isAdmin);
       expect(held.includes(Permission.AUDIT_READ)).toBe(isAdmin);
       expect(held.includes(Permission.ITEM_MANAGE)).toBe(isAdmin);
+      expect(held.includes(Permission.LOCATION_MANAGE)).toBe(isAdmin);
+    }
+  });
+
+  it('lets admin and purchasing, and nobody else, manage suppliers', () => {
+    for (const role of ROLE_KEYS) {
+      expect(permissionsFor([role]).includes(Permission.SUPPLIER_MANAGE)).toBe(
+        role === 'admin' || role === 'purchasing',
+      );
     }
   });
 
@@ -40,6 +49,8 @@ describe('roles and permissions (ADR-0008)', () => {
       Permission.USER_MANAGE,
       Permission.AUDIT_READ,
       Permission.ITEM_MANAGE,
+      Permission.LOCATION_MANAGE,
+      Permission.SUPPLIER_MANAGE,
     ]);
     expect(permissionsFor([])).toEqual([]);
   });

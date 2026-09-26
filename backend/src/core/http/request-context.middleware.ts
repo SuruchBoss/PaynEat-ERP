@@ -14,7 +14,7 @@ import {
   severityForStatus,
 } from '../telemetry/domain/log-record';
 import { MetricsService } from '../telemetry/metrics.service';
-import { runWithRequestContext } from '../telemetry/request-context';
+import { runWithRequestContext, type RequestContext } from '../telemetry/request-context';
 import { TelemetryLogger } from '../telemetry/telemetry-logger';
 
 /** Where the exception filter leaves the failure for the completion line to report. */
@@ -48,6 +48,9 @@ export function requestContextMiddleware(logger: TelemetryLogger, metrics: Metri
     req.id = correlationId;
     res.setHeader('x-request-id', correlationId);
 
+    // Kept by reference: the handler may label it with a location before the response ends.
+    const context: RequestContext = { correlationId, traceId };
+
     res.once('finish', () => {
       const elapsedMs = Number(process.hrtime.bigint() - started) / 1e6;
       const route = routeTemplate(req);
@@ -62,6 +65,7 @@ export function requestContextMiddleware(logger: TelemetryLogger, metrics: Metri
         // The response has finished; the ambient context may already be gone.
         correlationId,
         traceId,
+        labels: context.locationCode ? { location_code: context.locationCode } : undefined,
         httpRequest: {
           requestMethod: req.method,
           requestUrl: path,
@@ -72,7 +76,7 @@ export function requestContextMiddleware(logger: TelemetryLogger, metrics: Metri
       });
     });
 
-    runWithRequestContext({ correlationId, traceId }, next);
+    runWithRequestContext(context, next);
   };
 }
 

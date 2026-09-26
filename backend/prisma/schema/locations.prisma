@@ -1,0 +1,51 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
+// Every place stock can be — owned by the locations module (#6, ADR-0001, ADR-0007,
+// ADR-0011; docs/GLOSSARY.md "Location").
+
+/// `in_transit` is created and managed by the system, one per plant or warehouse.
+/// `subcontractor` is reserved (ADR-0001): the migration refuses it until it is built.
+enum LocationType {
+  plant
+  warehouse
+  branch
+  in_transit
+  subcontractor
+}
+
+/// Deactivated, never deleted. The code is the ecosystem-wide join key (ADR-0011): it can
+/// be corrected until the location is first used, and is fixed after that.
+model Location {
+  id     String       @id @default(uuid()) @db.Uuid
+  code   String       @unique
+  type   LocationType
+  nameTh String       @map("name_th")
+  nameEn String       @map("name_en")
+  active Boolean      @default(true)
+
+  /// In-transit only: the plant or warehouse whose dispatched stock it holds.
+  originId  String?   @unique @map("origin_id") @db.Uuid
+  origin    Location? @relation("InTransitOrigin", fields: [originId], references: [id], onDelete: Restrict)
+  inTransit Location? @relation("InTransitOrigin")
+
+  /// Set when a location whose code was already in use is replaced by a new one.
+  supersededById String?    @map("superseded_by_id") @db.Uuid
+  supersededBy   Location?  @relation("SupersededBy", fields: [supersededById], references: [id], onDelete: Restrict)
+  supersedes     Location[] @relation("SupersededBy")
+
+  /// The first use that fixed the code (a posted document, a POS pull), and when.
+  firstUsedAt DateTime? @map("first_used_at") @db.Timestamptz(3)
+  firstUse    String?   @map("first_use")
+
+  /// Bumped by every change: an edit made from an older revision is refused.
+  revision          Int     @default(1)
+  /// Branches only: the master data version of the branch's latest change (#5).
+  masterDataVersion BigInt? @map("master_data_version")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([type])
+  @@map("locations")
+}

@@ -23,6 +23,7 @@ import { createCipheriv, createHash, randomBytes } from 'node:crypto';
 import { hash as argonHash } from '@node-rs/argon2';
 import { AuditAction, MasterDataAction, Prisma, PrismaClient, type RoleKey } from '@prisma/client';
 import { seedRefusal } from '../src/modules/auth/domain/demo-mode';
+import { inTransitCode } from '../src/modules/locations/domain/location-rules';
 import { normaliseRecoveryCode } from '../src/modules/auth/domain/totp';
 
 export const DEMO_COMPANY = {
@@ -153,6 +154,43 @@ export const DEMO_ITEMS: readonly DemoItem[] = [
     purchaseUnits: [{ unitCode: 'bag', factor: '5' }],
   },
 ];
+
+/**
+ * The chain's sites (#6): one plant that cuts and marinates, three branches. Codes follow
+ * the ExcelToGo draft template. The plant's in-transit location is created with it.
+ */
+export const DEMO_LOCATIONS = [
+  { code: 'PLANT-01', type: 'plant', nameTh: 'โรงงานบางนา', nameEn: 'Bang Na plant' },
+  { code: 'BR-SILOM', type: 'branch', nameTh: 'สาขาสีลม', nameEn: 'Silom branch' },
+  { code: 'BR-ARI', type: 'branch', nameTh: 'สาขาอารีย์', nameEn: 'Ari branch' },
+  { code: 'BR-BANGNA', type: 'branch', nameTh: 'สาขาบางนา', nameEn: 'Bang Na branch' },
+] as const;
+
+/**
+ * Two fictional suppliers: fresh chicken, and everything dry. Their tax ids start with
+ * twelve zeros, a range no real taxpayer is given, and pass the check digit; their phone
+ * numbers and addresses are invented too.
+ */
+export const DEMO_SUPPLIERS = [
+  {
+    code: 'SUP-CHICKEN',
+    name: 'บริษัท ฟาร์มไก่เดโม จำกัด (สมมติ) · Demo Chicken Farm Co., Ltd. (fictional)',
+    taxId: '0000000000001',
+    contactName: 'ฝ่ายขาย (สมมติ)',
+    phone: '02-000-0001',
+    email: 'sales@chicken-farm.example',
+    address: 'ถนนสมมติ 1 จังหวัดตัวอย่าง (ที่อยู่สมมติ)',
+  },
+  {
+    code: 'SUP-DRYGOODS',
+    name: 'บริษัท วัตถุดิบเดโม จำกัด (สมมติ) · Demo Dry Goods Co., Ltd. (fictional)',
+    taxId: '0000000000027',
+    contactName: 'ฝ่ายขาย (สมมติ)',
+    phone: '02-000-0002',
+    email: 'sales@dry-goods.example',
+    address: 'ถนนสมมติ 2 จังหวัดตัวอย่าง (ที่อยู่สมมติ)',
+  },
+] as const;
 
 /** A refusal, not a crash: printed as a message with no stack trace. (Cwork.) */
 class SeedRefused extends Error {}
@@ -327,6 +365,124 @@ async function seedItems(prisma: PrismaClient): Promise<number> {
   return changed;
 }
 
+/** Takes the next master data version inside `tx` (mirrors MasterDataService). */
+async function nextMasterDataVersion(tx: Prisma.TransactionClient): Promise<bigint> {
+  const [{ version }] = await tx.$queryRaw<{ version: bigint }[]>`
+    INSERT INTO master_data_version (id, version) VALUES (1, 1)
+    ON CONFLICT (id) DO UPDATE SET version = master_data_version.version + 1
+    RETURNING version
+  `;
+  return version;
+}
+
+/**
+ * Creates the chain's sites, or puts back names or an active flag an evaluator changed.
+ * A branch is master data, so each branch it writes takes a master data version and a
+ * change, as the API does (mirrors LocationsService, which a script cannot boot). Codes
+ * are never rewritten: an evaluator's code correction stands.
+ */
+async function seedLocations(prisma: PrismaClient): Promise<number> {
+  let changed = 0;
+  for (const demo of DEMO_LOCATIONS) {
+    await prisma.$transaction(async (tx) => {
+      const existing = await tx.location.findUnique({ where: { code: demo.code } });
+      const wanted = { nameTh: demo.nameTh, nameEn: demo.nameEn, active: true };
+      if (
+        existing &&
+        existing.nameTh === wanted.nameTh &&
+        existing.nameEn === wanted.nameEn &&
+        existing.active
+      ) {
+        return;
+      }
+      if (existing?.supersededById) return;
+
+      const version = demo.type === 'branch' ? await nextMasterDataVersion(tx) : null;
+      const location = existing
+        ? await tx.location.update({
+            where: { id: existing.id },
+            data: { ...wanted, revision: { increment: 1 }, masterDataVersion: version },
+          })
+        : await tx.location.create({
+            data: { code: demo.code, type: demo.type, ...wanted, masterDataVersion: version },
+          });
+      if (demo.type === 'plant') {
+        const transit = {
+          code: inTransitCode(demo.code),
+          nameTh: `ระหว่างขนส่งจาก ${demo.nameTh}`,
+          nameEn: `In transit from ${demo.nameEn}`,
+          active: true,
+        };
+        await tx.location.upsert({
+          where: { originId: location.id },
+          create: { ...transit, type: 'in_transit', originId: location.id },
+          update: transit,
+        });
+      }
+      const snapshot = {
+        id: location.id,
+        locationCode: location.code,
+        type: location.type,
+        ...wanted,
+        supersededBy: null,
+      };
+      if (version !== null) {
+        await tx.masterDataChange.create({
+          data: {
+            version,
+            entityType: 'location',
+            entityId: location.id,
+            entityCode: location.code,
+            action: existing ? MasterDataAction.updated : MasterDataAction.created,
+            data: { ...snapshot, version: Number(version) } as Prisma.InputJsonValue,
+          },
+        });
+      }
+      await tx.auditLog.create({
+        data: {
+          action: existing ? AuditAction.UPDATE : AuditAction.CREATE,
+          entityType: 'Location',
+          entityId: location.id,
+          summary: `Demo seed ${existing ? 'restored' : 'created'} ${location.type} ${location.code}`,
+          changes: snapshot as Prisma.InputJsonValue,
+        },
+      });
+      changed += 1;
+    });
+  }
+  return changed;
+}
+
+/** Creates the two suppliers, or puts back what an evaluator changed. */
+async function seedSuppliers(prisma: PrismaClient): Promise<void> {
+  for (const demo of DEMO_SUPPLIERS) {
+    const { code, ...wanted } = demo;
+    await prisma.$transaction(async (tx) => {
+      const existing = await tx.supplier.findUnique({ where: { code } });
+      const same =
+        existing &&
+        existing.active &&
+        Object.entries(wanted).every(([k, v]) => existing[k as keyof typeof wanted] === v);
+      if (same) return;
+      const supplier = existing
+        ? await tx.supplier.update({
+            where: { id: existing.id },
+            data: { ...wanted, active: true, revision: { increment: 1 } },
+          })
+        : await tx.supplier.create({ data: { code, ...wanted } });
+      await tx.auditLog.create({
+        data: {
+          action: existing ? AuditAction.UPDATE : AuditAction.CREATE,
+          entityType: 'Supplier',
+          entityId: supplier.id,
+          summary: `Demo seed ${existing ? 'restored' : 'created'} supplier ${code}`,
+          changes: { supplierCode: code, ...wanted } as Prisma.InputJsonValue,
+        },
+      });
+    });
+  }
+}
+
 async function main(): Promise<void> {
   const refusal = seedRefusal({ erpDemo: process.env.ERP_DEMO, nodeEnv: process.env.NODE_ENV });
   if (refusal) throw new SeedRefused(`${refusal}\nNothing has been written.`);
@@ -345,6 +501,13 @@ async function main(): Promise<void> {
     console.log(`Demo company ready: ${company.code} — ${company.name}`);
 
     await seedUsers(prisma, key);
+    const changedLocations = await seedLocations(prisma);
+    console.log(
+      `Demo sites ready: ${DEMO_LOCATIONS.map((l) => l.code).join(', ')}` +
+        (changedLocations === 0 ? ' (already as described)' : ` (${changedLocations} written)`),
+    );
+    await seedSuppliers(prisma);
+    console.log(`Demo suppliers ready: ${DEMO_SUPPLIERS.map((s) => s.code).join(', ')}`);
     const changedItems = await seedItems(prisma);
     console.log(
       changedItems === 0

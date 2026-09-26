@@ -82,7 +82,12 @@ describe('signing in', () => {
         mfaRequired: false,
         tokenType: 'Bearer',
         expiresIn: 900,
-        user: { email: PURCHASING, roles: ['purchasing'], permissions: [], mfaEnabled: false },
+        user: {
+          email: PURCHASING,
+          roles: ['purchasing'],
+          permissions: ['supplier:manage'],
+          mfaEnabled: false,
+        },
       });
       expect(res.body.accessToken).toEqual(expect.any(String));
       expect(res.body.refreshToken).toEqual(expect.any(String));
@@ -222,7 +227,14 @@ describe('signing in', () => {
       expect(ok.body.user).toMatchObject({
         email: ADMIN,
         roles: ['admin'],
-        permissions: ['user:read', 'user:manage', 'audit:read', 'item:manage'],
+        permissions: [
+          'user:read',
+          'user:manage',
+          'audit:read',
+          'item:manage',
+          'location:manage',
+          'supplier:manage',
+        ],
         mfaEnabled: true,
       });
       const [entry] = await auditFor('e2e-admin-mfa-ok-01');
