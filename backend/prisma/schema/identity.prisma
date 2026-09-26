@@ -1,0 +1,92 @@
+// Users, their roles and their sessions — owned by the auth module (#4).
+// Adapted from Cwork (backend/prisma/schema/identity.prisma), see NOTICE. The ERP serves
+// one company per installation (ADR-0001), so Cwork's organisation column is gone, and
+// roles are the fixed seven of ADR-0008 rather than rows a customer edits.
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+/// The seven roles of ADR-0008, spelled exactly as the ADR and docs/GLOSSARY.md spell them.
+enum RoleKey {
+  admin
+  purchasing
+  purchasing_approver
+  plant
+  logistics
+  branch_manager
+  finance
+}
+
+model User {
+  id                String     @id @default(uuid()) @db.Uuid
+  /// Stored lower-case, so sign-in is not case-sensitive.
+  email             String     @unique
+  displayName       String     @map("display_name")
+  passwordHash      String     @map("password_hash")
+  passwordChangedAt DateTime   @default(now()) @map("password_changed_at") @db.Timestamptz(3)
+  status            UserStatus @default(ACTIVE)
+  /// `th` or `en`: the console's language for this person.
+  locale            String     @default("th")
+
+  mfaEnabled       Boolean   @default(false) @map("mfa_enabled")
+  /// AES-256-GCM `v1:iv:tag:ciphertext`. Set, but inactive, while enrolment is pending.
+  mfaSecretEnc     String?   @map("mfa_secret_enc")
+  /// SHA-256 digests of the unused recovery codes; each is removed as it is spent.
+  mfaRecoveryCodes String[]  @default([]) @map("mfa_recovery_codes")
+  mfaEnrolledAt    DateTime? @map("mfa_enrolled_at") @db.Timestamptz(3)
+  /// Newest TOTP step already accepted, so a code cannot be replayed within its window.
+  mfaLastUsedStep  Int?      @map("mfa_last_used_step")
+
+  failedLoginCount Int       @default(0) @map("failed_login_count")
+  lockedUntil      DateTime? @map("locked_until") @db.Timestamptz(3)
+  lastLoginAt      DateTime? @map("last_login_at") @db.Timestamptz(3)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  roles        UserRole[] @relation("UserRoles")
+  rolesGranted UserRole[] @relation("RoleGrantedBy")
+  sessions     Session[]
+  auditLogs    AuditLog[]
+
+  @@map("users")
+}
+
+/// One row per role a user holds. A user may hold several (ADR-0008).
+model UserRole {
+  userId      String   @map("user_id") @db.Uuid
+  user        User     @relation("UserRoles", fields: [userId], references: [id], onDelete: Cascade)
+  role        RoleKey
+  grantedAt   DateTime @default(now()) @map("granted_at") @db.Timestamptz(3)
+  /// Null only for roles the demo seed or the first-install setup gave.
+  grantedById String?  @map("granted_by_id") @db.Uuid
+  grantedBy   User?    @relation("RoleGrantedBy", fields: [grantedById], references: [id], onDelete: Restrict)
+
+  @@id([userId, role])
+  @@map("user_roles")
+}
+
+/// A signed-in session. Its refresh token is stored only as its SHA-256 and rotated on
+/// every use; presenting a rotated one revokes the whole family (it leaked). (Cwork.)
+/// Access tokens name their session, so revoking it (sign-out, password change, a role
+/// that now needs a second factor) stops them at once rather than when they expire.
+model Session {
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash     String    @unique @map("token_hash")
+  familyId      String    @map("family_id") @db.Uuid
+  rotatedToId   String?   @map("rotated_to_id") @db.Uuid
+  ipAddress     String?   @map("ip_address")
+  userAgent     String?   @map("user_agent")
+  issuedAt      DateTime  @default(now()) @map("issued_at") @db.Timestamptz(3)
+  expiresAt     DateTime  @map("expires_at") @db.Timestamptz(3)
+  lastUsedAt    DateTime? @map("last_used_at") @db.Timestamptz(3)
+  revokedAt     DateTime? @map("revoked_at") @db.Timestamptz(3)
+  revokedReason String?   @map("revoked_reason")
+
+  @@index([userId])
+  @@index([familyId])
+  @@map("sessions")
+}

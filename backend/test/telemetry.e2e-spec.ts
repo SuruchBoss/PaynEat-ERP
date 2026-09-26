@@ -10,9 +10,14 @@ import {
   Param,
 } from '@nestjs/common';
 import request from 'supertest';
+import { Public } from 'src/core/security/decorators';
 import { completedLine, createTestApp, TestContext } from './utils/test-app';
 
-/** Responses no production route gives yet: a 400, a 500, and a route with a parameter. */
+/**
+ * Responses no production route gives yet: a 400, a 500, and a route with a parameter.
+ * Public, so the telemetry of a request is tested apart from signing in.
+ */
+@Public()
 @Controller('test-only')
 class TestOnlyController {
   @Get('bad-request')
