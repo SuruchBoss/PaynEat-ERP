@@ -45,6 +45,18 @@ export class MetricsService implements OnApplicationBootstrap, OnApplicationShut
     registers: [this.registry],
   });
 
+  /**
+   * Every posting and reversal attempted, by document type and outcome (`succeeded`,
+   * `refused`), and for a refusal the rule that refused it (#7, ADR-0011). `rule` is empty
+   * for a posting that succeeded.
+   */
+  private readonly postings = new Counter({
+    name: 'erp_postings_total',
+    help: 'Stock document postings attempted, by document type, outcome and refusing rule.',
+    labelNames: ['document_type', 'outcome', 'rule'] as const,
+    registers: [this.registry],
+  });
+
   private server?: Server;
 
   constructor(
@@ -64,6 +76,11 @@ export class MetricsService implements OnApplicationBootstrap, OnApplicationShut
 
   countSignInFailure(): void {
     this.signInFailures.inc({ app: APP_NAME });
+  }
+
+  /** `by` 0 makes the series exist before anything happened, so "none yet" reads as 0. */
+  countPosting(documentType: string, outcome: 'succeeded' | 'refused', rule = '', by = 1): void {
+    this.postings.inc({ document_type: documentType, outcome, rule }, by);
   }
 
   async onApplicationBootstrap(): Promise<void> {

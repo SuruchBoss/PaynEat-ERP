@@ -1,0 +1,145 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
+// The stock ledger — owned by the ledger module (#7, ADR-0003, ADR-0004, ADR-0005, ADR-0006,
+// ADR-0018). Lots, ledger entries and balances are written only by the ledger module, only in
+// raw SQL inside one transaction (ADR-0010); `npm run check:architecture` enforces it. These
+// models exist for the schema and for reads.
+
+/// Every document that can write stock. Each type keeps its own lines in its own module's
+/// tables; the header, its number and its state live here, so posting and reversing work the
+/// same way for every type.
+enum StockDocumentType {
+  opening_balance
+  reversal
+}
+
+enum StockDocumentStatus {
+  draft
+  posted
+}
+
+/// A document header. A draft is edited freely and affects nothing; posting it writes all of
+/// its ledger entries in one transaction or none. A posted document never changes (a trigger
+/// refuses it): a mistake is corrected by a reversal, a new document that negates it exactly.
+model StockDocument {
+  id           String              @id @default(uuid()) @db.Uuid
+  /// OB-2026-00001, RV-2026-00001: allocated inside the transaction that creates the document,
+  /// so numbers have no gaps.
+  number       String              @unique
+  type         StockDocumentType
+  status       StockDocumentStatus @default(draft)
+  /// When the movement happened (ADR-0018). Never later than today in the company's time zone.
+  businessDate DateTime            @map("business_date") @db.Date
+  note         String?
+  /// Bumped by every change to a draft: an edit made from an older revision is refused.
+  revision     Int                 @default(1)
+
+  createdById String    @map("created_by_id") @db.Uuid
+  createdBy   User      @relation("StockDocumentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  postedById  String?   @map("posted_by_id") @db.Uuid
+  postedBy    User?     @relation("StockDocumentPostedBy", fields: [postedById], references: [id], onDelete: Restrict)
+  postedAt    DateTime? @map("posted_at") @db.Timestamptz(3)
+
+  /// Reversals only: the posted document this one negates. Unique, so a document is reversed
+  /// at most once, whatever happens concurrently.
+  reversesId String?        @unique @map("reverses_id") @db.Uuid
+  reverses   StockDocument? @relation("Reversal", fields: [reversesId], references: [id], onDelete: Restrict)
+  reversedBy StockDocument? @relation("Reversal")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  lots           Lot[]
+  entries        LedgerEntry[]
+  openingBalance OpeningBalance?
+
+  @@index([type, status])
+  @@map("stock_documents")
+}
+
+/// A quantity of one item that shares an origin, a cost and an expiry date (ADR-0006). Created
+/// only by posting, never changed afterwards.
+model Lot {
+  id                String        @id @default(uuid()) @db.Uuid
+  /// The origin document's number and line: OB-2026-00001/2.
+  number            String        @unique
+  itemId            String        @map("item_id") @db.Uuid
+  item              Item          @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  originDocumentId  String        @map("origin_document_id") @db.Uuid
+  originDocument    StockDocument @relation(fields: [originDocumentId], references: [id], onDelete: Restrict)
+  originLineNo      Int           @map("origin_line_no")
+  /// Per base unit, exact (ADR-0004, ADR-0019).
+  unitCost          Decimal       @map("unit_cost") @db.Decimal(18, 6)
+  expiryDate        DateTime      @map("expiry_date") @db.Date
+  /// What the lot was created with, in the item's base unit.
+  quantity          Decimal       @db.Decimal(18, 3)
+  /// Variable-weight items only: the piece count it was created with (ADR-0005).
+  secondaryQuantity Decimal?      @map("secondary_quantity") @db.Decimal(18, 0)
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  entries  LedgerEntry[]
+  balances StockBalance[]
+
+  @@unique([id, itemId])
+  @@unique([originDocumentId, originLineNo])
+  @@index([itemId, expiryDate])
+  @@map("lots")
+}
+
+/// One stock movement. Never updated or deleted, including by the database's owner through
+/// SQL: a trigger refuses both (ADR-0003).
+model LedgerEntry {
+  id                String        @id @default(uuid()) @db.Uuid
+  documentId        String        @map("document_id") @db.Uuid
+  document          StockDocument @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  /// The document line the entry comes from.
+  lineNo            Int           @map("line_no")
+  itemId            String        @map("item_id") @db.Uuid
+  item              Item          @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  lotId             String        @map("lot_id") @db.Uuid
+  /// Through (lot, item), so an entry can never name one item and another item's lot.
+  lot               Lot           @relation(fields: [lotId, itemId], references: [id, itemId], onDelete: Restrict)
+  locationId        String        @map("location_id") @db.Uuid
+  location          Location      @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  /// Signed, in the item's base unit; never zero.
+  quantity          Decimal       @db.Decimal(18, 3)
+  secondaryQuantity Decimal?      @map("secondary_quantity") @db.Decimal(18, 0)
+  /// The lot's cost, carried on every entry (ADR-0004).
+  unitCost          Decimal       @map("unit_cost") @db.Decimal(18, 6)
+  /// When the movement happened: the start of the document's business date in the company's
+  /// time zone (ADR-0018). Stock as of a date is judged by it.
+  businessTime      DateTime      @map("business_time") @db.Timestamptz(3)
+  postedById        String        @map("posted_by_id") @db.Uuid
+  postedBy          User          @relation("LedgerEntryPostedBy", fields: [postedById], references: [id], onDelete: Restrict)
+  /// When the ERP wrote the entry. Never used to decide which period it belongs to.
+  postedAt          DateTime      @map("posted_at") @db.Timestamptz(3)
+  /// Reversal entries only: the entry this one negates.
+  reversesEntryId   String?       @unique @map("reverses_entry_id") @db.Uuid
+  reversesEntry     LedgerEntry?  @relation("EntryReversal", fields: [reversesEntryId], references: [id], onDelete: Restrict)
+  reversedBy        LedgerEntry?  @relation("EntryReversal")
+
+  @@index([documentId])
+  @@index([lotId, locationId])
+  @@index([locationId, businessTime])
+  @@index([businessTime])
+  @@map("ledger_entries")
+}
+
+/// Balances per lot and location: a snapshot kept up to date by every posting, for speed.
+/// It can be rebuilt from the ledger at any time, and the ledger wins on any disagreement.
+model StockBalance {
+  lotId             String   @map("lot_id") @db.Uuid
+  itemId            String   @map("item_id") @db.Uuid
+  lot               Lot      @relation(fields: [lotId, itemId], references: [id, itemId], onDelete: Restrict)
+  item              Item     @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  locationId        String   @map("location_id") @db.Uuid
+  location          Location @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  quantity          Decimal  @db.Decimal(18, 3)
+  secondaryQuantity Decimal? @map("secondary_quantity") @db.Decimal(18, 0)
+  updatedAt         DateTime @default(now()) @map("updated_at") @db.Timestamptz(3)
+
+  @@id([lotId, locationId])
+  @@index([locationId, itemId])
+  @@map("stock_balances")
+}

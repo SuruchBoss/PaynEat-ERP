@@ -1,0 +1,21 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
+// Document numbers — owned by core/sequence (#7). Adapted from Cwork
+// (backend/prisma/schema/sequence.prisma), see NOTICE: one company per installation, so no
+// organisation column.
+
+/// The next number of one scope and year (OB-2026-00042). Taken with one atomic
+/// `INSERT … ON CONFLICT DO UPDATE … RETURNING` inside the transaction that creates the
+/// document: the row stays locked until that transaction ends, and a rollback returns the
+/// number, so numbers have no gaps.
+model NumberSequence {
+  /// Scope and year, e.g. "OB:2026".
+  key       String   @id
+  prefix    String
+  nextValue Int      @default(1) @map("next_value")
+  padding   Int      @default(5)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(3)
+
+  @@map("number_sequences")
+}

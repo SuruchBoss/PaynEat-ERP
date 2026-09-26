@@ -40,6 +40,19 @@ type ItemRow = Prisma.ItemGetPayload<{ select: typeof ITEM_SELECT }>;
 /** The master data entity type items are logged under. */
 export const ITEM_ENTITY = 'item';
 
+/** What another module needs to know about an item to use it on a document (#7). */
+export interface ItemFacts {
+  id: string;
+  code: string;
+  nameTh: string;
+  nameEn: string;
+  active: boolean;
+  variableWeight: boolean;
+  baseUnitCode: string;
+  /** Decimals a quantity in the base unit keeps (ADR-0019). */
+  baseUnitDecimals: number;
+}
+
 /**
  * The item master (#5, ADR-0005): what the company stocks, in which base unit, bought in
  * which purchase units. Every create and update commits together with its master data
@@ -80,6 +93,33 @@ export class ItemsService {
     const row = await this.prisma.item.findUnique({ where: { id }, select: ITEM_SELECT });
     if (!row) throw new NotFoundError('Item', id);
     return toView(row);
+  }
+
+  /**
+   * The facts other modules need about these items, keyed by id; unknown ids are absent.
+   * Pass the caller's transaction to read inside it.
+   */
+  async describe(
+    ids: readonly string[],
+    tx: Prisma.TransactionClient = this.prisma,
+  ): Promise<Map<string, ItemFacts>> {
+    if (ids.length === 0) return new Map();
+    const rows = await tx.item.findMany({
+      where: { id: { in: [...new Set(ids)] } },
+      select: {
+        id: true,
+        code: true,
+        nameTh: true,
+        nameEn: true,
+        active: true,
+        variableWeight: true,
+        baseUnitCode: true,
+        baseUnit: { select: { decimals: true } },
+      },
+    });
+    return new Map(
+      rows.map(({ baseUnit, ...row }) => [row.id, { ...row, baseUnitDecimals: baseUnit.decimals }]),
+    );
   }
 
   async create(dto: CreateItemDto, actor: AuthenticatedUser, meta: ClientMeta): Promise<ItemView> {

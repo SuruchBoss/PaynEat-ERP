@@ -2,14 +2,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {
+  add,
   decimalPlaces,
   formatFixed,
   formatMinimal,
   integerDigits,
   multiply,
+  negate,
   parseDecimal,
   roundHalfAwayFromZero,
   sign,
+  ZERO,
   type ExactDecimal,
 } from './exact-decimal';
 
@@ -79,5 +82,14 @@ describe('exact decimals', () => {
     expect(formatMinimal(d('10.000000'))).toBe('10');
     expect(formatMinimal(d('0.050'))).toBe('0.05');
     expect(formatMinimal(d('-0'))).toBe('0');
+  });
+
+  it('adds exactly across scales, and negates', () => {
+    expect(formatMinimal(add(d('0.1'), d('0.2')))).toBe('0.3');
+    expect(formatFixed(add(d('21.600'), d('-21.6')), 3)).toBe('0.000');
+    expect(formatMinimal(add(d('1846.8'), d('0.000001')))).toBe('1846.800001');
+    expect(formatMinimal(add(ZERO, d('-3')))).toBe('-3');
+    expect(formatMinimal(negate(d('12.5')))).toBe('-12.5');
+    expect(formatMinimal(negate(negate(d('-0.013'))))).toBe('-0.013');
   });
 });

@@ -16,6 +16,7 @@ import {
   MinLength,
   validateSync,
 } from 'class-validator';
+import { isTimeZone } from '../time/domain/business-date';
 
 const toInt = () => Transform(({ value }) => (value === undefined ? undefined : Number(value)));
 
@@ -47,6 +48,13 @@ export class EnvironmentVariables {
    */
   @IsIn(['0', '1'], { message: 'ERP_DEMO must be 0 or 1' })
   ERP_DEMO: string = '0';
+
+  /**
+   * The company's time zone (ADR-0018): what "today" means for a business date, and where
+   * one business date ends and the next begins. An IANA name.
+   */
+  @IsString()
+  COMPANY_TIME_ZONE: string = 'Asia/Bangkok';
 
   @IsString()
   @MinLength(1)
@@ -181,6 +189,11 @@ export function validateEnv(raw: Record<string, unknown>): EnvironmentVariables 
 
   if (config.NODE_ENV === 'production') {
     assertProductionSafety(config);
+  }
+  if (!isTimeZone(config.COMPANY_TIME_ZONE)) {
+    throw new Error(
+      `COMPANY_TIME_ZONE "${config.COMPANY_TIME_ZONE}" is not a time zone this runtime knows (e.g. Asia/Bangkok)`,
+    );
   }
   if (config.METRICS_PORT !== 0 && config.METRICS_PORT === config.PORT) {
     throw new Error('METRICS_PORT must differ from PORT: metrics are never served on the API port');
