@@ -24,6 +24,8 @@ edited to change their meaning; a new ADR supersedes them.
 | 0014 | [A lot's expiry is never later than the supplier's date](0014-lot-expiry-never-later-than-supplier-date.md) | [วันหมดอายุของ lot ต้องไม่เกินวันที่ซัพพลายเออร์ระบุ](0014-lot-expiry-never-later-than-supplier-date.th.md) | Accepted |
 | 0015 | [Editions: Community and Enterprise](0015-editions-community-and-enterprise.md) | [รุ่นของระบบ: Community และ Enterprise](0015-editions-community-and-enterprise.th.md) | Accepted |
 | 0016 | [ExcelToGo joins the ecosystem as the spreadsheet companion](0016-exceltogo-spreadsheet-companion.md) | [ExcelToGo เข้าร่วมระบบนิเวศในฐานะเครื่องมือสเปรดชีต](0016-exceltogo-spreadsheet-companion.th.md) | Accepted |
+| 0017 | [Stock counts: blind, as of a count time, allocated to lots by rule at branches](0017-stock-counts.md) | [การตรวจนับสต๊อก: นับแบบไม่เห็นยอด ณ เวลาตรวจนับ และที่สาขาปันส่วนต่างลง lot ตามกฎ](0017-stock-counts.th.md) | Accepted |
+| 0018 | [Period close by business date, and sales that arrive after their period closed](0018-period-close-and-business-time.md) | [ปิดงวดตามวันที่เกิดรายการ และยอดขายที่มาถึงหลังงวดปิดไปแล้ว](0018-period-close-and-business-time.th.md) | Accepted |
 
 ## Template
 
