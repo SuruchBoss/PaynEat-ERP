@@ -1,6 +1,6 @@
 # ADR-0016: ExcelToGo joins the ecosystem as the spreadsheet companion
 
-- **Status:** Accepted
+- **Status:** Accepted; decision 6 (deployment model) extended by [ADR-0020](0020-distribution-and-installation.md)
 - **Date:** 2026-09-26
 - **ภาษาไทย:** [0016-exceltogo-spreadsheet-companion.th.md](0016-exceltogo-spreadsheet-companion.th.md)
 

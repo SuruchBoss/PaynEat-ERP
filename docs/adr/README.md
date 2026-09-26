@@ -23,10 +23,11 @@ edited to change their meaning; a new ADR supersedes them.
 | 0013 | [Extension by integration, not in-process plugins](0013-extension-by-integration.md) | [ต่อยอดผ่านการเชื่อมต่อ ไม่ใช่ plugin ภายใน](0013-extension-by-integration.th.md) | Accepted |
 | 0014 | [A lot's expiry is never later than the supplier's date](0014-lot-expiry-never-later-than-supplier-date.md) | [วันหมดอายุของ lot ต้องไม่เกินวันที่ซัพพลายเออร์ระบุ](0014-lot-expiry-never-later-than-supplier-date.th.md) | Accepted |
 | 0015 | [Editions: Community and Enterprise](0015-editions-community-and-enterprise.md) | [รุ่นของระบบ: Community และ Enterprise](0015-editions-community-and-enterprise.th.md) | Accepted |
-| 0016 | [ExcelToGo joins the ecosystem as the spreadsheet companion](0016-exceltogo-spreadsheet-companion.md) | [ExcelToGo เข้าร่วมระบบนิเวศในฐานะเครื่องมือสเปรดชีต](0016-exceltogo-spreadsheet-companion.th.md) | Accepted |
+| 0016 | [ExcelToGo joins the ecosystem as the spreadsheet companion](0016-exceltogo-spreadsheet-companion.md) | [ExcelToGo เข้าร่วมระบบนิเวศในฐานะเครื่องมือสเปรดชีต](0016-exceltogo-spreadsheet-companion.th.md) | Accepted (decision 6 extended by 0020) |
 | 0017 | [Stock counts: blind, as of a count time, allocated to lots by rule at branches](0017-stock-counts.md) | [การตรวจนับสต๊อก: นับแบบไม่เห็นยอด ณ เวลาตรวจนับ และที่สาขาปันส่วนต่างลง lot ตามกฎ](0017-stock-counts.th.md) | Accepted |
 | 0018 | [Period close by business date, and sales that arrive after their period closed](0018-period-close-and-business-time.md) | [ปิดงวดตามวันที่เกิดรายการ และยอดขายที่มาถึงหลังงวดปิดไปแล้ว](0018-period-close-and-business-time.th.md) | Accepted |
 | 0019 | [Exact decimal quantities, and one rounding rule for unit conversion](0019-exact-quantities-and-conversion-rounding.md) | [ปริมาณเป็นทศนิยมแบบแม่นยำ และกฎการปัดเศษเดียวสำหรับการแปลงหน่วย](0019-exact-quantities-and-conversion-rounding.th.md) | Accepted |
+| 0020 | [Distribution and installation: installable console, no-developer server install, PaynEat Cloud later](0020-distribution-and-installation.md) | [การแจกจ่ายและการติดตั้ง: console ติดตั้งลงเครื่องได้ ติดตั้งเซิร์ฟเวอร์ได้โดยไม่ต้องมีนักพัฒนา และ PaynEat Cloud ในภายหลัง](0020-distribution-and-installation.th.md) | Accepted |
 
 ## Template
 
