@@ -188,7 +188,7 @@ export const en = {
     ['GitHub', REPO],
     ['Design decisions', `${REPO}/blob/main/docs/adr/README.md`],
     ['Issues', `${REPO}/issues`],
-    ['PaynEat POS', 'https://github.com/SuruchBoss/PaynEat'],
+    ['PaynEat POS', 'https://suruchboss.github.io/PaynEat/'],
   ],
   readmeSection: {
     title: 'The problems it solves today',
@@ -369,7 +369,7 @@ export const th = {
     ['GitHub', REPO],
     ['บันทึกการตัดสินใจ', `${REPO}/blob/main/docs/adr/README.md`],
     ['Issues', `${REPO}/issues`],
-    ['PaynEat POS', 'https://github.com/SuruchBoss/PaynEat'],
+    ['PaynEat POS', 'https://suruchboss.github.io/PaynEat/'],
   ],
   readmeSection: {
     title: 'ปัญหาที่แก้ได้แล้ววันนี้',

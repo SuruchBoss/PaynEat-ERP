@@ -1,6 +1,6 @@
 # ADR-0012: Positioning — the best open-source option for one niche, not a general ERP
 
-- **Status:** Accepted; decision 4's "no paid edition" superseded by [ADR-0015](0015-editions-community-and-enterprise.md)
+- **Status:** Accepted; decision 4's "no paid edition" superseded by [ADR-0015](0015-editions-community-and-enterprise.md); a statement of fact in Consequences corrected 2026-09-26
 - **Date:** 2026-09-25
 - **ภาษาไทย:** [0012-positioning-niche-depth-over-breadth.th.md](0012-positioning-niche-depth-over-breadth.th.md)
 
@@ -52,8 +52,14 @@ releases before being quoted anywhere public.)
 - Reaching level 2 makes some engineering disciplines part of scope from the start rather than later:
   versioned releases with release notes, database migrations that are tested against a copy of the
   previous release's data, a documented upgrade path, and installation and operating guides.
-- Real users decide priorities after the first release. PaynEat POS already has its first real user,
-  and the ERP should seek one chain willing to pilot it.
+- Real users decide priorities after the first release. Neither PaynEat POS nor the ERP has a
+  restaurant using it in production yet; the ERP should seek one chain willing to pilot it.
+
+  *Correction (2026-09-26):* this line first said that PaynEat POS "already has its first real user".
+  That was not true. The owner confirmed that no restaurant runs the POS in production. The phrase
+  came from POS documents that called a butcher's shop which requested selling by weight and
+  wholesale "the first real user". The POS corrected its own documents in SuruchBoss/PaynEat#27. The
+  decision above does not change.
 - The comparison with Odoo is stated honestly wherever it is made: narrower, deeper in one field, fully
   open, and designed to sit next to the tools a chain already has.
 
