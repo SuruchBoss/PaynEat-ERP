@@ -76,6 +76,7 @@ The "why" matters more than the "what" in an ERP, so every decision is written d
 | [0013](docs/adr/0013-extension-by-integration.md) | Extension by integration: a versioned public API, scoped tokens and signed webhooks — no in-process plugins that could bypass the ledger |
 | [0014](docs/adr/0014-lot-expiry-never-later-than-supplier-date.md) | A lot's expiry is the earlier of shelf life and the supplier's date; production outputs never outlive their inputs |
 | [0015](docs/adr/0015-editions-community-and-enterprise.md) | Two editions: a free Community edition that is complete for one chain, and a paid Enterprise edition for scale, regulation and AI; food safety, data access and upgrades are never paywalled |
+| [0016](docs/adr/0016-exceltogo-spreadsheet-companion.md) | ExcelToGo joins as the spreadsheet companion: onboarding by template file, finance reports through the public API |
 
 Domain vocabulary, in English and Thai: [`docs/GLOSSARY.md`](docs/GLOSSARY.md).
 
@@ -87,6 +88,7 @@ Domain vocabulary, in English and Thai: [`docs/GLOSSARY.md`](docs/GLOSSARY.md).
 | [PaynEat POS](https://github.com/SuruchBoss/PaynEat) | Orders, payments, shifts, tax invoices at the branch — and still works on its own without the ERP |
 | [Cwork](https://github.com/SuruchBoss/Cwork) | People, attendance, leave, payroll (integration planned) |
 | SherWhyve *(private)* | AI investigator of technical incidents; reads the ERP's structured logs and metrics to explain, with evidence, why something broke |
+| [ExcelToGo](https://github.com/SuruchBoss/ExcelToGo) | Spreadsheets: filling the ERP's import templates, and finance reports refreshed from the ERP's public API (planned, ADR-0016) |
 
 The boundaries between them are in [ADR-0011](docs/adr/0011-ecosystem-and-sherwhyve.md): each owns one domain, they integrate only through versioned APIs and events, and a location has the same code in all of them.
 

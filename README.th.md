@@ -71,6 +71,7 @@ flowchart LR
 | [0013](docs/adr/0013-extension-by-integration.th.md) | ต่อยอดผ่านการเชื่อมต่อ: public API ที่มีเวอร์ชัน, token จำกัดสิทธิ์ และ webhook ที่มีลายเซ็น — ไม่มี plugin ที่รันภายในแล้วข้ามกฎบัญชีสต๊อกได้ |
 | [0014](docs/adr/0014-lot-expiry-never-later-than-supplier-date.th.md) | วันหมดอายุของ lot คือวันที่เร็วกว่าระหว่างอายุการเก็บกับวันที่ของซัพพลายเออร์; ผลผลิตหมดอายุไม่ช้ากว่าวัตถุดิบ |
 | [0015](docs/adr/0015-editions-community-and-enterprise.th.md) | สองรุ่น: Community ฟรีและครบสำหรับหนึ่งเชน กับ Enterprise แบบเสียเงินสำหรับขนาดใหญ่ กฎระเบียบ และ AI; ความปลอดภัยอาหาร การเข้าถึงข้อมูล และการอัปเกรด ไม่มีวันอยู่หลัง paywall |
+| [0016](docs/adr/0016-exceltogo-spreadsheet-companion.th.md) | ExcelToGo เข้าร่วมเป็นเครื่องมือสเปรดชีต: ย้ายข้อมูลด้วยไฟล์แม่แบบ และรายงานบัญชีผ่าน public API |
 
 ศัพท์โดเมนภาษาอังกฤษ–ไทย: [`docs/GLOSSARY.md`](docs/GLOSSARY.md)
 
@@ -82,6 +83,7 @@ flowchart LR
 | [PaynEat POS](https://github.com/SuruchBoss/PaynEat) | ออเดอร์ การชำระเงิน กะ ใบกำกับภาษีที่สาขา — และยังใช้เดี่ยวได้โดยไม่ต้องมี ERP |
 | [Cwork](https://github.com/SuruchBoss/Cwork) | บุคลากร เวลาทำงาน การลา เงินเดือน (มีแผนเชื่อมต่อ) |
 | SherWhyve *(private)* | AI สืบสวนเหตุขัดข้องทางเทคนิค อ่าน log และ metric แบบมีโครงสร้างของ ERP เพื่ออธิบายพร้อมหลักฐานว่าอะไรพังเพราะอะไร |
+| [ExcelToGo](https://github.com/SuruchBoss/ExcelToGo) | สเปรดชีต: กรอกแม่แบบนำเข้าของ ERP และรายงานบัญชีที่ดึงจาก public API ของ ERP (มีแผนเชื่อมต่อ, ADR-0016) |
 
 ขอบเขตระหว่างกันอยู่ใน [ADR-0011](docs/adr/0011-ecosystem-and-sherwhyve.th.md): แต่ละระบบเป็นเจ้าของโดเมนเดียว เชื่อมกันผ่าน API และ event ที่มีเวอร์ชันเท่านั้น และสถานที่หนึ่งแห่งใช้รหัสเดียวกันในทุกระบบ
 

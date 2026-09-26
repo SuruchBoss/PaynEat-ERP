@@ -114,8 +114,8 @@ way with the same reasons. Nothing from the credential itself is logged.
 
 | Service | Runs | Visible to SherWhyve on Google Cloud |
 |---|---|---|
-| PaynEat ERP | Central server | Everything in this contract |
-| Cwork | Central server | Everything in this contract |
+| PaynEat ERP | One central server per chain, self-hosted: on the chain's own private network or on a cloud VM (ADR-0016) | Everything in this contract when it runs on Google Cloud; otherwise only what the chain chooses to ship there |
+| Cwork | One central server per organisation, self-hosted in the same way | Same as the ERP |
 | PaynEat POS | **In the restaurant** (one-line Docker install; printers and scales on the shop LAN) | **Not by default** — its logs and metrics stay in the shop |
 
 Because the POS side is usually out of sight, the ERP's own evidence is what explains most POS→ERP
