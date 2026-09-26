@@ -29,4 +29,5 @@ export function createQueryClient(): QueryClient {
 /** Query keys in one place, so invalidation never guesses at a string. */
 export const qk = {
   health: ['health'] as const,
+  users: ['users'] as const,
 };

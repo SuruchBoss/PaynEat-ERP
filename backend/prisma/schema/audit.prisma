@@ -1,0 +1,39 @@
+// The audit trail — owned by the audit module (#4). Adapted from Cwork
+// (backend/prisma/schema/identity.prisma, AuditLog), see NOTICE.
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  LOGIN
+  LOGIN_FAILED
+  LOGOUT
+  ROLE_GRANTED
+  ROLE_REVOKED
+}
+
+/// Append-only: a trigger in the migration refuses UPDATE and DELETE, so not even a
+/// bug or a hand-written query can rewrite history. Users are never deleted, only
+/// disabled, which is why the actor reference restricts deletion instead of nulling it.
+model AuditLog {
+  id            String      @id @default(uuid()) @db.Uuid
+  /// Who acted. For a failed sign-in, the account being signed into; null when the
+  /// email matched no account (the attempted email itself is never stored).
+  actorUserId   String?     @map("actor_user_id") @db.Uuid
+  actor         User?       @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+  action        AuditAction
+  entityType    String      @map("entity_type")
+  entityId      String?     @map("entity_id")
+  summary       String?
+  /// Field-level detail; secrets are redacted before the row is written.
+  changes       Json?
+  ipAddress     String?     @map("ip_address")
+  userAgent     String?     @map("user_agent")
+  /// The request's correlation id (`x-request-id`, docs/TELEMETRY.md), to find its log lines.
+  correlationId String?     @map("correlation_id")
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@index([actorUserId, createdAt])
+  @@map("audit_logs")
+}

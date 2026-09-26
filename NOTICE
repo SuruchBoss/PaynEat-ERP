@@ -25,6 +25,20 @@ Each adapted file says so in its header. Adapted so far, from Cwork commit 6e520
   web/src/styles/                 design tokens and layout styles
   web/Dockerfile, web/nginx.conf, web/vite.config.ts, web/eslint.config.js
 
+Adapted from Cwork commit 6e520ed for sign-in, users and roles (#4):
+
+  backend/src/core/security/      crypto service (AES-256-GCM, Argon2id), permissions and roles,
+                                  decorators, permissions guard, current user
+  backend/src/core/http/pagination.dto.ts
+  backend/src/modules/auth/       auth, MFA and JWT strategy and guard, user context, DTOs,
+                                  password policy; domain/totp.ts and its tests copied unchanged
+  backend/src/modules/audit/      audit service, controller and query
+  backend/prisma/schema/          identity and audit models; the append-only audit trigger
+  backend/prisma/seed.ts          the published demo second factor and the refusal to seed a
+                                  database that is not a demo one
+  web/src/stores/auth.store.ts    session store; web/src/lib/api-client.ts token refresh
+  web/src/features/auth/          sign-in steps (password, second factor, enrolment)
+
 
 Licensed under the Apache License, Version 2.0 (see LICENSE).
 If you fork, redistribute, or build a derivative work of this project,

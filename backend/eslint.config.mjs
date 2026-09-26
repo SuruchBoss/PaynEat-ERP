@@ -20,7 +20,12 @@ export default tseslint.config(
     },
     rules: {
       '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      // Leaving a field out of a copy (`const { secret: _secret, ...safe } = row`) is how a
+      // value is kept out of a response; the web console's config says the same.
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', ignoreRestSiblings: true },
+      ],
       '@typescript-eslint/explicit-member-accessibility': ['off'],
       // Everything the API says goes through the telemetry logger (docs/TELEMETRY.md):
       // a stray console line is a log line with no severity, labels or correlation id.

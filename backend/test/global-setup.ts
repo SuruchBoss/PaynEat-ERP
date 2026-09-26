@@ -14,6 +14,15 @@ export default async function globalSetup(): Promise<void> {
   process.env.NODE_ENV = process.env.NODE_ENV ?? 'test';
   // Every app the suite boots binds its metrics listener to a free port.
   process.env.METRICS_PORT = '0';
+  // Test-only secrets, used when the environment does not bring its own. They sign and
+  // encrypt nothing outside this throwaway database.
+  process.env.JWT_ACCESS_SECRET ??= 'e2e-only-access-secret-0123456789abcdefghij';
+  process.env.JWT_REFRESH_SECRET ??= 'e2e-only-refresh-secret-0123456789abcdefghij';
+  process.env.FIELD_ENCRYPTION_KEY ??= Buffer.alloc(32, 0xe2).toString('base64');
+  // The suite signs in far more often than any person; the limits themselves are
+  // tested by booting an app with a low one (auth.e2e-spec.ts).
+  process.env.THROTTLE_LIMIT = '100000';
+  process.env.AUTH_THROTTLE_LIMIT = '100000';
 
   execFileSync('npx', ['prisma', 'migrate', 'deploy'], {
     cwd: process.cwd(),

@@ -1,0 +1,11 @@
+import type { Request } from 'express';
+import type { ClientMeta } from './session-tokens.service';
+
+/**
+ * What the audit trail keeps about where a request came from. `req.ip` is the client's
+ * address behind the one trusted proxy hop (http-setup.ts). The correlation id is not
+ * here: the audit service reads it from the request context itself.
+ */
+export function clientMeta(req: Request): ClientMeta {
+  return { ipAddress: req.ip, userAgent: req.headers['user-agent'] };
+}

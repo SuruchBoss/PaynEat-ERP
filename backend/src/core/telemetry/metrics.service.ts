@@ -34,6 +34,14 @@ export class MetricsService implements OnApplicationBootstrap, OnApplicationShut
     registers: [this.registry],
   });
 
+  /** Every refused sign-in: wrong password or code, unknown account, locked or disabled. */
+  private readonly signInFailures = new Counter({
+    name: 'auth_sign_in_failures_total',
+    help: 'Sign-in attempts refused.',
+    labelNames: ['app'] as const,
+    registers: [this.registry],
+  });
+
   private server?: Server;
 
   constructor(
@@ -41,12 +49,18 @@ export class MetricsService implements OnApplicationBootstrap, OnApplicationShut
     private readonly logger: TelemetryLogger,
   ) {
     collectDefaultMetrics({ register: this.registry });
+    // Present at zero from the start: "no failures yet" must read as 0, never as missing.
+    this.signInFailures.inc({ app: APP_NAME }, 0);
   }
 
   /** `route` must be a template (`/documents/:id`), never a concrete path. */
   observeRequest(method: string, route: string, status: number, seconds: number): void {
     this.requests.inc({ app: APP_NAME, method, route, status: String(status) });
     this.duration.observe({ app: APP_NAME, method, route }, seconds);
+  }
+
+  countSignInFailure(): void {
+    this.signInFailures.inc({ app: APP_NAME });
   }
 
   async onApplicationBootstrap(): Promise<void> {
