@@ -53,6 +53,16 @@ const PAIRS: [string, string][] = [
   ['text-subtle', 'danger-soft'],
   ['text', 'neutral-soft'],
   ['text', 'surface-2'],
+  ['text-muted', 'surface-2'],
+  ['warning', 'warning-soft'],
+  ['success', 'surface'],
+  // The navigation rail (always dark) and what sits on it.
+  ['rail-text', 'rail'],
+  ['rail-muted', 'rail'],
+  ['rail-text', 'rail-raised'],
+  ['rail-muted', 'rail-raised'],
+  ['rail-accent', 'rail'],
+  ['rail-accent', 'rail-raised'],
 ];
 
 describe.each([

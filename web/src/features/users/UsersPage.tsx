@@ -114,12 +114,19 @@ export function UsersPage() {
             </thead>
             <tbody>
               {users.data.map((user) => (
-                <tr key={user.id}>
+                <tr key={user.id} className={user.status === 'DISABLED' ? 'row--off' : undefined}>
                   <th scope="row">
-                    <span className="cell-title">{user.displayName}</span>
+                    <span className="cell-title">
+                      {user.displayName}
+                      {user.status === 'DISABLED' && (
+                        <span className="badge badge--disabled badge--inline">
+                          {t('users.status.disabled')}
+                        </span>
+                      )}
+                    </span>
                     <span className="subtle">{user.email}</span>
                   </th>
-                  <td>
+                  <td data-label={t('users.column.roles')}>
                     {user.roles.length === 0 ? (
                       <span className="subtle">{t('users.noRoles')}</span>
                     ) : (
@@ -132,14 +139,14 @@ export function UsersPage() {
                       </ul>
                     )}
                   </td>
-                  <td>
+                  <td data-label={t('users.column.mfa')}>
                     <span
                       className={`badge badge--${user.mfaEnabled ? 'up' : user.mfaRequired ? 'down' : 'neutral'}`}
                     >
                       {t(secondFactorKey(user))}
                     </span>
                   </td>
-                  <td>
+                  <td data-label={t('users.column.lastSignIn')}>
                     {user.lastLoginAt ? (
                       formatDateTime(user.lastLoginAt, language)
                     ) : (
