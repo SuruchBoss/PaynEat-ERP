@@ -4,8 +4,10 @@
 import type { RouteObject } from 'react-router-dom';
 import { SignInPage } from '@/features/auth/SignInPage';
 import { ItemsPage } from '@/features/items/ItemsPage';
+import { LocationsPage } from '@/features/locations/LocationsPage';
 import { NotFoundPage } from '@/features/not-found/NotFoundPage';
 import { StatusPage } from '@/features/status/StatusPage';
+import { SuppliersPage } from '@/features/suppliers/SuppliersPage';
 import { UsersPage } from '@/features/users/UsersPage';
 import { Permission } from '@/lib/access';
 import { AppLayout } from './AppLayout';
@@ -23,6 +25,8 @@ export const routes: RouteObject[] = [
         children: [
           { index: true, element: <StatusPage /> },
           { path: 'items', element: <ItemsPage /> },
+          { path: 'locations', element: <LocationsPage /> },
+          { path: 'suppliers', element: <SuppliersPage /> },
           {
             element: <RequirePermission permission={Permission.USER_READ} />,
             children: [{ path: 'users', element: <UsersPage /> }],

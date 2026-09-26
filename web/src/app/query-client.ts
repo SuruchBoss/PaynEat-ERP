@@ -36,4 +36,6 @@ export const qk = {
   users: ['users'] as const,
   items: ['items'] as const,
   units: ['units'] as const,
+  locations: ['locations'] as const,
+  suppliers: ['suppliers'] as const,
 };

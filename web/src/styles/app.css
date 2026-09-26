@@ -793,3 +793,43 @@ h1:focus {
     margin-bottom: 8px;
   }
 }
+
+/* ---------------------------------------------------------------- locations, suppliers (#6) */
+
+.inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 12px;
+  align-items: flex-end;
+}
+
+.inline-form .field {
+  min-width: 260px;
+}
+
+.inline-form .button {
+  margin-bottom: 14px;
+}
+
+.panel__footer h3 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.field textarea {
+  padding: 8px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  resize: vertical;
+}
+
+.field input[readonly] {
+  background: var(--surface-2);
+}
