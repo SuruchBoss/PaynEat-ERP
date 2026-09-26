@@ -97,7 +97,7 @@ way with the same reasons. Nothing from the credential itself is logged.
 
 | Event | Emitted by | Severity |
 |---|---|---|
-| `app.log` | every service | Any line that is not one of the events below (start-up, shutdown, configuration). Never used for something the catalogue names |
+| `app.log` | every service | As fits the line. For lines that are not one of the events below (start-up, shutdown, configuration); never for something the catalogue names |
 | `http.request.completed` | every API | `INFO`; `WARNING` for 4xx except 401/404; `ERROR` for 5xx |
 | `auth.sign_in.failed` | ERP, Cwork | `WARNING` |
 | `ledger.posting.succeeded` | ERP | `INFO` |
