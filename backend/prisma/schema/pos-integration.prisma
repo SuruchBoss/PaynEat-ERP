@@ -1,0 +1,89 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
+// POS integration — owned by the pos-integration module (#9, ADR-0002, contracts/). A PaynEat POS
+// instance registered here pulls master data and delivers sales events with its own machine
+// credential. Each sales event is stored exactly once, by its idempotency key.
+
+enum SalesEventStatus {
+  received
+  processed
+  failed
+}
+
+/// One installation of PaynEat POS registered with the ERP (docs/GLOSSARY.md "POS instance").
+model PosInstance {
+  id          String              @id @default(uuid()) @db.Uuid
+  /// The ecosystem code shape; every sales event names it, and it labels every log line.
+  code        String              @unique
+  name        String
+  createdById String              @map("created_by_id") @db.Uuid
+  createdBy   User                @relation("PosInstanceCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt   DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  /// The last successful master-data pull: the metric reads it here, never from memory.
+  lastPullAt  DateTime?           @map("last_pull_at") @db.Timestamptz(3)
+  branches    PosInstanceBranch[]
+  credentials PosCredential[]
+  salesEvents SalesEvent[]
+
+  @@map("pos_instances")
+}
+
+/// A branch the instance sells for. A sales event for any other branch is refused.
+model PosInstanceBranch {
+  posInstanceId String      @map("pos_instance_id") @db.Uuid
+  posInstance   PosInstance @relation(fields: [posInstanceId], references: [id], onDelete: Cascade)
+  locationId    String      @map("location_id") @db.Uuid
+  location      Location    @relation(fields: [locationId], references: [id], onDelete: Restrict)
+
+  @@id([posInstanceId, locationId])
+  @@map("pos_instance_branches")
+}
+
+/// A machine credential. Only its SHA-256 is kept: the credential itself is shown once and
+/// never stored or logged. Revoked credentials stay, so a POS still using one is recognised
+/// (and its instance named) when it is refused. At most one is active per instance.
+model PosCredential {
+  id            String      @id @default(uuid()) @db.Uuid
+  posInstanceId String      @map("pos_instance_id") @db.Uuid
+  posInstance   PosInstance @relation(fields: [posInstanceId], references: [id], onDelete: Restrict)
+  tokenHash     String      @unique @map("token_hash")
+  createdById   String      @map("created_by_id") @db.Uuid
+  createdBy     User        @relation("PosCredentialCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  revokedById   String?     @map("revoked_by_id") @db.Uuid
+  revokedBy     User?       @relation("PosCredentialRevokedBy", fields: [revokedById], references: [id], onDelete: Restrict)
+  revokedAt     DateTime?   @map("revoked_at") @db.Timestamptz(3)
+
+  @@index([posInstanceId])
+  @@map("pos_credentials")
+}
+
+/// One paid sale line from a POS (sales event v1), stored once per idempotency key. Turning it
+/// into ingredient usage (#17) moves its status on; nothing else about it ever changes.
+model SalesEvent {
+  id             String           @id @default(uuid()) @db.Uuid
+  idempotencyKey String           @unique @map("idempotency_key")
+  posInstanceId  String           @map("pos_instance_id") @db.Uuid
+  posInstance    PosInstance      @relation(fields: [posInstanceId], references: [id], onDelete: Restrict)
+  locationId     String           @map("location_id") @db.Uuid
+  location       Location         @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  saleTime       DateTime         @map("sale_time") @db.Timestamptz(3)
+  menuItemCode   String           @map("menu_item_code")
+  /// Sold by count: how many. Null when sold by weight.
+  quantity       Decimal?         @db.Decimal(18, 0)
+  /// Sold by weight: the kilograms sold. Null when sold by count.
+  weightKg       Decimal?         @map("weight_kg") @db.Decimal(18, 3)
+  /// `[{ code, quantity }]`, as sent.
+  modifiers      Json
+  /// The event exactly as validated, for #17 and for an investigator.
+  payload        Json
+  /// SHA-256 of the canonical payload: a key sent again with a different sale is refused.
+  payloadHash    String           @map("payload_hash")
+  status         SalesEventStatus @default(received)
+  receivedAt     DateTime         @default(now()) @map("received_at") @db.Timestamptz(3)
+
+  @@index([locationId, saleTime])
+  @@index([posInstanceId, receivedAt])
+  @@map("sales_events")
+}

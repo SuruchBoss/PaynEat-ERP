@@ -128,6 +128,7 @@ describe('user administration', () => {
         'item:manage',
         'location:manage',
         'supplier:manage',
+        'pos_instance:manage',
       ],
       requiresSecondFactor: true,
     });

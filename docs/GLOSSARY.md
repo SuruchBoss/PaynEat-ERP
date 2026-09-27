@@ -141,6 +141,7 @@ using a new domain concept anywhere else.
 | POS instance | POS instance | One installation of PaynEat POS registered with the ERP. May serve one branch or several. |
 | Connected mode | โหมดเชื่อมต่อ ERP | A POS instance registered with the ERP. Master data becomes read-only on the POS. |
 | Standalone mode | โหมดใช้งานเดี่ยว | A POS instance with no ERP. Everything works as it does today. |
+| Machine credential | machine credential | The secret a POS instance authenticates with, issued by an ERP administrator and shown once (`pnepos_…`). The ERP keeps only its hash; it can be revoked and a new one issued, all audited. Never logged on either side (#9, `contracts/`). |
 | Sales event | event ยอดขาย | A POS sale line sent to the ERP: menu item, quantity or weighed weight, modifiers, time. |
 | Outbox | outbox | A table written in the same transaction as the business change, drained to the other system afterwards. |
 | Idempotency key | idempotency key | A unique key per event so a retried delivery is applied once. |

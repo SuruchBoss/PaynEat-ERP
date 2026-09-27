@@ -36,6 +36,8 @@ export const Permission = {
   STOCK_ADJUSTMENT_RAISE: 'stock_adjustment:raise',
   /** Approve (which posts) or reject them: finance, never on one they raised (#8). */
   STOCK_ADJUSTMENT_APPROVE: 'stock_adjustment:approve',
+  /** Register PaynEat POS instances and manage their credentials: the admin (#9, API only). */
+  POS_INSTANCE_MANAGE: 'pos_instance:manage',
 } as const;
 
 export type PermissionKey = (typeof Permission)[keyof typeof Permission];

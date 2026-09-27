@@ -152,7 +152,6 @@ export const en = {
     title: 'What’s cooking next.',
     sub: 'Built in public, one GitHub issue at a time. None of this is in the demo yet.',
     items: [
-      [9, 'POS integration contract and POS registration', 'progress'],
       [10, 'Purchase orders with an approval threshold'],
       [11, 'Goods receipts with inspection and lots'],
       [13, 'Production orders: measured yield and lot genealogy'],
@@ -332,7 +331,6 @@ export const th = {
     title: 'สิ่งที่กำลังจะมา',
     sub: 'สร้างแบบเปิดเผยทีละ GitHub issue ทั้งหมดนี้ยังไม่อยู่ในเดโม',
     items: [
-      [9, 'สัญญาการเชื่อมต่อ POS และการลงทะเบียน POS', 'progress'],
       [10, 'ใบสั่งซื้อพร้อมเกณฑ์วงเงินที่ต้องอนุมัติ'],
       [11, 'ใบรับสินค้าพร้อมการตรวจรับและ lot'],
       [13, 'ใบสั่งผลิต: yield ที่วัดจริงและผังความสัมพันธ์ lot'],

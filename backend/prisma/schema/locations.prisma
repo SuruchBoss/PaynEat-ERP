@@ -50,6 +50,8 @@ model Location {
   stockBalances   StockBalance[]
   openingBalances OpeningBalance[]
   adjustments     StockAdjustment[]
+  posInstances    PosInstanceBranch[]
+  salesEvents     SalesEvent[]
 
   @@index([type])
   @@map("locations")

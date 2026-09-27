@@ -57,6 +57,17 @@ export class MetricsService implements OnApplicationBootstrap, OnApplicationShut
     registers: [this.registry],
   });
 
+  /**
+   * Every sales event a POS delivered (#9, docs/TELEMETRY.md): `received` the first time,
+   * `duplicate` when its idempotency key was already stored, `rejected` with the `reason`.
+   */
+  private readonly salesEvents = new Counter({
+    name: 'erp_sales_events_total',
+    help: 'Sales events delivered by POS instances, by outcome and refusal reason.',
+    labelNames: ['outcome', 'reason'] as const,
+    registers: [this.registry],
+  });
+
   private server?: Server;
 
   constructor(
@@ -66,6 +77,8 @@ export class MetricsService implements OnApplicationBootstrap, OnApplicationShut
     collectDefaultMetrics({ register: this.registry });
     // Present at zero from the start: "no failures yet" must read as 0, never as missing.
     this.signInFailures.inc({ app: APP_NAME }, 0);
+    this.salesEvents.inc({ outcome: 'received', reason: '' }, 0);
+    this.salesEvents.inc({ outcome: 'duplicate', reason: '' }, 0);
   }
 
   /** `route` must be a template (`/documents/:id`), never a concrete path. */
@@ -81,6 +94,10 @@ export class MetricsService implements OnApplicationBootstrap, OnApplicationShut
   /** `by` 0 makes the series exist before anything happened, so "none yet" reads as 0. */
   countPosting(documentType: string, outcome: 'succeeded' | 'refused', rule = '', by = 1): void {
     this.postings.inc({ document_type: documentType, outcome, rule }, by);
+  }
+
+  countSalesEvent(outcome: 'received' | 'duplicate' | 'rejected', reason = ''): void {
+    this.salesEvents.inc({ outcome, reason });
   }
 
   /**

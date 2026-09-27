@@ -1,0 +1,8 @@
+{
+  "code": "POS-SILOM-1",
+  "name": "Silom front counter",
+  "contractVersion": "1.0.0",
+  "branches": [
+    { "code": "BR-SILOM", "nameTh": "สาขาสีลม", "nameEn": "Silom branch", "active": true }
+  ]
+}

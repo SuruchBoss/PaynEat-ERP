@@ -14,6 +14,7 @@ enum AuditAction {
   ROLE_REVOKED
   APPROVE
   REJECT
+  REVOKE
 }
 
 /// Append-only: a trigger in the migration refuses UPDATE and DELETE, so not even a

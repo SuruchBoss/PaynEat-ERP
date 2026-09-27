@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/SuruchBoss/PaynEat-ERP/contracts/pos/v1/sales-event-receipt.schema.json",
+  "title": "Sales event receipt v1",
+  "description": "The ERP's answer to a sales event it has stored: 201 the first time, 200 with `duplicate: true` and the same `receivedAt` every time after. Both mean the event is safe in the ERP.",
+  "type": "object",
+  "required": ["idempotencyKey", "status", "duplicate", "receivedAt"],
+  "properties": {
+    "idempotencyKey": { "type": "string" },
+    "status": {
+      "description": "Where the event is in the ERP. Contract v1 stores events as `received`; turning them into ingredient usage (ERP #17) moves them on to `processed` or `failed`, which a later delivery of the same event can then report.",
+      "enum": ["received", "processed", "failed"]
+    },
+    "duplicate": {
+      "description": "True when the ERP already had this idempotency key: nothing was stored again.",
+      "type": "boolean"
+    },
+    "receivedAt": {
+      "description": "When the ERP first stored the event.",
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}
