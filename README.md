@@ -213,7 +213,7 @@ The "why" matters more than the "what" in an ERP, so every decision is written d
 | [0019](docs/adr/0019-exact-quantities-and-conversion-rounding.md) | Quantities and factors are exact decimals, never floating point; a factor is always above zero; converting to the base unit rounds once, half away from zero, to that unit's decimals; an item's base unit never changes |
 | [0020](docs/adr/0020-distribution-and-installation.md) | The console installs from the browser on phones, tablets and PCs (v1, caches no data); after v1 a chain installs the server without a developer (first-run setup, one-command installer, backups and upgrades from the console); PaynEat Cloud hosting after the pilot; self-hosting always supported |
 | [0021](docs/adr/0021-public-demo-in-the-browser.md) | A public demo of the console on GitHub Pages, answered inside the browser by the backend's own rules and demo data, never a copy of them; a screen the demo does not serve says so; a normal build carries none of it |
-| [0022](docs/adr/0022-vulnerability-disclosure-across-the-ecosystem.md) | *Proposed.* A vulnerability is reported privately to the project that owns the code, never written anywhere public while unfixed; another project's is referenced only by its fixed version and advisory; `SECURITY.md` names the channel |
+| [0022](docs/adr/0022-vulnerability-disclosure-across-the-ecosystem.md) | A vulnerability is reported privately to the project that owns the code, never written anywhere public while unfixed; another project's is referenced only by its fixed version and advisory; code adapted between projects is fixed in both before any advisory; `SECURITY.md` names the channel |
 
 Domain vocabulary, in English and Thai: [`docs/GLOSSARY.md`](docs/GLOSSARY.md).
 
