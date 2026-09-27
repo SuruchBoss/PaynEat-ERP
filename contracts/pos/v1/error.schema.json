@@ -8,7 +8,7 @@
   "properties": {
     "statusCode": { "type": "integer" },
     "code": {
-      "description": "`POS_CREDENTIAL_REJECTED` (401): stop sending and tell an administrator. `SALES_EVENT_REJECTED` (422): this event will never be accepted as it is; dead-letter it. Anything else: see the HTTP status.",
+      "description": "`POS_CREDENTIAL_REJECTED` (401): stop the queue, keep pending events pending, and tell an administrator. `SALES_EVENT_REJECTED` (422): this event will never be accepted as it is; dead-letter it (nothing was stored, so the same key can be resent once the cause is fixed). Anything else: see the HTTP status and contracts/README.md.",
       "type": "string"
     },
     "message": { "type": "string" },

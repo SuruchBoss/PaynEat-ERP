@@ -418,6 +418,36 @@ describe('POS integration', () => {
       expect(invalid.body.details.errors.length).toBeGreaterThan(0);
       expect(await prisma.salesEvent.count({ where: { posInstanceId: instance.id } })).toBe(1);
     });
+
+    it('keeps a refused key unused, so the same event is accepted once its cause is fixed', async () => {
+      const [served, added] = [await newBranch(), await newBranch()];
+      const { instance, credential } = await register([served.code]);
+      const deadLetter = event(instance, added.code);
+
+      const refused = await send(credential, deadLetter);
+      expect(refused.status).toBe(422);
+      expect(refused.body.details.reason).toBe('branch_not_served');
+      expect(
+        await prisma.salesEvent.count({ where: { idempotencyKey: deadLetter.idempotencyKey } }),
+      ).toBe(0);
+
+      // The cause is fixed: the instance now serves that branch. There is no endpoint for this
+      // yet (branches are chosen at registration), so the test adds it where the ERP keeps it.
+      await prisma.posInstanceBranch.create({
+        data: { posInstanceId: instance.id, locationId: added.id },
+      });
+
+      const resent = await send(credential, deadLetter);
+      expect(resent.status).toBe(201);
+      expect(resent.body).toMatchObject({
+        idempotencyKey: deadLetter.idempotencyKey,
+        status: 'received',
+        duplicate: false,
+      });
+      expect(
+        await prisma.salesEvent.count({ where: { idempotencyKey: deadLetter.idempotencyKey } }),
+      ).toBe(1);
+    });
   });
 
   describe('credentials', () => {

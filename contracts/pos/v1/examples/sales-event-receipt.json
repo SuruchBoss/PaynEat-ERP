@@ -1,5 +1,5 @@
 {
-  "idempotencyKey": "POS-SILOM-1-order-item-000123",
+  "idempotencyKey": "POS-SILOM-1-K3F9Q2-00001234",
   "status": "received",
   "duplicate": false,
   "receivedAt": "2026-09-27T05:35:02.118Z"

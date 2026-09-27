@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/SuruchBoss/PaynEat-ERP/contracts/pos/v1/sales-event.schema.json",
   "title": "Sales event v1",
-  "description": "One non-cancelled sale line of a bill that has been paid in full, sent by a PaynEat POS instance to PaynEat ERP. See contracts/README.md for when a POS sends it and how it retries.",
+  "description": "One non-cancelled sale line, sent by a PaynEat POS instance to PaynEat ERP once the line is paid: when its bill is paid in full, or when a payment covering that line is made (a split bill). See contracts/README.md for when a POS sends it and how it retries.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -20,7 +20,7 @@
       "const": 1
     },
     "idempotencyKey": {
-      "description": "Stable for this sale line across every retry, and unique across the chain: for example `<pos-instance>-<order-item-id>`. It is also the event's correlation id: the POS sends it as `x-request-id` on every delivery (docs/TELEMETRY.md), which is why it keeps to that header's characters.",
+      "description": "Stable for this sale line across every retry, and unique across the chain, even if the POS database is reinstalled: for example `<pos-instance>-<database id>-<order-item id>`, `POS-SILOM-1-K3F9Q2-00001234`. It is also the event's correlation id: the POS sends it as `x-request-id` on every delivery (docs/TELEMETRY.md), which is why it keeps to that header's characters.",
       "type": "string",
       "pattern": "^[A-Za-z0-9_-]{8,64}$"
     },
@@ -33,7 +33,7 @@
       "$ref": "#/$defs/code"
     },
     "saleTime": {
-      "description": "When the bill was paid in full, with its UTC offset (RFC 3339), for example 2026-09-27T12:34:56+07:00.",
+      "description": "When the line was paid: the time of the payment that paid its bill in full, or of the payment covering that line, with its UTC offset (RFC 3339), for example 2026-09-27T12:34:56+07:00.",
       "type": "string",
       "format": "date-time"
     },
@@ -62,7 +62,7 @@
         "properties": {
           "code": { "$ref": "#/$defs/code" },
           "quantity": {
-            "description": "How many times the option applies to the line, a whole number above zero, as a string.",
+            "description": "How many times the option applies to each unit sold on the line: per piece for `quantity`, per kilogram for `weightKg`. A whole number above zero, as a string. The ingredients used are the option's recipe × this quantity × the line's `quantity` (or `weightKg`).",
             "type": "string",
             "pattern": "^[1-9][0-9]{0,3}$"
           }

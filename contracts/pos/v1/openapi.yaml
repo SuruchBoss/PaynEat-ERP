@@ -77,6 +77,12 @@ paths:
     post:
       operationId: postSalesEvent
       summary: One paid sale line, stored exactly once by its idempotency key.
+      description: |
+        A sale line is paid when its bill is paid in full, or when a payment covering that line is
+        made (a split bill); `saleTime` is that payment's time. The POS sends each line from its
+        outbox and acts on every answer as contracts/README.md says: dead letters come from `422`
+        only; any 5xx, timeout or network error is retried with the same key, never dead-lettered;
+        any other status, or a 2xx whose body is not a valid receipt, stops the queue as `401` does.
       parameters:
         - name: x-request-id
           in: header
@@ -120,7 +126,10 @@ paths:
         '422':
           description: >-
             This event will never be accepted as it is (`SALES_EVENT_REJECTED` with
-            `details.reason`): the POS moves it to its dead letters with the reason.
+            `details.reason`): the POS moves it to its dead letters with the reason. Nothing is
+            stored, so the key is not used up: once the cause is fixed, the same event resent with
+            the same key is accepted as new (`201`). The exception is `idempotency_key_reused`,
+            whose key already belongs to another sale line.
           content:
             application/json:
               schema:
@@ -130,6 +139,11 @@ paths:
                   externalValue: './examples/error.schema-invalid.json'
         '429':
           description: Too many requests from this address. Retry after the `Retry-After` seconds.
+        '503':
+          description: >-
+            The ERP is briefly unavailable. The POS waits the `Retry-After` seconds when the header
+            is present, otherwise backs off (capped at 5 minutes), then retries with the same key.
+            Like any 5xx or timeout, it never dead-letters the event.
 components:
   securitySchemes:
     posCredential:
@@ -149,8 +163,9 @@ components:
     CredentialRejected:
       description: >-
         The credential was revoked, or the ERP does not know it (`POS_CREDENTIAL_REJECTED` with
-        `details.reason` `credential_revoked` or `credential_unknown`). The POS stops sending and
-        tells an administrator; retrying cannot help.
+        `details.reason` `credential_revoked` or `credential_unknown`). The POS stops the queue,
+        keeps pending events pending, and tells an administrator; retrying cannot help. The queue
+        resumes when a new credential is saved.
       content:
         application/json:
           schema:

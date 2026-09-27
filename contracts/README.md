@@ -36,8 +36,9 @@ each answer. The POS tickets built on it are `25-erp-connected-mode`, `26-erp-sa
 
 A `401` with `POS_CREDENTIAL_REJECTED` on any call means the credential was revoked
 (`credential_revoked`) or never existed (`credential_unknown`). Retrying cannot help: the POS stops
-calling the ERP and tells its administrator. The ERP logs and counts every such refusal, so the
-chain's investigator sees it too.
+calling the ERP, keeps every sale waiting to be sent, and tells its administrator; it resumes when a
+new credential is saved. The ERP logs and counts every such refusal, so the chain's investigator sees
+it too.
 
 ## Master data: pull by version
 
@@ -62,15 +63,18 @@ chain's investigator sees it too.
 
 ## Sales events: an outbox, delivered exactly once
 
-**When a sales event exists.** When a bill is **paid in full**, the POS creates one sales event per
-sale line that was not cancelled:
+**When a sales event exists.** When a **sale line is paid** (its bill is paid in full, or a payment
+covering that line is made, as when a bill is split), the POS creates one sales event for that line,
+if it was not cancelled:
 
-- `saleTime` is the time of full payment, with its UTC offset.
+- `saleTime` is that payment's time, with its UTC offset.
 - A line sold by count carries `quantity`. A line sold by weight carries `weightKg`, the weight
   actually sold, in kilograms. Never both.
 - `menuItemCode` and each modifier's `code` are the ERP's codes (mirrored with contract 1.1). A
   menu item without an ERP code cannot be sold in connected mode, so no line lacks one.
-- Modifiers are included, each with how many times it applies.
+- Modifiers are included. A modifier's `quantity` is **per one unit sold on the line**: per piece
+  for `quantity`, per kilogram for `weightKg`. The ingredients used are the option's recipe × the
+  modifier's `quantity` × the line's `quantity` (or `weightKg`).
 - **Not sent in v1:** refunds or voids after payment, and food prepared but cancelled before
   payment. Stock counts absorb that difference (PaynEat POS `docs/DECISIONS.md` #66). No event has
   a negative or zero quantity.
@@ -80,7 +84,9 @@ the payment**: if the payment fails, there is no event, and if it succeeds, the 
 lost. A POS in standalone mode writes nothing.
 
 **The idempotency key** identifies the sale line: stable across every retry, and unique across the
-chain, for example `<pos-instance>-<order-item-id>` (`POS-SILOM-1-000123`). It is also the event's
+chain. **The key must stay unique even if the POS database is reinstalled**, so it carries an id of
+the database as well as the order item: `<pos-instance>-<6-character database id>-<order-item id,
+8 digits>`, for example `POS-SILOM-1-K3F9Q2-00001234` (at most 48 characters). It is also the event's
 **correlation id** (docs/TELEMETRY.md), so it is sent as `x-request-id` on every delivery, and that is
 why it keeps to that header's characters: `^[A-Za-z0-9_-]{8,64}$`. A colon is not one of them, so use
 `-` between the parts. There is no second id: the ERP's log lines about the event, the POS's lines
@@ -93,10 +99,16 @@ about delivering it, and both metrics' investigations all follow this one value.
 |---|---|---|
 | `201` | Stored | Marks the row sent |
 | `200`, `duplicate: true` | Already stored (an earlier try arrived); nothing stored again | Marks the row sent |
-| `422` `SALES_EVENT_REJECTED` | Will never be accepted as it is; `details.reason` says why | Moves the row to its dead letters, with the reason, for a person to look at |
-| `401` `POS_CREDENTIAL_REJECTED` | The credential is revoked or unknown | Stops the whole queue and alerts an administrator |
+| `422` `SALES_EVENT_REJECTED` | Will never be accepted as it is; `details.reason` says why. Nothing was stored | Moves the row to its dead letters, with the reason, for a person to look at |
+| `401` `POS_CREDENTIAL_REJECTED` | The credential is revoked or unknown | Stops the whole queue, keeps every pending row pending, and alerts an administrator. Resumes when a new credential is saved |
 | `429` | Too many requests from this address | Waits `Retry-After` seconds, then retries |
-| `5xx`, timeout, no network | The ERP could not answer | Retries with exponential backoff, the same key each time; after N tries, dead-letters |
+| `5xx`, timeout, no network | The ERP could not answer | Retries forever with a capped exponential backoff (the POS caps it at 5 minutes), the same key each time; on a `503` with `Retry-After`, waits that long. Never dead-letters: `outbox_oldest_pending_age_seconds` raises the alarm |
+| Any other status (`400`, `403`, `404`, `405`, `413`…), or a `2xx` whose body is not a valid receipt | A configuration problem: a wrong address, a proxy, a contract version mismatch | As on `401`: stops the whole queue, keeps every pending row pending, and alerts an administrator. Never dead-letters. Resumes when a new address or credential is saved |
+
+**Dead letters come from `422` only.** A refusal does not use up the key: a `422` stores nothing, so
+once its cause is fixed (for example, the instance now serves that branch), the same event resent
+from the dead letters with the same key is accepted as new (`201`). The one exception is
+`idempotency_key_reused`, whose key already belongs to another sale line.
 
 **The ERP stores each idempotency key exactly once**, even when the same event arrives several
 times at the same moment. It checks, in this order:
@@ -130,7 +142,8 @@ The ERP writes and counts:
 | `master_data.pull_refused` | Refused pulls, with `reason` |
 | `erp_master_data_last_pull_timestamp_seconds{pos_instance}` | The last successful pull of each instance, read from the database |
 
-The POS writes `outbox.delivery.failed` and the `outbox_*` gauges.
+The POS writes `outbox.delivery.failed` and the `outbox_*` gauges; `outbox_oldest_pending_age_seconds`
+is the one that shows sales waiting because the ERP cannot be reached.
 
 ## Versioning
 
