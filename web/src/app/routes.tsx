@@ -8,6 +8,7 @@ import { LocationsPage } from '@/features/locations/LocationsPage';
 import { NotFoundPage } from '@/features/not-found/NotFoundPage';
 import { OpeningBalancesPage } from '@/features/opening-balances/OpeningBalancesPage';
 import { StatusPage } from '@/features/status/StatusPage';
+import { StockAdjustmentsPage } from '@/features/stock-adjustments/StockAdjustmentsPage';
 import { StockOnHandPage } from '@/features/stock/StockOnHandPage';
 import { SuppliersPage } from '@/features/suppliers/SuppliersPage';
 import { UsersPage } from '@/features/users/UsersPage';
@@ -31,6 +32,7 @@ export const routes: RouteObject[] = [
           { path: 'suppliers', element: <SuppliersPage /> },
           { path: 'stock', element: <StockOnHandPage /> },
           { path: 'opening-balances', element: <OpeningBalancesPage /> },
+          { path: 'stock-adjustments', element: <StockAdjustmentsPage /> },
           {
             element: <RequirePermission permission={Permission.USER_READ} />,
             children: [{ path: 'users', element: <UsersPage /> }],

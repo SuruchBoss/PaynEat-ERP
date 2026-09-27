@@ -3,7 +3,9 @@
 
 /**
  * Stock on hand and opening balances in the demo API (#41, ADR-0021): drafts, posting a draft
- * into lots, reversing a posted document, and stock on hand as of a business date. Every rule
+ * into lots, reversing a posted document, and stock on hand as of a business date. Stock
+ * adjustments (#8) are read only: the seed's approved write-off is shown, and raising one
+ * answers NOT_IN_DEMO. Every rule
  * is the backend's own, imported from `ledger/domain/posting-rules.ts` and
  * `opening-balances/domain/opening-balance-rules.ts`; what is written here is the order the
  * backend's LedgerService and OpeningBalancesService apply them in — the document first, then
@@ -46,6 +48,7 @@ import {
   type LocationRecord,
   type OpeningBalanceLine,
   type OpeningBalanceRecord,
+  type StockAdjustmentRecord,
 } from './state';
 
 const today = (now: number) => dateIn(DEMO_TIME_ZONE, new Date(now));
@@ -71,6 +74,8 @@ const REFUSAL_MESSAGES: Record<PostingRule, string> = {
   reversal_of_reversal: 'A reversal cannot be reversed; post the correct document instead',
   already_reversed: 'This document has already been reversed',
   business_date_before_original: 'A reversal cannot be dated before the document it reverses',
+  not_approved: 'Only an approved document can be posted',
+  self_approval: 'Nobody approves a document they created; someone else has to approve it',
 };
 
 /** 422, or 409 when it lost a race with someone else (backend `PostingRefusedError`). */
@@ -126,6 +131,7 @@ function write(state: DemoState, entries: EntryRecord[]): void {
   if (!result.ok) {
     throw postingRefused(result.rule, {
       lotId: result.lotId,
+      lotNumber: state.lots.find((l) => l.id === result.lotId)?.number,
       locationCode: state.locations.find((l) => l.id === result.locationId)?.code,
       quantity: result.quantity,
     });
@@ -250,6 +256,7 @@ export function stockOnHand(state: DemoState, ctx: Context) {
         unitCost: lot.unitCost,
         value: stockValue(balance.quantity, lot.unitCost),
         expired: compareDates(lot.expiryDate, asOf) < 0,
+        countRecommended: location.type === 'branch' && balance.quantity.startsWith('-'),
       };
     })
     .sort(
@@ -259,7 +266,74 @@ export function stockOnHand(state: DemoState, ctx: Context) {
         a.lot.expiryDate.localeCompare(b.lot.expiryDate) ||
         a.lot.number.localeCompare(b.lot.number),
     );
-  return { asOf, rows, totalValue: sumValues(rows.map((r) => r.value)) };
+  return {
+    asOf,
+    rows,
+    totalValue: sumValues(rows.map((r) => r.value)),
+    negativeBranchBalances: rows.filter((r) => r.countRecommended).length,
+  };
+}
+
+// --- Stock adjustments (backend stock-adjustments.service.ts), read only ---------------------
+
+function stockAdjustmentView(state: DemoState, record: StockAdjustmentRecord) {
+  const doc = state.documents.find((d) => d.id === record.documentId)!;
+  const location = state.locations.find((l) => l.id === record.locationId)!;
+  const step = (userId: string | null, time: string | null) =>
+    userId && time ? { by: person(state, userId)!, at: time } : null;
+  const lines = record.lines.map((line) => {
+    const item = state.items.find((i) => i.id === line.itemId)!;
+    const lot = state.lots.find((l) => l.id === line.lotId)!;
+    return {
+      lineNo: line.lineNo,
+      item: {
+        id: item.id,
+        code: item.code,
+        nameTh: item.nameTh,
+        nameEn: item.nameEn,
+        baseUnitCode: item.baseUnitCode,
+        variableWeight: item.variableWeight,
+      },
+      lot: { id: lot.id, number: lot.number, expiryDate: lot.expiryDate },
+      quantity: formatQuantity(line.quantity, unitDecimals(item.baseUnitCode)),
+      secondaryQuantity: line.secondaryQuantity,
+      unitCost: lot.unitCost,
+      value: stockValue(line.quantity, lot.unitCost),
+      reason: line.reason,
+    };
+  });
+  const rejected = step(record.rejectedById, record.rejectedAt);
+  return {
+    ...documentView(state, doc),
+    location: locationRef(location),
+    submitted: step(record.submittedById, record.submittedAt),
+    approved: step(record.approvedById, record.approvedAt),
+    rejected: rejected ? { ...rejected, reason: record.rejectionReason! } : null,
+    lines,
+    totalValue: sumValues(lines.map((l) => l.value)),
+  };
+}
+
+const ADJUSTMENT_STATUSES = ['draft', 'submitted', 'approved', 'posted', 'rejected', 'all'];
+
+export function listStockAdjustments(state: DemoState, ctx: Context) {
+  const status = queryValue(ctx.query, 'status', { oneOf: ADJUSTMENT_STATUSES }) ?? 'all';
+  const locationId = queryValue(ctx.query, 'locationId', { uuid: true });
+  return state.stockAdjustments
+    .filter((record) => !locationId || record.locationId === locationId)
+    .map((record) => {
+      const { lines, ...view } = stockAdjustmentView(state, record);
+      return { ...view, lineCount: lines.length };
+    })
+    .filter((summary) => status === 'all' || summary.status === status)
+    .sort((a, b) => b.number.localeCompare(a.number));
+}
+
+export function getStockAdjustment(state: DemoState, ctx: Context) {
+  const documentId = uuidParam(ctx.params[0]);
+  const record = state.stockAdjustments.find((r) => r.documentId === documentId);
+  if (!record) throw notFound('Stock adjustment', documentId);
+  return stockAdjustmentView(state, record);
 }
 
 // --- Opening balances (backend opening-balances.service.ts) ----------------------------------

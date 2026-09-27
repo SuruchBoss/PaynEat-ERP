@@ -120,6 +120,11 @@ const ROUTES: readonly Route[] = [
   route('POST', `${V1}/opening-balances/:id/reverse`, stock.reverseOpeningBalance, {
     permission: Permission.OPENING_BALANCE_MANAGE,
   }),
+
+  // Stock adjustments (#8) are read only here: raising, approving or rejecting one answers
+  // NOT_IN_DEMO, as ADR-0021 allows a screen added after the demo to.
+  route('GET', `${V1}/stock-adjustments`, stock.listStockAdjustments),
+  route('GET', `${V1}/stock-adjustments/:id`, stock.getStockAdjustment),
 ];
 
 export interface DemoRequest {

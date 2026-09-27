@@ -19,6 +19,7 @@ import {
   DEMO_RECOVERY_CODES,
   DEMO_SUPPLIERS,
   DEMO_USERS,
+  DEMO_WRITE_OFF,
 } from './seed';
 import { normaliseRecoveryCode } from './totp';
 
@@ -97,8 +98,8 @@ export interface SupplierRecord {
 export interface DocumentRecord {
   id: string;
   number: string;
-  type: 'opening_balance' | 'reversal';
-  status: 'draft' | 'posted';
+  type: 'opening_balance' | 'reversal' | 'stock_adjustment';
+  status: 'draft' | 'submitted' | 'approved' | 'posted' | 'rejected';
   businessDate: string;
   note: string | null;
   revision: number;
@@ -122,6 +123,30 @@ export interface OpeningBalanceRecord {
   documentId: string;
   locationId: string;
   lines: OpeningBalanceLine[];
+}
+
+export interface StockAdjustmentLine {
+  lineNo: number;
+  lotId: string;
+  itemId: string;
+  /** Signed: below zero takes stock out. */
+  quantity: string;
+  secondaryQuantity: string | null;
+  reason: string;
+}
+
+/** A stock adjustment (#8). The demo only shows the seed's; raising one needs a real installation. */
+export interface StockAdjustmentRecord {
+  documentId: string;
+  locationId: string;
+  submittedById: string | null;
+  submittedAt: string | null;
+  approvedById: string | null;
+  approvedAt: string | null;
+  rejectedById: string | null;
+  rejectedAt: string | null;
+  rejectionReason: string | null;
+  lines: StockAdjustmentLine[];
 }
 
 export interface LotRecord {
@@ -155,6 +180,7 @@ export interface DemoState {
   suppliers: SupplierRecord[];
   documents: DocumentRecord[];
   openingBalances: OpeningBalanceRecord[];
+  stockAdjustments: StockAdjustmentRecord[];
   lots: LotRecord[];
   entries: EntryRecord[];
   masterDataVersion: number;
@@ -188,6 +214,7 @@ export function seedState(now: Date): DemoState {
     suppliers: [],
     documents: [],
     openingBalances: [],
+    stockAdjustments: [],
     lots: [],
     entries: [],
     masterDataVersion: 0,
@@ -324,5 +351,60 @@ export function seedState(now: Date): DemoState {
   }
   plant.firstUsedAt = at;
   plant.firstUse = `posted document ${document.number}`;
+
+  // The approved write-off (#8): raised by the plant user, approved and posted today by the
+  // finance user, on the lot of the opening balance's line the seed names.
+  const financeUser = state.users.find((u) => u.roles.includes('finance'))!;
+  const lot = state.lots.find((l) => l.lineNo === DEMO_WRITE_OFF.openingBalanceLineNo)!;
+  state.sequences.set(`AD:${year}`, 1);
+  const writeOff: DocumentRecord = {
+    id: seedId(KIND.document, 1),
+    number: `AD-${year}-00001`,
+    type: 'stock_adjustment',
+    status: 'posted',
+    businessDate: today,
+    note: DEMO_WRITE_OFF.note,
+    revision: 4,
+    createdById: plantUser.id,
+    createdAt: at,
+    postedById: financeUser.id,
+    postedAt: at,
+    reversesId: null,
+  };
+  state.documents.push(writeOff);
+  state.stockAdjustments.push({
+    documentId: writeOff.id,
+    locationId: plant.id,
+    submittedById: plantUser.id,
+    submittedAt: at,
+    approvedById: financeUser.id,
+    approvedAt: at,
+    rejectedById: null,
+    rejectedAt: null,
+    rejectionReason: null,
+    lines: [
+      {
+        lineNo: 1,
+        lotId: lot.id,
+        itemId: lot.itemId,
+        quantity: DEMO_WRITE_OFF.quantity,
+        secondaryQuantity: DEMO_WRITE_OFF.secondaryQuantity,
+        reason: DEMO_WRITE_OFF.reason,
+      },
+    ],
+  });
+  state.entries.push({
+    id: seedId(KIND.entry, lines.length),
+    documentId: writeOff.id,
+    lineNo: 1,
+    itemId: lot.itemId,
+    lotId: lot.id,
+    locationId: plant.id,
+    quantity: DEMO_WRITE_OFF.quantity,
+    secondaryQuantity: DEMO_WRITE_OFF.secondaryQuantity,
+    unitCost: lot.unitCost,
+    businessDate: writeOff.businessDate,
+    reversesEntryId: null,
+  });
   return state;
 }

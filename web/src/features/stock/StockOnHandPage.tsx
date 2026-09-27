@@ -110,6 +110,11 @@ export function StockOnHandPage() {
               value: groupDigits(stock.data.totalValue),
             })}
           </p>
+          {stock.data.negativeBranchBalances > 0 && (
+            <p className="callout">
+              {t('stock.flagged', { count: stock.data.negativeBranchBalances })}
+            </p>
+          )}
           {stock.data.rows.length === 0 ? (
             <p className="muted">{t('stock.empty')}</p>
           ) : (
@@ -141,7 +146,6 @@ export function StockOnHandPage() {
                 </thead>
                 <tbody>
                   {stock.data.rows.map((row) => {
-                    const negative = row.quantity.startsWith('-');
                     return (
                       <tr key={`${row.lot.id}|${row.location.id}`}>
                         <th scope="row">
@@ -178,7 +182,7 @@ export function StockOnHandPage() {
                             {groupDigits(row.quantity)}{' '}
                             {unitName(unitList, row.item.baseUnitCode, language)}
                           </span>
-                          {negative && (
+                          {row.countRecommended && (
                             <span className="badge badge--down badge--inline">
                               {t('stock.negative')}
                             </span>

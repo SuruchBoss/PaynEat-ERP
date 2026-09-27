@@ -73,6 +73,7 @@ using a new domain concept anywhere else.
 | Book quantity | ยอดตามระบบ | The balance the ledger holds for a count line as of the count time. Hidden from the counter until the count is submitted (blind count). |
 | Blind count | การนับแบบไม่เห็นยอด | Counting without seeing the book quantity, so the count is not steered towards it (ADR-0017). |
 | Adjustment | ใบปรับยอด | Posts the difference between counted and recorded stock, or writes off waste, with a reason and an approver. |
+| Count recommended | ควรตรวจนับ | The flag on a branch lot whose balance is below zero: allowed, because a branch's stock follows sales that already happened, but a sign that the records and the shelf disagree, so the lot should be counted (ADR-0003, #8). Shown in stock on hand and counted by `erp_negative_branch_balances`. |
 | Opening balance | ยอดยกมา | The document that brings stock already on hand into the system when a plant, warehouse or branch goes live. Each line becomes a lot, with the unit cost and expiry date entered on it, because no receipt priced it (#7). |
 | Stock on hand | สต๊อกคงเหลือ | What the ledger holds per item, lot and location as of the end of a business date, with quantity, secondary quantity, unit cost, value and expiry. |
 | Unit cost | ต้นทุนต่อหน่วย | A lot's cost per base unit, an exact decimal (at most 6 decimals), carried by every entry of that lot (ADR-0004). |
