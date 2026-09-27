@@ -10,6 +10,17 @@ names**. A deployment on Google Cloud — where SherWhyve's live connectors run 
 metrics are identical everywhere; on Google Cloud, Managed Service for Prometheus collects them into
 Cloud Monitoring.
 
+## Additions to v1.2 (2026-09-27, ERP #9)
+
+Additive only; nothing is renamed.
+
+- `master_data.pull_refused` joins the catalogue: the "refused pull" the POS↔ERP section already
+  required had no event name of its own, and `master_data.pulled` must keep meaning a pull that
+  happened.
+- Two sales-event `reason` values found while writing the contract: `pos_instance_mismatch` (the event
+  names another instance than its credential's) and `idempotency_key_reused` (a key sent again with a
+  different sale line). The full list is in `contracts/pos/v1/error.schema.json`.
+
 ## Clarification to v1.2 (2026-09-26, no change to what any service emits)
 
 - The label values of `erp_postings_total` are now written down (see "Metrics"). The ERP's first
@@ -65,7 +76,7 @@ One JSON object per line on stdout.
 | `document_number` | ERP document number, when the line concerns one. |
 | `pos_instance` | Registered POS instance id, on integration traffic. |
 | `rule` | The rule that refused something, e.g. `negative_stock_plant`, `expired_lot`, `self_approval`, `period_closed`. |
-| `reason` | Rejection or failure reason for an integration event, e.g. `schema_invalid`, `branch_not_served`, `credential_revoked`, `credential_unknown`, `unknown_menu_item`, `no_recipe_in_effect`. |
+| `reason` | Rejection or failure reason for an integration event, e.g. `schema_invalid`, `branch_not_served`, `pos_instance_mismatch`, `idempotency_key_reused`, `credential_revoked`, `credential_unknown`, `unknown_menu_item`, `no_recipe_in_effect`. The sales-event values are listed in `contracts/pos/v1/error.schema.json`. |
 
 ### Correlation
 
@@ -113,6 +124,7 @@ way with the same reasons. Nothing from the credential itself is logged.
 | `sales_event.processed` | ERP | `INFO` — the event became branch consumption |
 | `sales_event.failed` | ERP | `WARNING`, with `reason` — received but could not become consumption (ERP #17) |
 | `master_data.pulled` | ERP | `INFO`, with `pos_instance` |
+| `master_data.pull_refused` | ERP | `WARNING`, with `reason` (and `pos_instance` when the credential names one) — a refused pull (ERP #9) |
 | `outbox.delivery.failed` | POS (and any service with an outbox) | `WARNING`; `ERROR` when dead-lettered |
 
 ## Where each service runs, and what an investigator can see

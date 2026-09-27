@@ -21,6 +21,7 @@ import { LedgerModule } from './modules/ledger/ledger.module';
 import { LocationsModule } from './modules/locations/locations.module';
 import { MasterDataModule } from './modules/master-data/master-data.module';
 import { OpeningBalancesModule } from './modules/opening-balances/opening-balances.module';
+import { PosIntegrationModule } from './modules/pos-integration/pos-integration.module';
 import { StockAdjustmentsModule } from './modules/stock-adjustments/stock-adjustments.module';
 import { SuppliersModule } from './modules/suppliers/suppliers.module';
 
@@ -59,6 +60,7 @@ import { SuppliersModule } from './modules/suppliers/suppliers.module';
     LedgerModule,
     OpeningBalancesModule,
     StockAdjustmentsModule,
+    PosIntegrationModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: AllExceptionsFilter },

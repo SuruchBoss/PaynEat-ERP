@@ -34,6 +34,12 @@ export const Permission = {
    * approved one the ledger refused (#8). Never for a document the approver created (ADR-0008).
    */
   STOCK_ADJUSTMENT_APPROVE: 'stock_adjustment:approve',
+  /**
+   * Register PaynEat POS instances, issue and revoke their machine credentials (#9). A
+   * credential lets a machine deliver sales, so only the admin, who signs in with a second
+   * factor, manages them.
+   */
+  POS_INSTANCE_MANAGE: 'pos_instance:manage',
 } as const;
 
 export type PermissionKey = (typeof Permission)[keyof typeof Permission];
@@ -58,7 +64,8 @@ export type Role = (typeof ROLE_KEYS)[number];
 /** What each role may do today. Grows with every issue that adds endpoints. */
 export const ROLE_PERMISSIONS: Record<Role, readonly PermissionKey[]> = {
   // ADR-0008: manage users, roles, locations, configuration; reopen closed periods.
-  // Master data is configuration: only the admin maintains items (#5).
+  // Master data is configuration: only the admin maintains items (#5). Connecting a POS is
+  // configuration too (#9).
   admin: [
     Permission.USER_READ,
     Permission.USER_MANAGE,
@@ -66,6 +73,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly PermissionKey[]> = {
     Permission.ITEM_MANAGE,
     Permission.LOCATION_MANAGE,
     Permission.SUPPLIER_MANAGE,
+    Permission.POS_INSTANCE_MANAGE,
   ],
   // ADR-0008: create and send purchase orders (from #10); manage suppliers (#6).
   purchasing: [Permission.SUPPLIER_MANAGE],

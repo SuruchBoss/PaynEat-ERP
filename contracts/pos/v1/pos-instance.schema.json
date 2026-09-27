@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/SuruchBoss/PaynEat-ERP/contracts/pos/v1/pos-instance.schema.json",
+  "title": "POS instance v1",
+  "description": "What the ERP knows about the POS instance holding the credential: `GET /api/v1/pos/instance`. A POS reads it when it connects, to learn its own code and the branches it serves.",
+  "type": "object",
+  "required": ["code", "name", "contractVersion", "branches"],
+  "properties": {
+    "code": {
+      "description": "The instance's code, which every sales event names as `posInstance`.",
+      "type": "string",
+      "pattern": "^[A-Z0-9][A-Z0-9-]{1,31}$"
+    },
+    "name": { "type": "string" },
+    "contractVersion": {
+      "description": "The version of this contract the ERP serves, semver. A POS written against 1.x works with any 1.y.",
+      "type": "string",
+      "pattern": "^1\\.[0-9]+\\.[0-9]+$"
+    },
+    "branches": {
+      "description": "The branches this instance may sell for, by ecosystem location code. A sales event for any other branch is refused.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["code", "nameTh", "nameEn", "active"],
+        "properties": {
+          "code": { "type": "string", "pattern": "^[A-Z0-9][A-Z0-9-]{1,31}$" },
+          "nameTh": { "type": "string" },
+          "nameEn": { "type": "string" },
+          "active": { "type": "boolean" }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,181 @@
+# Copyright 2026 Suruch Chakrapeesirisuk
+# SPDX-License-Identifier: Apache-2.0
+openapi: 3.1.0
+info:
+  title: PaynEat ERP — POS integration
+  version: 1.0.0
+  description: |
+    What a PaynEat POS instance calls on PaynEat ERP (ADR-0002): who it is and which branches it
+    serves, the master-data changes since the last version it applied, and one sales event per
+    paid sale line. Every call carries the instance's machine credential, and an `x-request-id`
+    (for a sales event, its idempotency key). The prose in contracts/README.md says when and how
+    a POS calls each one; the JSON Schemas next to this file are the payloads, and both
+    repositories test against them.
+  license:
+    name: Apache-2.0
+servers:
+  - url: '{erp}'
+    description: The chain's own ERP server, as its administrator gives it to the POS.
+    variables:
+      erp:
+        default: https://erp.example
+security:
+  - posCredential: []
+paths:
+  /api/v1/pos/instance:
+    get:
+      operationId: getPosInstance
+      summary: The POS instance holding this credential, and the branches it serves.
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: The instance.
+          content:
+            application/json:
+              schema:
+                $ref: './pos-instance.schema.json'
+              examples:
+                default:
+                  externalValue: './examples/pos-instance.json'
+        '401':
+          $ref: '#/components/responses/CredentialRejected'
+  /api/v1/master-data/changes:
+    get:
+      operationId: getMasterDataChanges
+      summary: Every master-data change after a version, in version order.
+      description: |
+        Items and branches (contract 1.0). Pull on a schedule and on demand: ask with the last
+        version applied (0 the first time), apply the page in order, store the last version, and
+        ask again while `hasMore` is true. The ERP records each successful pull as the instance's
+        last pull.
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - name: since
+          in: query
+          description: The last version this POS applied; 0 asks for everything.
+          schema: { type: integer, minimum: 0, default: 0 }
+        - name: limit
+          in: query
+          description: At most this many changes on the page.
+          schema: { type: integer, minimum: 1, maximum: 1000, default: 500 }
+      responses:
+        '200':
+          description: One page of changes.
+          content:
+            application/json:
+              schema:
+                $ref: './master-data-changes.schema.json'
+              examples:
+                default:
+                  externalValue: './examples/master-data-changes.json'
+        '400':
+          $ref: '#/components/responses/Invalid'
+        '401':
+          $ref: '#/components/responses/CredentialRejected'
+  /api/v1/sales-events:
+    post:
+      operationId: postSalesEvent
+      summary: One paid sale line, stored exactly once by its idempotency key.
+      description: |
+        A sale line is paid when its bill is paid in full, or when a payment covering that line is
+        made (a split bill); `saleTime` is that payment's time. The POS sends each line from its
+        outbox and acts on every answer as contracts/README.md says: dead letters come from `422`
+        only; any 5xx, timeout or network error is retried with the same key, never dead-lettered;
+        any other status, or a 2xx whose body is not a valid receipt, stops the queue as `401` does.
+      parameters:
+        - name: x-request-id
+          in: header
+          required: true
+          description: The event's idempotency key, the same value as in the body.
+          schema: { type: string, pattern: '^[A-Za-z0-9_-]{8,64}$' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './sales-event.schema.json'
+            examples:
+              counted:
+                externalValue: './examples/sales-event.counted.json'
+              weighed:
+                externalValue: './examples/sales-event.weighed.json'
+      responses:
+        '201':
+          description: Stored for the first time. The POS marks the outbox row sent.
+          content:
+            application/json:
+              schema:
+                $ref: './sales-event-receipt.schema.json'
+              examples:
+                default:
+                  externalValue: './examples/sales-event-receipt.json'
+        '200':
+          description: >-
+            Already stored (`duplicate: true`), with the original `receivedAt`. Success: the POS
+            marks the outbox row sent.
+          content:
+            application/json:
+              schema:
+                $ref: './sales-event-receipt.schema.json'
+              examples:
+                default:
+                  externalValue: './examples/sales-event-receipt.duplicate.json'
+        '401':
+          $ref: '#/components/responses/CredentialRejected'
+        '422':
+          description: >-
+            This event will never be accepted as it is (`SALES_EVENT_REJECTED` with
+            `details.reason`): the POS moves it to its dead letters with the reason. Nothing is
+            stored, so the key is not used up: once the cause is fixed, the same event resent with
+            the same key is accepted as new (`201`). The exception is `idempotency_key_reused`,
+            whose key already belongs to another sale line.
+          content:
+            application/json:
+              schema:
+                $ref: './error.schema.json'
+              examples:
+                default:
+                  externalValue: './examples/error.schema-invalid.json'
+        '429':
+          description: Too many requests from this address. Retry after the `Retry-After` seconds.
+        '503':
+          description: >-
+            The ERP is briefly unavailable. The POS waits the `Retry-After` seconds when the header
+            is present, otherwise backs off (capped at 5 minutes), then retries with the same key.
+            Like any 5xx or timeout, it never dead-letters the event.
+components:
+  securitySchemes:
+    posCredential:
+      type: http
+      scheme: bearer
+      description: >-
+        The machine credential shown once when an administrator registered the instance in the
+        ERP (it starts with `pnepos_`). Kept secret by the POS: never logged, never exported.
+  parameters:
+    RequestId:
+      name: x-request-id
+      in: header
+      required: false
+      description: A correlation id the ERP puts on its log lines; generated when left out.
+      schema: { type: string, pattern: '^[\w-]{8,64}$' }
+  responses:
+    CredentialRejected:
+      description: >-
+        The credential was revoked, or the ERP does not know it (`POS_CREDENTIAL_REJECTED` with
+        `details.reason` `credential_revoked` or `credential_unknown`). The POS stops the queue,
+        keeps pending events pending, and tells an administrator; retrying cannot help. The queue
+        resumes when a new credential is saved.
+      content:
+        application/json:
+          schema:
+            $ref: './error.schema.json'
+          examples:
+            default:
+              externalValue: './examples/error.credential-revoked.json'
+    Invalid:
+      description: A query parameter is not valid.
+      content:
+        application/json:
+          schema:
+            $ref: './error.schema.json'

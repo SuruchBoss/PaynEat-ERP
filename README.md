@@ -34,7 +34,9 @@ screens from the demo.
 > own in-transit location), suppliers, and the versioned master data change log a POS will pull
 > from — and the **stock ledger**: lots, ledger entries nothing can change, opening balances that post
 > in one transaction and are corrected only by reversal, stock adjustments that post only once someone
-> other than their creator approves them, and stock on hand as of any date, with its value. The console works on a desktop, a tablet (the menu narrows to icons) and a phone (each table
+> other than their creator approves them, and stock on hand as of any date, with its value — and the
+> **POS integration contract** ([`contracts/`](contracts/README.md)): POS instances registered with a
+> machine credential pull master data by version and deliver sales events the ERP stores exactly once. The console works on a desktop, a tablet (the menu narrows to icons) and a phone (each table
 > row becomes a card), in light and dark mode, and anyone can try it in the browser on the
 [public demo](https://suruchboss.github.io/PaynEat-ERP/). No purchasing, production or transfer document exists
 > yet; they are being built in public, one GitHub issue at a time. This README says only what is true
@@ -224,7 +226,7 @@ Domain vocabulary, in English and Thai: [`docs/GLOSSARY.md`](docs/GLOSSARY.md).
 | SherWhyve *(private)* | AI investigator of technical incidents; reads the ERP's structured logs and metrics to explain, with evidence, why something broke |
 | [ExcelToGo](https://github.com/SuruchBoss/ExcelToGo) | Spreadsheets: filling the ERP's import templates, and finance reports refreshed from the ERP's public API (planned, ADR-0016) |
 
-The boundaries between them are in [ADR-0011](docs/adr/0011-ecosystem-and-sherwhyve.md): each owns one domain, they integrate only through versioned APIs and events, and a location has the same code in all of them.
+The boundaries between them are in [ADR-0011](docs/adr/0011-ecosystem-and-sherwhyve.md): each owns one domain, they integrate only through versioned APIs and events, and a location has the same code in all of them. The ERP↔POS contract itself — endpoints, JSON Schemas, examples, and what each side must do — is in [`contracts/`](contracts/README.md), and both repositories test against it.
 
 ## Roadmap for the first release (six weeks)
 
@@ -267,7 +269,10 @@ of [ADR-0008](docs/adr/0008-roles-and-segregation-of-duties.md); an append-only 
 **master data** — items, units and purchase units; locations, whose codes are shared with the POS
 and Cwork; suppliers — each change to an item or a branch a new master data version a POS can pull;
 the **stock ledger** — opening balances, stock adjustments approved by a second person, and stock on
-hand by item, lot and location, as of any date, with branch lots below zero flagged for a count;
+hand by item, lot and location, as of any date, with branch lots below zero flagged for a count; the
+**POS integration** of [`contracts/`](contracts/README.md) — POS instances registered with a machine
+credential (API), the master-data pull by version, and sales events stored exactly once by idempotency
+key;
 and the skeleton under them — an API that reports its own health and its database's, writes every request as
 structured JSON (the ecosystem's [telemetry contract](docs/TELEMETRY.md)) and counts requests,
 failed sign-ins and postings in Prometheus metrics.
@@ -328,7 +333,7 @@ The password of every demo account is **`demo-chicken-2026`**.
 
 | Role | Email | What the role is for (ADR-0008) | What it can do in the console today |
 |---|---|---|---|
-| `admin` | `admin@demo-chicken.example` | Manage users, roles, locations, configuration; reopen closed periods | Sign in with a second factor; **Users and roles**: list, create, give and take away roles; **Items and units**: create, edit, deactivate; **Locations**: create, correct a code, deactivate, supersede; **Suppliers**; read stock on hand and opening balances; read the audit trail (API) |
+| `admin` | `admin@demo-chicken.example` | Manage users, roles, locations, configuration; reopen closed periods | Sign in with a second factor; **Users and roles**: list, create, give and take away roles; **Items and units**: create, edit, deactivate; **Locations**: create, correct a code, deactivate, supersede; **Suppliers**; read stock on hand and opening balances; register POS instances and manage their credentials (API); read the audit trail (API) |
 | `purchasing` | `purchasing@demo-chicken.example` | Create and send purchase orders; manage suppliers | Sign in; **Suppliers**: create, edit, deactivate; read items, locations and stock on hand; its purchase-order screens arrive with #10 |
 | `purchasing_approver` | `approver@demo-chicken.example` | Approve purchase orders above the approval threshold | Sign in; read items, locations, suppliers and stock on hand; its screen arrives with #10 |
 | `plant` | `plant@demo-chicken.example` | Receive goods, run production orders, manage plant stock | Sign in; **Opening balances**: draft, post, reverse; **Stock adjustments**: draft and submit; **Stock on hand**; read items, locations and suppliers; its receipt and production screens arrive with #11 and #13 |
@@ -374,10 +379,11 @@ undoes them.
    itself as a purchase unit: the API refuses, and each row says why. **Edit** an item: its code and
    base unit cannot change (ADR-0019). **Deactivate** it: it leaves the default list, nothing is
    deleted, and **Show: All** brings it back to reactivate.
-7. Every item change is a new **master data version**, the number a POS pulls by. Read the log with
-   any user's access token: `GET /api/v1/master-data/changes?since=0` returns each change in version
-   order, the whole item as it stood after it, and `latestVersion`; ask again with `since` set to the
-   last version you saw and only newer changes come back. Two admins saving at the same moment still
+7. Every item change is a new **master data version**, the number a POS pulls by (with its machine
+   credential, step 13). Read the log with any user's access token:
+   `GET /api/v1/master-data/changes?since=0` returns each change in version order, the whole item as
+   it stood after it, and `latestVersion`; ask again with `since` set to the last version you saw and
+   only newer changes come back. Two admins saving at the same moment still
    get consecutive versions, and the one who saved from a stale screen is told to reload rather than
    silently undoing the other.
 8. Open **Locations**: the Bang Na plant `PLANT-01`, its in-transit location `IN-TRANSIT:PLANT-01`
@@ -422,7 +428,22 @@ undoes them.
    branch it is allowed: the lot shows **Negative: count it** in stock on hand, and
    `erp_negative_branch_balances` counts it for that branch. An approver can also **Reject**, with a
    reason the raiser sees; a rejected adjustment is final.
-13. Every one of those changes, and every refused sign-in, is in the audit trail with who, when and
+13. Connect a POS (Docker install; the public demo has no API for it). With the **admin**'s access
+   token, `POST /api/v1/pos-instances` with a `code` (`POS-SILOM-1`), a `name` and the `branchCodes` it
+   sells for (`["BR-SILOM"]`): the answer carries the machine credential, `pnepos_…`, **once** — the ERP
+   keeps only its hash. With that credential as the bearer token, `GET /api/v1/pos/instance` answers who
+   the instance is and which branches it serves, and `GET /api/v1/master-data/changes?since=0` pulls
+   the items and branches page by page, recorded as its last pull
+   (`erp_master_data_last_pull_timestamp_seconds{pos_instance}`). `POST /api/v1/sales-events` with
+   [`contracts/pos/v1/examples/sales-event.counted.json`](contracts/pos/v1/examples/sales-event.counted.json)
+   (changed to your instance's code and branch) answers `201`; send it again, or eight times at once,
+   and it answers `200` with `duplicate: true` — stored exactly once. A branch the instance does not
+   serve, or an event that breaks the schema, is refused with `422` and its `reason`.
+   `POST /api/v1/pos-instances/<id>/revoke`, and the next call is a `401` with `credential_revoked`.
+   Every one of these is a `sales_event.*` or `master_data.*` log line carrying `pos_instance`, the
+   branch's `location_code`, and the event's idempotency key as its `correlation_id`, counted in
+   `erp_sales_events_total` — and the credential itself never appears in a log.
+14. Every one of those changes, and every refused sign-in, is in the audit trail with who, when and
    the request's correlation id. Read it through the API with the admin's access token:
    `GET /api/v1/audit-logs` (filters: `action`, `entityId`, `actorUserId`, `correlationId`, `from`,
    `to`). A refused sign-in is also a `WARNING` line with `"event":"auth.sign_in.failed"` in

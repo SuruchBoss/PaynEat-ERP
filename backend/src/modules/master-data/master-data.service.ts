@@ -6,6 +6,8 @@ import { MasterDataAction, Prisma } from '@prisma/client';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import type { MasterDataChangesView } from './dto/master-data.dto';
 
+export type { MasterDataChangesView } from './dto/master-data.dto';
+
 export interface MasterDataChange {
   entityType: string;
   entityId: string;

@@ -5,7 +5,11 @@
 import { ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
-import { IS_PUBLIC_KEY } from '../../core/security/decorators';
+import {
+  IS_PUBLIC_KEY,
+  POS_CREDENTIAL_KEY,
+  POS_CREDENTIAL_PREFIX,
+} from '../../core/security/decorators';
 
 /**
  * Applied globally: every route is authenticated unless it opts out with
@@ -18,11 +22,22 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
   }
 
   canActivate(context: ExecutionContext) {
-    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    const targets = [context.getHandler(), context.getClass()];
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, targets);
     if (isPublic) return true;
+    // A POS route authenticates its machine credential in the handler (#9).
+    const pos = this.reflector.getAllAndOverride<'only' | 'or-session'>(
+      POS_CREDENTIAL_KEY,
+      targets,
+    );
+    if (pos === 'only') return true;
+    if (pos === 'or-session') {
+      const header = context.switchToHttp().getRequest<{ headers: Record<string, unknown> }>()
+        .headers.authorization;
+      if (typeof header === 'string' && header.startsWith(`Bearer ${POS_CREDENTIAL_PREFIX}`)) {
+        return true;
+      }
+    }
     return super.canActivate(context);
   }
 }

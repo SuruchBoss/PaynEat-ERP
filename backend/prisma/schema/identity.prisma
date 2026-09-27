@@ -64,6 +64,9 @@ model User {
   stockAdjustmentsSubmitted StockAdjustment[] @relation("StockAdjustmentSubmittedBy")
   stockAdjustmentsApproved  StockAdjustment[] @relation("StockAdjustmentApprovedBy")
   stockAdjustmentsRejected  StockAdjustment[] @relation("StockAdjustmentRejectedBy")
+  posInstancesCreated       PosInstance[]     @relation("PosInstanceCreatedBy")
+  posCredentialsCreated     PosCredential[]   @relation("PosCredentialCreatedBy")
+  posCredentialsRevoked     PosCredential[]   @relation("PosCredentialRevokedBy")
 
   @@map("users")
 }

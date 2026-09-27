@@ -98,7 +98,10 @@ export class EnvironmentVariables {
   })
   FIELD_ENCRYPTION_KEY!: string;
 
-  /** Requests per THROTTLE_TTL seconds from one address, across the whole API. */
+  /**
+   * Requests per THROTTLE_TTL seconds from one address to one route: each route keeps its own
+   * count (@nestjs/throttler keys by handler), so a busy route never spends another's budget.
+   */
   @toInt()
   @IsInt()
   @Min(1)

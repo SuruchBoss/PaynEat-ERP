@@ -1,25 +1,6 @@
 // Copyright 2026 Suruch Chakrapeesirisuk
 // SPDX-License-Identifier: Apache-2.0
 
-import { Type } from 'class-transformer';
-import { IsInt, IsOptional, Max, Min } from 'class-validator';
-
-export class ChangesQueryDto {
-  /** The last version the caller has applied; 0 (the default) asks for everything. */
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  @IsOptional()
-  since = 0;
-
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(1000)
-  @IsOptional()
-  limit = 500;
-}
-
 export interface MasterDataChangeView {
   version: number;
   /** `item` today; locations, menu items and recipes reuse the same log later. */

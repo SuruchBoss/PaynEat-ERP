@@ -1,0 +1,44 @@
+{
+  "latestVersion": 12,
+  "changes": [
+    {
+      "version": 4,
+      "entityType": "item",
+      "entityId": "c761f330-b888-49de-8e62-c5e4a2a319c5",
+      "entityCode": "WHOLE-CHICKEN",
+      "action": "created",
+      "data": {
+        "id": "c761f330-b888-49de-8e62-c5e4a2a319c5",
+        "itemCode": "WHOLE-CHICKEN",
+        "nameTh": "ไก่ทั้งตัว",
+        "nameEn": "Whole chicken",
+        "baseUnitCode": "kg",
+        "variableWeight": true,
+        "shelfLifeDays": 5,
+        "active": true,
+        "purchaseUnits": [{ "unitCode": "case", "factor": "20" }],
+        "version": 4
+      },
+      "changedAt": "2026-09-26T03:00:00.000Z"
+    },
+    {
+      "version": 12,
+      "entityType": "location",
+      "entityId": "14202659-24c0-4cc7-9639-6e36780aaa44",
+      "entityCode": "BR-SILOM-OLD",
+      "action": "updated",
+      "data": {
+        "id": "14202659-24c0-4cc7-9639-6e36780aaa44",
+        "locationCode": "BR-SILOM-OLD",
+        "type": "branch",
+        "nameTh": "สาขาสีลม (รหัสเดิม)",
+        "nameEn": "Silom branch (old code)",
+        "active": false,
+        "supersededBy": { "id": "f0344ff9-67cb-4a4c-bae8-2a0240cdc291", "locationCode": "BR-SILOM" },
+        "version": 12
+      },
+      "changedAt": "2026-09-26T04:00:00.000Z"
+    }
+  ],
+  "hasMore": false
+}

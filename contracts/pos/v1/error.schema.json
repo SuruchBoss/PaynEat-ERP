@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/SuruchBoss/PaynEat-ERP/contracts/pos/v1/error.schema.json",
+  "title": "Error v1",
+  "description": "Every refusal the ERP sends a POS. Branch on `code` and `details.reason`, never on `message`, which is English text for people.",
+  "type": "object",
+  "required": ["statusCode", "code", "message"],
+  "properties": {
+    "statusCode": { "type": "integer" },
+    "code": {
+      "description": "`POS_CREDENTIAL_REJECTED` (401): stop the queue, keep pending events pending, and tell an administrator. `SALES_EVENT_REJECTED` (422): this event will never be accepted as it is; dead-letter it (nothing was stored, so the same key can be resent once the cause is fixed). Anything else: see the HTTP status and contracts/README.md.",
+      "type": "string"
+    },
+    "message": { "type": "string" },
+    "details": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "description": "The same value the ERP logs and counts as `reason` (docs/TELEMETRY.md).",
+          "enum": [
+            "credential_revoked",
+            "credential_unknown",
+            "schema_invalid",
+            "pos_instance_mismatch",
+            "branch_not_served",
+            "idempotency_key_reused"
+          ]
+        },
+        "errors": {
+          "description": "For `schema_invalid`: where the event breaks the schema.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["path", "message"],
+            "properties": {
+              "path": { "type": "string" },
+              "message": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "path": { "type": "string" },
+    "requestId": { "type": "string" },
+    "timestamp": { "type": "string", "format": "date-time" }
+  }
+}

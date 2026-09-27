@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "idempotencyKey": "POS-SILOM-1-K3F9Q2-00001300",
+  "posInstance": "POS-SILOM-1",
+  "branchCode": "BR-SILOM",
+  "saleTime": "2026-09-27T12:34:56+07:00",
+  "menuItemCode": "FRIED-CHICKEN-BY-WEIGHT",
+  "quantity": "1",
+  "weightKg": "0.450",
+  "modifiers": []
+}

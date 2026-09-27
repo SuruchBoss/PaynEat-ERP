@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "idempotencyKey": "POS-SILOM-1-K3F9Q2-00001303",
+  "posInstance": "POS-SILOM-1",
+  "branchCode": "BR-SILOM",
+  "saleTime": "2026-09-27 12:34:56",
+  "menuItemCode": "SET-WINGS-6",
+  "quantity": "1",
+  "modifiers": []
+}

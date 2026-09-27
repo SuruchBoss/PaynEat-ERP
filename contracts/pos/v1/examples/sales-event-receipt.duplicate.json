@@ -1,0 +1,6 @@
+{
+  "idempotencyKey": "POS-SILOM-1-K3F9Q2-00001234",
+  "status": "received",
+  "duplicate": true,
+  "receivedAt": "2026-09-27T05:35:02.118Z"
+}

@@ -13,6 +13,12 @@ export interface RequestContext {
    * writes from then on carries it as `location_code` (docs/TELEMETRY.md).
    */
   locationCode?: string;
+  /**
+   * The POS instance the request comes from, once its machine credential is known: every
+   * line the request writes from then on carries it as `pos_instance` (docs/TELEMETRY.md,
+   * "POS↔ERP integration lines").
+   */
+  posInstance?: string;
 }
 
 const storage = new AsyncLocalStorage<RequestContext>();
@@ -36,4 +42,10 @@ export function currentRequestContext(): RequestContext | undefined {
 export function labelRequestLocation(locationCode: string): void {
   const context = storage.getStore();
   if (context) context.locationCode = locationCode;
+}
+
+/** Labels the rest of this request's lines with the POS instance it comes from. */
+export function labelRequestPosInstance(posInstance: string): void {
+  const context = storage.getStore();
+  if (context) context.posInstance = posInstance;
 }

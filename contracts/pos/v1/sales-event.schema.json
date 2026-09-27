@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/SuruchBoss/PaynEat-ERP/contracts/pos/v1/sales-event.schema.json",
+  "title": "Sales event v1",
+  "description": "One non-cancelled sale line, sent by a PaynEat POS instance to PaynEat ERP once the line is paid: when its bill is paid in full, or when a payment covering that line is made (a split bill). See contracts/README.md for when a POS sends it and how it retries.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "idempotencyKey",
+    "posInstance",
+    "branchCode",
+    "saleTime",
+    "menuItemCode",
+    "modifiers"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "description": "The major version of this schema.",
+      "const": 1
+    },
+    "idempotencyKey": {
+      "description": "Stable for this sale line across every retry, and unique across the chain, even if the POS database is reinstalled: for example `<pos-instance>-<database id>-<order-item id>`, `POS-SILOM-1-K3F9Q2-00001234`. It is also the event's correlation id: the POS sends it as `x-request-id` on every delivery (docs/TELEMETRY.md), which is why it keeps to that header's characters.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{8,64}$"
+    },
+    "posInstance": {
+      "description": "The code of the POS instance as registered in the ERP. Must be the instance the credential belongs to.",
+      "$ref": "#/$defs/code"
+    },
+    "branchCode": {
+      "description": "The ecosystem location code of the branch where the sale happened. Must be a branch the instance serves.",
+      "$ref": "#/$defs/code"
+    },
+    "saleTime": {
+      "description": "When the line was paid: the time of the payment that paid its bill in full, or of the payment covering that line, with its UTC offset (RFC 3339), for example 2026-09-27T12:34:56+07:00.",
+      "type": "string",
+      "format": "date-time"
+    },
+    "menuItemCode": {
+      "description": "The ERP's code for the menu item sold.",
+      "$ref": "#/$defs/code"
+    },
+    "quantity": {
+      "description": "For a menu item sold by count: how many, a whole number above zero, as a string. Exactly one of `quantity` and `weightKg`.",
+      "type": "string",
+      "pattern": "^[1-9][0-9]{0,5}$"
+    },
+    "weightKg": {
+      "description": "For a menu item sold by weight: the weight sold in kilograms, above zero, at most 3 decimals, as a string. Exactly one of `quantity` and `weightKg`.",
+      "type": "string",
+      "pattern": "^(?!0+(\\.0+)?$)(0|[1-9][0-9]{0,5})(\\.[0-9]{1,3})?$"
+    },
+    "modifiers": {
+      "description": "The options chosen on this line, by the ERP's option code; empty when none.",
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "quantity"],
+        "properties": {
+          "code": { "$ref": "#/$defs/code" },
+          "quantity": {
+            "description": "How many times the option applies to each unit sold on the line: per piece for `quantity`, per kilogram for `weightKg`. A whole number above zero, as a string. The ingredients used are the option's recipe × this quantity × the line's `quantity` (or `weightKg`).",
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,3}$"
+          }
+        }
+      }
+    }
+  },
+  "oneOf": [{ "required": ["quantity"] }, { "required": ["weightKg"] }],
+  "$defs": {
+    "code": {
+      "description": "The ecosystem-wide code shape (docs/GLOSSARY.md): 2 to 32 capital letters, digits or hyphens, starting with a letter or digit.",
+      "type": "string",
+      "pattern": "^[A-Z0-9][A-Z0-9-]{1,31}$"
+    }
+  }
+}

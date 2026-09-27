@@ -348,6 +348,19 @@ export class LocationsService {
    * The facts other modules need about these locations, keyed by id; unknown ids are absent.
    * Pass the caller's transaction to read inside it.
    */
+  /** Locations by code, for callers that are given codes (a POS names its branches by code). */
+  async byCodes(
+    codes: readonly string[],
+    tx: Tx = this.prisma,
+  ): Promise<Map<string, LocationFacts>> {
+    if (codes.length === 0) return new Map();
+    const rows = await tx.location.findMany({
+      where: { code: { in: [...new Set(codes)] } },
+      select: { id: true, code: true, type: true, nameTh: true, nameEn: true, active: true },
+    });
+    return new Map(rows.map((row) => [row.code, row]));
+  }
+
   async describe(
     ids: readonly string[],
     tx: Tx = this.prisma,
