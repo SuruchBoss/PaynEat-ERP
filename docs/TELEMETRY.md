@@ -10,6 +10,17 @@ names**. A deployment on Google Cloud — where SherWhyve's live connectors run 
 metrics are identical everywhere; on Google Cloud, Managed Service for Prometheus collects them into
 Cloud Monitoring.
 
+## Additions to v1.2 (2026-09-27, PaynEat POS ticket 25)
+
+Additive only; nothing is renamed, and nothing the ERP emits changes.
+
+- The POS's own lines about pulling master data get names: `master_data.pull.completed` and
+  `master_data.pull.failed`. When the POS cannot reach the ERP, the ERP writes nothing at all, so the
+  POS's line is the only evidence of why a branch shows stale items. `app.log` cannot carry that: an
+  investigator has no name to ask for.
+- The POS's integration `reason` values are written down (see "Labels"). `outbox.delivery.failed` uses the
+  same list, so POS ticket 26 needs no second decision.
+
 ## Additions to v1.2 (2026-09-27, ERP #9)
 
 Additive only; nothing is renamed.
@@ -76,7 +87,7 @@ One JSON object per line on stdout.
 | `document_number` | ERP document number, when the line concerns one. |
 | `pos_instance` | Registered POS instance id, on integration traffic. |
 | `rule` | The rule that refused something, e.g. `negative_stock_plant`, `expired_lot`, `self_approval`, `period_closed`. |
-| `reason` | Rejection or failure reason for an integration event, e.g. `schema_invalid`, `branch_not_served`, `pos_instance_mismatch`, `idempotency_key_reused`, `credential_revoked`, `credential_unknown`, `unknown_menu_item`, `no_recipe_in_effect`. The sales-event values are listed in `contracts/pos/v1/error.schema.json`. |
+| `reason` | Rejection or failure reason for an integration event, e.g. `schema_invalid`, `branch_not_served`, `pos_instance_mismatch`, `idempotency_key_reused`, `credential_revoked`, `credential_unknown`, `unknown_menu_item`, `no_recipe_in_effect`. The sales-event values are listed in `contracts/pos/v1/error.schema.json`. On the POS side, `master_data.pull.failed` and `outbox.delivery.failed` use: the ERP's own `details.reason` when it gave one (`credential_revoked`, `credential_unknown`, and on a `422` the sales-event value); otherwise `erp_unreachable` (no network, timeout, 5xx), `rate_limited` (429, or 503 with `Retry-After`), `unexpected_response` (any other status, or a 2xx body that is not what the contract says), `contract_unsupported` (the ERP serves a contract major version the POS does not implement). |
 
 ### Correlation
 
@@ -98,7 +109,8 @@ One JSON object per line on stdout.
 Every log line about POS↔ERP traffic — on either side, **including lines about failures** — carries
 `pos_instance` and, when the line concerns one branch, `location_code`. This covers the ERP's
 `http.request.completed` for the sales-event and master-data endpoints, `sales_event.*`,
-`master_data.pulled` and a refused pull, and the POS's `outbox.delivery.failed`. A label is left out only
+`master_data.pulled` and a refused pull, and the POS's `master_data.pull.*` and
+`outbox.delivery.failed`. A label is left out only
 when its value cannot be known (a credential the ERP has never issued has no `pos_instance`); it is never
 filled with a guess.
 
@@ -125,7 +137,9 @@ way with the same reasons. Nothing from the credential itself is logged.
 | `sales_event.failed` | ERP | `WARNING`, with `reason` — received but could not become consumption (ERP #17) |
 | `master_data.pulled` | ERP | `INFO`, with `pos_instance` |
 | `master_data.pull_refused` | ERP | `WARNING`, with `reason` (and `pos_instance` when the credential names one) — a refused pull (ERP #9) |
-| `outbox.delivery.failed` | POS (and any service with an outbox) | `WARNING`; `ERROR` when dead-lettered |
+| `master_data.pull.completed` | POS | `INFO`, with `pos_instance` — a pull the ERP answered and the POS applied |
+| `master_data.pull.failed` | POS | `WARNING`, with `reason`; `ERROR` when the POS stops pulling until a person acts (`credential_revoked`, `credential_unknown`, `unexpected_response`, `contract_unsupported`) |
+| `outbox.delivery.failed` | POS (and any service with an outbox) | `WARNING`, with `reason`; `ERROR` when dead-lettered or when the queue stops until a person acts |
 
 ## Where each service runs, and what an investigator can see
 
