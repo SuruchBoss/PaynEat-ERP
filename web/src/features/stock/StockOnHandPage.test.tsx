@@ -45,6 +45,7 @@ const row = (overrides: Partial<StockOnHandRow>): StockOnHandRow => ({
   unitCost: '72.5',
   value: '1566',
   expired: false,
+  countRecommended: false,
   ...overrides,
 });
 
@@ -81,8 +82,10 @@ const TODAY: StockOnHandView = {
       quantity: '-5.000',
       secondaryQuantity: null,
       value: '-362.5',
+      countRecommended: true,
     }),
   ],
+  negativeBranchBalances: 1,
 };
 
 const lists = {
@@ -111,6 +114,7 @@ describe('stock on hand', () => {
     const negative = within(chickens[1].closest('tr')!);
     expect(negative.getByText('ติดลบ ควรตรวจนับ')).toBeVisible();
     expect(negative.getByText('-362.5')).toBeVisible();
+    expect(screen.getByText(/1 lot ที่สาขาติดลบ ควรตรวจนับ/)).toBeVisible();
 
     expect(screen.getByText('9,328.5')).toBeVisible();
     expect(screen.getByText(/3 รายการ มูลค่ารวม 9,328.5 บาท/)).toBeVisible();
@@ -137,6 +141,7 @@ describe('stock on hand', () => {
           asOf: url.searchParams.get('asOf') ?? '2026-09-26',
           rows: [],
           totalValue: '0',
+          negativeBranchBalances: 0,
         });
       },
     });

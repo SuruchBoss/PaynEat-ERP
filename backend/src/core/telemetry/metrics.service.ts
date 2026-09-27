@@ -4,7 +4,7 @@
 import { createServer, Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { Inject, Injectable, OnApplicationBootstrap, OnApplicationShutdown } from '@nestjs/common';
-import { collectDefaultMetrics, Counter, Histogram, Registry } from 'prom-client';
+import { collectDefaultMetrics, Counter, Gauge, Histogram, Registry } from 'prom-client';
 import { APP_CONFIG } from '../config/config.token';
 import type { RootConfig } from '../config/configuration';
 import { APP_NAME, GENERIC_EVENT, TelemetryLogger } from './telemetry-logger';
@@ -81,6 +81,45 @@ export class MetricsService implements OnApplicationBootstrap, OnApplicationShut
   /** `by` 0 makes the series exist before anything happened, so "none yet" reads as 0. */
   countPosting(documentType: string, outcome: 'succeeded' | 'refused', rule = '', by = 1): void {
     this.postings.inc({ document_type: documentType, outcome, rule }, by);
+  }
+
+  /**
+   * A gauge that describes the system rather than this process, so it is read from the
+   * database each time metrics are scraped (docs/TELEMETRY.md): several replicas report the same
+   * value, and a restart never blanks it. `read` returns every series with its value.
+   */
+  gaugeFromDatabase<L extends string>(
+    name: string,
+    help: string,
+    labelNames: readonly L[],
+    read: () => Promise<Array<{ labels: Record<L, string>; value: number }>>,
+  ): void {
+    const logger = this.logger;
+    new Gauge<L>({
+      name,
+      help,
+      labelNames,
+      registers: [this.registry],
+      async collect() {
+        let series: Awaited<ReturnType<typeof read>>;
+        try {
+          series = await read();
+        } catch (error) {
+          // One unreadable gauge must not take every other metric down with it: the series
+          // disappear for this scrape, which an investigator reads as "missing", never as 0.
+          this.reset();
+          logger.write({
+            severity: 'WARNING',
+            event: GENERIC_EVENT,
+            message: `Could not read ${name} from the database`,
+            error,
+          });
+          return;
+        }
+        this.reset();
+        for (const { labels, value } of series) this.set(labels as never, value);
+      },
+    });
   }
 
   async onApplicationBootstrap(): Promise<void> {

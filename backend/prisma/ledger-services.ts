@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * The ledger and opening-balance services, wired by hand for scripts that run without the API:
+ * The ledger, opening-balance and stock-adjustment services, wired by hand for scripts that run without the API:
  * the demo seed and `npm run ledger:rebuild-balances`. The same code the API runs, so no script
  * writes stock any other way than the ledger module does (#7, ADR-0010).
  */
@@ -19,10 +19,12 @@ import { LedgerService } from '../src/modules/ledger/ledger.service';
 import { LocationsService } from '../src/modules/locations/locations.service';
 import { MasterDataService } from '../src/modules/master-data/master-data.service';
 import { OpeningBalancesService } from '../src/modules/opening-balances/opening-balances.service';
+import { StockAdjustmentsService } from '../src/modules/stock-adjustments/stock-adjustments.service';
 
 export interface LedgerServices {
   ledger: LedgerService;
   openingBalances: OpeningBalancesService;
+  stockAdjustments: StockAdjustmentsService;
 }
 
 /**
@@ -58,5 +60,9 @@ export function ledgerServices(
     metrics,
     config,
   );
-  return { ledger, openingBalances: new OpeningBalancesService(db, ledger, items, locations) };
+  return {
+    ledger,
+    openingBalances: new OpeningBalancesService(db, ledger, items, locations),
+    stockAdjustments: new StockAdjustmentsService(db, ledger, items, locations, audit, logger),
+  };
 }

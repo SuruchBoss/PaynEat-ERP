@@ -107,7 +107,7 @@ export const en = {
       points: [
         ['Seven roles', 'From purchasing to finance; a user may hold several.'],
         ['Second factor', 'An authenticator code for administrators, with recovery codes.'],
-        ['Segregation of duties', 'Nobody approves their own document — arriving with the first approval.', 8],
+        ['Segregation of duties', 'Nobody approves a document they created, whatever roles they hold: refused by the API, not hidden by the screen.'],
       ],
       shots: [
         ['users', 'desktop', 'Users and roles: seven demo users, their roles and their second-factor status'],
@@ -152,8 +152,7 @@ export const en = {
     title: 'What’s cooking next.',
     sub: 'Built in public, one GitHub issue at a time. None of this is in the demo yet.',
     items: [
-      [8, 'Stock adjustments with segregation of duties', 'progress'],
-      [9, 'POS integration contract and POS registration'],
+      [9, 'POS integration contract and POS registration', 'progress'],
       [10, 'Purchase orders with an approval threshold'],
       [11, 'Goods receipts with inspection and lots'],
       [13, 'Production orders: measured yield and lot genealogy'],
@@ -288,7 +287,7 @@ export const th = {
       points: [
         ['เจ็ดบทบาท', 'ตั้งแต่จัดซื้อถึงการเงิน ผู้ใช้หนึ่งคนมีได้หลายบทบาท'],
         ['การยืนยันตัวตนขั้นที่สอง', 'รหัสจากแอป authenticator สำหรับผู้ดูแลระบบ พร้อมรหัสกู้คืน'],
-        ['การแยกหน้าที่', 'ไม่มีใครอนุมัติเอกสารที่ตัวเองสร้าง มาพร้อมการอนุมัติครั้งแรก', 8],
+        ['การแยกหน้าที่', 'ไม่มีใครอนุมัติเอกสารที่ตัวเองสร้าง ไม่ว่าจะถือบทบาทใด API ปฏิเสธเอง ไม่ใช่แค่ซ่อนปุ่ม'],
       ],
       shots: [
         ['users', 'desktop', 'ผู้ใช้และบทบาท: ผู้ใช้เดโมเจ็ดคน บทบาท และสถานะการยืนยันตัวตนขั้นที่สอง'],
@@ -333,8 +332,7 @@ export const th = {
     title: 'สิ่งที่กำลังจะมา',
     sub: 'สร้างแบบเปิดเผยทีละ GitHub issue ทั้งหมดนี้ยังไม่อยู่ในเดโม',
     items: [
-      [8, 'การปรับปรุงสต๊อกพร้อมการแยกหน้าที่', 'progress'],
-      [9, 'สัญญาการเชื่อมต่อ POS และการลงทะเบียน POS'],
+      [9, 'สัญญาการเชื่อมต่อ POS และการลงทะเบียน POS', 'progress'],
       [10, 'ใบสั่งซื้อพร้อมเกณฑ์วงเงินที่ต้องอนุมัติ'],
       [11, 'ใบรับสินค้าพร้อมการตรวจรับและ lot'],
       [13, 'ใบสั่งผลิต: yield ที่วัดจริงและผังความสัมพันธ์ lot'],

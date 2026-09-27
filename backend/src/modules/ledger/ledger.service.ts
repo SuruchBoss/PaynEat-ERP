@@ -41,6 +41,8 @@ import type {
   DocumentRef,
   LotView,
   PersonRef,
+  StockDocumentStatus,
+  StockDocumentType,
   StockDocumentView,
   StockOnHandQueryDto,
   StockOnHandRow,
@@ -48,14 +50,27 @@ import type {
 } from './dto/ledger.dto';
 
 export type { PostingRule } from './domain/posting-rules';
-export type { StockDocumentView, LotView, DocumentRef } from './dto/ledger.dto';
+export type {
+  StockDocumentView,
+  StockDocumentStatus,
+  StockDocumentType,
+  LotView,
+  DocumentRef,
+  PersonRef,
+} from './dto/ledger.dto';
 
 type Tx = Prisma.TransactionClient;
-export type StockDocumentType = 'opening_balance' | 'reversal';
+
+/** What a posting wrote, and the branch lots it left below zero (flagged for a count). */
+interface Written {
+  entries: number;
+  negativeAtBranch: Array<{ lotId: string; locationCode: string; quantity: string }>;
+}
 
 const SCOPES: Record<StockDocumentType, SequenceScope> = {
   opening_balance: 'OPENING_BALANCE',
   reversal: 'REVERSAL',
+  stock_adjustment: 'STOCK_ADJUSTMENT',
 };
 
 /** Long enough for a posting to wait its turn behind another on the same lots. */
@@ -79,6 +94,8 @@ const REFUSAL_MESSAGES: Record<PostingRule, string> = {
   reversal_of_reversal: 'A reversal cannot be reversed; post the correct document instead',
   already_reversed: 'This document has already been reversed',
   business_date_before_original: 'A reversal cannot be dated before the document it reverses',
+  not_approved: 'Only an approved document can be posted',
+  self_approval: 'Nobody approves a document they created; someone else has to approve it',
 };
 
 /**
@@ -110,18 +127,47 @@ export interface NewLot {
   expiryDate: string;
 }
 
-/** What a document type hands the ledger to post: the lots to create, or why not. */
+/**
+ * A change to a lot that already exists, from one document line: signed, in the item's base
+ * unit. The ledger carries the lot's own cost on the entry (ADR-0004), never a cost the
+ * document type supplies.
+ */
+export interface LotChange {
+  lineNo: number;
+  lotId: string;
+  itemId: string;
+  locationId: string;
+  quantity: string;
+  secondaryQuantity: string | null;
+}
+
+/**
+ * What a document type hands the ledger to post: the lots to create, the changes to existing
+ * lots, or why not.
+ */
 export type PostingPlan =
-  { refusal: { rule: PostingRule; lineNo?: number } } | { newLots: NewLot[] };
+  | { refusal: { rule: PostingRule; lineNo?: number } }
+  | { newLots: NewLot[] }
+  | { lotChanges: LotChange[] };
 
 /** A document header as the ledger locks it. */
 export interface LockedDocument {
   id: string;
   number: string;
   type: StockDocumentType;
-  status: 'draft' | 'posted';
+  status: StockDocumentStatus;
   businessDate: string;
   revision: number;
+  createdById: string;
+}
+
+/** The facts a document type needs about a lot, read inside its transaction. */
+export interface LotFacts {
+  id: string;
+  number: string;
+  itemId: string;
+  unitCost: string;
+  expiryDate: string;
 }
 
 interface DraftHeader {
@@ -167,6 +213,12 @@ export class LedgerService {
     @Inject(APP_CONFIG) private readonly config: RootConfig,
   ) {
     for (const type of Object.keys(SCOPES)) this.metrics.countPosting(type, 'succeeded', '', 0);
+    this.metrics.gaugeFromDatabase(
+      'erp_negative_branch_balances',
+      'Lots below zero at each branch: each one is a flag asking for a stock count (ADR-0003).',
+      ['location_code'],
+      () => this.negativeBranchBalances(),
+    );
   }
 
   /** Today's date in the company's time zone (ADR-0018). */
@@ -203,7 +255,7 @@ export class LedgerService {
    * it never changes, and is corrected by a reversal.
    */
   async lockDraft(tx: Tx, id: string, revision: number): Promise<LockedDocument> {
-    const doc = await this.lockDocument(tx, id);
+    const doc = await this.lockAt(tx, id, revision);
     if (doc.status === 'posted') {
       throw new DomainError(
         'DOCUMENT_POSTED',
@@ -211,6 +263,23 @@ export class LedgerService {
         HttpStatus.CONFLICT,
       );
     }
+    if (doc.status !== 'draft') {
+      throw new DomainError(
+        'DOCUMENT_NOT_DRAFT',
+        'Only a draft can be edited: this document has already been submitted.',
+        HttpStatus.CONFLICT,
+        { status: doc.status },
+      );
+    }
+    return doc;
+  }
+
+  /**
+   * Locks a document at the revision the person saw, whatever its status: for a step that
+   * moves it on (submitting, approving, rejecting). An older revision is refused.
+   */
+  async lockAt(tx: Tx, id: string, revision: number): Promise<LockedDocument> {
+    const doc = await this.lockDocument(tx, id);
     if (doc.revision !== revision) {
       throw new DomainError(
         'DOCUMENT_CHANGED',
@@ -220,6 +289,23 @@ export class LedgerService {
       );
     }
     return doc;
+  }
+
+  /**
+   * Moves a locked document to its next status and takes the next revision. The document type
+   * decides which moves are allowed; posting is never one of them (only `post` posts).
+   */
+  async moveTo(
+    tx: Tx,
+    doc: LockedDocument,
+    status: Exclude<StockDocumentStatus, 'posted'>,
+  ): Promise<void> {
+    await tx.$executeRaw`
+      UPDATE "stock_documents"
+      SET "status" = ${status}::"StockDocumentStatus", "revision" = "revision" + 1,
+          "updated_at" = now()
+      WHERE "id" = ${doc.id}::uuid
+    `;
   }
 
   /** Changes a locked draft's header and takes the next revision. */
@@ -272,6 +358,41 @@ export class LedgerService {
     }));
   }
 
+  /** Lots by id, with what a document type needs to check a change to them. */
+  async lotFacts(ids: readonly string[], tx: Tx = this.prisma): Promise<Map<string, LotFacts>> {
+    if (ids.length === 0) return new Map();
+    const rows = await tx.lot.findMany({
+      where: { id: { in: [...new Set(ids)] } },
+      select: { id: true, number: true, itemId: true, unitCost: true, expiryDate: true },
+    });
+    return new Map(
+      rows.map((row) => [
+        row.id,
+        {
+          id: row.id,
+          number: row.number,
+          itemId: row.itemId,
+          unitCost: normaliseDecimal(row.unitCost.toFixed()),
+          expiryDate: dateText(row.expiryDate),
+        },
+      ]),
+    );
+  }
+
+  /** Which of these lots have ever been held at this location (they have a balance row there). */
+  async heldAt(
+    locationId: string,
+    lotIds: readonly string[],
+    tx: Tx = this.prisma,
+  ): Promise<Set<string>> {
+    if (lotIds.length === 0) return new Set();
+    const rows = await tx.stockBalance.findMany({
+      where: { locationId, lotId: { in: [...new Set(lotIds)] } },
+      select: { lotId: true },
+    });
+    return new Set(rows.map((row) => row.lotId));
+  }
+
   // --- Posting ---------------------------------------------------------------------
 
   /**
@@ -284,15 +405,19 @@ export class LedgerService {
     revision: number,
     actor: AuthenticatedUser,
     plan: (tx: Tx, doc: LockedDocument) => Promise<PostingPlan>,
+    options: { from: 'draft' | 'approved' } = { from: 'draft' },
   ): Promise<void> {
     let doc: LockedDocument | undefined;
-    let entries = 0;
+    let written: Written = { entries: 0, negativeAtBranch: [] };
     try {
       await this.prisma.$transaction(async (tx) => {
         doc = await this.lockDocument(tx, documentId);
         if (doc.status === 'posted') throw new PostingRefusedError('already_posted');
         if (doc.revision !== revision) {
           throw new PostingRefusedError('stale_revision', { currentRevision: doc.revision });
+        }
+        if (doc.status !== options.from) {
+          throw new PostingRefusedError('not_approved', { status: doc.status });
         }
         const prepared = await plan(tx, doc);
         if ('refusal' in prepared) {
@@ -302,8 +427,11 @@ export class LedgerService {
         const dateRule = businessDateProblem(doc.businessDate, this.today());
         if (dateRule) throw new PostingRefusedError(dateRule);
 
-        const movements = await this.createLots(tx, doc, prepared.newLots);
-        entries = await this.write(tx, doc, movements, actor);
+        const movements =
+          'newLots' in prepared
+            ? await this.createLots(tx, doc, prepared.newLots)
+            : await this.changesOf(tx, prepared.lotChanges);
+        written = await this.write(tx, doc, movements, actor);
         await tx.$executeRaw`
           UPDATE "stock_documents"
           SET "status" = 'posted', "posted_by_id" = ${actor.userId}::uuid, "posted_at" = now(),
@@ -321,7 +449,16 @@ export class LedgerService {
         this.recordRefusal(doc.type, doc.number, error);
       throw error;
     }
-    this.recordSuccess(doc!.type, doc!.number, entries);
+    this.recordSuccess(doc!.type, doc!.number, written);
+  }
+
+  /**
+   * Counts and logs a refusal a document type made before asking the ledger to post, under the
+   * same metric and event as the ledger's own (docs/TELEMETRY.md): an approval by the person who
+   * created the document is refused posting as surely as a lot that would go negative.
+   */
+  recordTypeRefusal(type: StockDocumentType, number: string, error: PostingRefusedError): void {
+    this.recordRefusal(type, number, error);
   }
 
   /**
@@ -337,7 +474,7 @@ export class LedgerService {
   ): Promise<DocumentRef> {
     let original: LockedDocument | undefined;
     let reversal: DocumentRef | undefined;
-    let entries = 0;
+    let written: Written = { entries: 0, negativeAtBranch: [] };
     try {
       await this.prisma.$transaction(async (tx) => {
         original = await this.lockDocument(tx, documentId);
@@ -368,7 +505,7 @@ export class LedgerService {
           RETURNING "id"
         `;
         reversal = { id: created[0].id, number };
-        entries = await this.write(
+        written = await this.write(
           tx,
           { id: reversal.id, number, businessDate },
           reversalMovements(originalEntries),
@@ -383,7 +520,7 @@ export class LedgerService {
       }
       throw error;
     }
-    this.recordSuccess('reversal', reversal!.number, entries, original!.number);
+    this.recordSuccess('reversal', reversal!.number, written, original!.number);
     return reversal!;
   }
 
@@ -466,6 +603,7 @@ export class LedgerService {
         unitCost,
         value: stockValue(balance.quantity, unitCost),
         expired: compareDates(expiryDate, asOf) < 0,
+        countRecommended: location.type === 'branch' && balance.quantity.startsWith('-'),
       };
     });
     rows.sort(
@@ -475,7 +613,12 @@ export class LedgerService {
         a.lot.expiryDate.localeCompare(b.lot.expiryDate) ||
         a.lot.number.localeCompare(b.lot.number),
     );
-    return { asOf, rows, totalValue: sumValues(rows.map((r) => r.value)) };
+    return {
+      asOf,
+      rows,
+      totalValue: sumValues(rows.map((r) => r.value)),
+      negativeBranchBalances: rows.filter((r) => r.countRecommended).length,
+    };
   }
 
   /** Where the balance snapshot disagrees with the ledger; empty when they agree. */
@@ -543,7 +686,8 @@ export class LedgerService {
   private async lockDocument(tx: Tx, id: string): Promise<LockedDocument> {
     const rows = await tx.$queryRaw<LockedDocument[]>`
       SELECT "id", "number", "type"::text AS "type", "status"::text AS "status",
-             to_char("business_date", 'YYYY-MM-DD') AS "businessDate", "revision"
+             to_char("business_date", 'YYYY-MM-DD') AS "businessDate", "revision",
+             "created_by_id"::text AS "createdById"
       FROM "stock_documents" WHERE "id" = ${id}::uuid
       FOR UPDATE
     `;
@@ -581,6 +725,21 @@ export class LedgerService {
     }));
   }
 
+  /** Movements for changes to existing lots, each carrying its lot's own cost (ADR-0004). */
+  private async changesOf(tx: Tx, changes: LotChange[]): Promise<Movement[]> {
+    const lots = await this.lotFacts(
+      changes.map((c) => c.lotId),
+      tx,
+    );
+    return changes.map((change) => {
+      const lot = lots.get(change.lotId);
+      if (!lot || lot.itemId !== change.itemId) {
+        throw new NotFoundError('Lot', change.lotId);
+      }
+      return { ...change, unitCost: lot.unitCost };
+    });
+  }
+
   /**
    * The heart of posting: lock the balance rows the movements touch, by lot then location
    * (ADR-0003 decision 6), check that no plant, warehouse or in-transit lot goes below zero,
@@ -591,8 +750,8 @@ export class LedgerService {
     doc: { id: string; number: string; businessDate: string },
     movements: Movement[],
     actor: AuthenticatedUser,
-  ): Promise<number> {
-    if (movements.length === 0) return 0;
+  ): Promise<Written> {
+    if (movements.length === 0) return { entries: 0, negativeAtBranch: [] };
     const keys = lockOrder(netChanges(movements));
     const current = await tx.$queryRaw<Balance[]>`
       SELECT "lot_id" AS "lotId", "item_id" AS "itemId", "location_id" AS "locationId",
@@ -612,8 +771,14 @@ export class LedgerService {
     const types = new Map<string, LocationType>([...locations.values()].map((l) => [l.id, l.type]));
     const result = applyMovements(current, movements, types);
     if (!result.ok) {
+      // The refusal names the lot as people know it, not only by id (#8).
+      const lot = await tx.lot.findUnique({
+        where: { id: result.lotId },
+        select: { number: true },
+      });
       throw new PostingRefusedError(result.rule, {
         lotId: result.lotId,
+        lotNumber: lot?.number,
         locationCode: locations.get(result.locationId)?.code,
         quantity: result.quantity,
       });
@@ -655,7 +820,14 @@ export class LedgerService {
         END,
         "updated_at" = now()
     `;
-    return movements.length;
+    return {
+      entries: movements.length,
+      negativeAtBranch: result.negativeAtBranch.map((b) => ({
+        lotId: b.lotId,
+        locationCode: locations.get(b.locationId)?.code ?? '',
+        quantity: b.quantity,
+      })),
+    };
   }
 
   private async entriesOf(tx: Tx, documentId: string): Promise<PostedEntry[]> {
@@ -698,7 +870,7 @@ export class LedgerService {
   private recordSuccess(
     type: StockDocumentType,
     number: string,
-    entries: number,
+    written: Written,
     reverses?: string,
   ): void {
     this.metrics.countPosting(type, 'succeeded');
@@ -706,10 +878,46 @@ export class LedgerService {
       severity: 'INFO',
       event: 'ledger.posting.succeeded',
       message: reverses
-        ? `Posted ${number}, reversing ${reverses}: ${entries} ledger entries`
-        : `Posted ${number}: ${entries} ledger entries`,
+        ? `Posted ${number}, reversing ${reverses}: ${written.entries} ledger entries`
+        : `Posted ${number}: ${written.entries} ledger entries`,
       labels: { document_number: number },
     });
+    // A branch may go below zero; it is allowed, and it is flagged for a count (ADR-0003).
+    for (const negative of written.negativeAtBranch) {
+      this.logger.write({
+        severity: 'WARNING',
+        event: 'app.log',
+        message: `${number} left a lot at ${negative.locationCode} at ${negative.quantity}: count recommended`,
+        labels: { document_number: number, location_code: negative.locationCode },
+      });
+    }
+  }
+
+  /**
+   * Lots below zero per branch, read from the database when metrics are scraped
+   * (docs/TELEMETRY.md): every active branch reports, at 0 when nothing is negative, so "no
+   * flags" reads as 0 and never as a missing series.
+   */
+  private async negativeBranchBalances(): Promise<
+    Array<{ labels: { location_code: string }; value: number }>
+  > {
+    const negatives = await this.prisma.stockBalance.groupBy({
+      by: ['locationId'],
+      where: { quantity: { lt: 0 } },
+      _count: { _all: true },
+    });
+    const [branches, described] = await Promise.all([
+      this.locations.list({ type: 'branch', status: 'active' } as Parameters<
+        LocationsService['list']
+      >[0]),
+      this.locations.describe(negatives.map((n) => n.locationId)),
+    ]);
+    const counts = new Map<string, number>(branches.map((b) => [b.code, 0]));
+    for (const negative of negatives) {
+      const location = described.get(negative.locationId);
+      if (location?.type === 'branch') counts.set(location.code, negative._count._all);
+    }
+    return [...counts].map(([code, value]) => ({ labels: { location_code: code }, value }));
   }
 
   private recordRefusal(type: StockDocumentType, number: string, error: PostingRefusedError): void {

@@ -212,3 +212,18 @@ export const DEMO_OPENING_BALANCE = {
     },
   ],
 } as const;
+
+/**
+ * One approved write-off (#8): whole chickens damaged in the plant's chiller, written off the
+ * first whole-chicken lot of the opening balance. Raised by the plant, approved by finance —
+ * never by the person who raised it (ADR-0008). Fictional, like everything here.
+ */
+export const DEMO_WRITE_OFF = {
+  locationCode: 'PLANT-01',
+  note: 'Demo seed: chickens damaged in the chiller (fictional)',
+  /** The opening-balance line whose lot is written off. */
+  openingBalanceLineNo: 3,
+  quantity: '-1.800',
+  secondaryQuantity: '-1',
+  reason: 'Damaged in the chiller',
+} as const;

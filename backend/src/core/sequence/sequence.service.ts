@@ -7,11 +7,12 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 
-export type SequenceScope = 'OPENING_BALANCE' | 'REVERSAL';
+export type SequenceScope = 'OPENING_BALANCE' | 'REVERSAL' | 'STOCK_ADJUSTMENT';
 
 const PREFIXES: Record<SequenceScope, string> = {
   OPENING_BALANCE: 'OB',
   REVERSAL: 'RV',
+  STOCK_ADJUSTMENT: 'AD',
 };
 
 /**

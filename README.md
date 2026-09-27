@@ -33,8 +33,8 @@ screens from the demo.
 > conversion factors, locations (plants, warehouses and branches, each plant and warehouse with its
 > own in-transit location), suppliers, and the versioned master data change log a POS will pull
 > from — and the **stock ledger**: lots, ledger entries nothing can change, opening balances that post
-> in one transaction and are corrected only by reversal, and stock on hand as of any date, with its
-> value. The console works on a desktop, a tablet (the menu narrows to icons) and a phone (each table
+> in one transaction and are corrected only by reversal, stock adjustments that post only once someone
+> other than their creator approves them, and stock on hand as of any date, with its value. The console works on a desktop, a tablet (the menu narrows to icons) and a phone (each table
 > row becomes a card), in light and dark mode, and anyone can try it in the browser on the
 [public demo](https://suruchboss.github.io/PaynEat-ERP/). No purchasing, production or transfer document exists
 > yet; they are being built in public, one GitHub issue at a time. This README says only what is true
@@ -110,7 +110,7 @@ Seven roles, enforced by the API — not just hidden buttons. Administrators sig
 
 - **Seven roles** — From purchasing to finance; a user may hold several.
 - **Second factor** — An authenticator code for administrators, with recovery codes.
-- **Segregation of duties** — Nobody approves their own document — arriving with the first approval. _(Planned: [#8](https://github.com/SuruchBoss/PaynEat-ERP/issues/8))_
+- **Segregation of duties** — Nobody approves a document they created, whatever roles they hold: refused by the API, not hidden by the screen.
 
 **Try it:** Sign in as admin with one of the recovery codes the sign-in screen shows, then open “Users and roles”.
 
@@ -266,7 +266,8 @@ What works today: signing in, with a second factor for administrators; users and
 of [ADR-0008](docs/adr/0008-roles-and-segregation-of-duties.md); an append-only audit trail; the
 **master data** — items, units and purchase units; locations, whose codes are shared with the POS
 and Cwork; suppliers — each change to an item or a branch a new master data version a POS can pull;
-the **stock ledger** — opening balances and stock on hand by item, lot and location, as of any date;
+the **stock ledger** — opening balances, stock adjustments approved by a second person, and stock on
+hand by item, lot and location, as of any date, with branch lots below zero flagged for a count;
 and the skeleton under them — an API that reports its own health and its database's, writes every request as
 structured JSON (the ecosystem's [telemetry contract](docs/TELEMETRY.md)) and counts requests,
 failed sign-ins and postings in Prometheus metrics.
@@ -330,14 +331,15 @@ The password of every demo account is **`demo-chicken-2026`**.
 | `admin` | `admin@demo-chicken.example` | Manage users, roles, locations, configuration; reopen closed periods | Sign in with a second factor; **Users and roles**: list, create, give and take away roles; **Items and units**: create, edit, deactivate; **Locations**: create, correct a code, deactivate, supersede; **Suppliers**; read stock on hand and opening balances; read the audit trail (API) |
 | `purchasing` | `purchasing@demo-chicken.example` | Create and send purchase orders; manage suppliers | Sign in; **Suppliers**: create, edit, deactivate; read items, locations and stock on hand; its purchase-order screens arrive with #10 |
 | `purchasing_approver` | `approver@demo-chicken.example` | Approve purchase orders above the approval threshold | Sign in; read items, locations, suppliers and stock on hand; its screen arrives with #10 |
-| `plant` | `plant@demo-chicken.example` | Receive goods, run production orders, manage plant stock | Sign in; **Opening balances**: draft, post, reverse; **Stock on hand**; read items, locations and suppliers; its receipt and production screens arrive with #11 and #13 |
+| `plant` | `plant@demo-chicken.example` | Receive goods, run production orders, manage plant stock | Sign in; **Opening balances**: draft, post, reverse; **Stock adjustments**: draft and submit; **Stock on hand**; read items, locations and suppliers; its receipt and production screens arrive with #11 and #13 |
 | `logistics` | `logistics@demo-chicken.example` | Dispatch transfers | Sign in; read items, locations, suppliers and stock on hand; its screen arrives with #14 |
-| `branch_manager` | `branch.manager@demo-chicken.example` | Raise requisitions, receive transfers, count branch stock | Sign in; read items, locations, suppliers and stock on hand; its screens arrive with #14 and #15 |
-| `finance` | `finance@demo-chicken.example` | View costs, variances and valuation; export financial data | Sign in; **Stock on hand** with cost and value; read items, locations and suppliers; its screens arrive with the costing and period-close work of weeks 4–5 |
+| `branch_manager` | `branch.manager@demo-chicken.example` | Raise requisitions, receive transfers, count branch stock | Sign in; **Stock adjustments**: draft and submit; read items, locations, suppliers and stock on hand; its requisition and transfer screens arrive with #14 and #15 |
+| `finance` | `finance@demo-chicken.example` | View costs, variances and valuation; export financial data | Sign in; **Stock adjustments**: approve (which posts) or reject, never one it raised; **Stock on hand** with cost and value; read items, locations and suppliers; its screens arrive with the costing and period-close work of weeks 4–5 |
 
 A user may hold several roles; the API refuses anything none of them allows (403), and anything
-without a session (401). Nobody approves a document they created, whatever roles they hold — that
-check arrives with the first approval (#8, #10).
+without a session (401). Nobody approves a document they created, whatever roles they hold: the API
+refuses it on every stock adjustment (#8), and the database refuses it again for anything that goes
+around the API; purchase orders follow the same rule (#10).
 
 **The admin account needs a second factor.** Add the published demo secret to any authenticator app
 (Google Authenticator, Microsoft Authenticator, 1Password, …) and type the 6-digit code it shows:
@@ -391,10 +393,11 @@ undoes them.
    by its check digit. Suppliers stay in the ERP and never reach a POS.
 10. Open **Stock on hand** (any account): the plant's opening stock — batter flour, frying oil, and
    three lots of whole chicken, each weighed with its bird count and expiring on a different day — with
-   the unit cost and value of every lot, 22,716.7 baht in all. Every figure is the ledger's exact
-   decimal, never rounded. Set **As of** to two days ago: nothing, because the opening balance is dated
-   yesterday. Stock as of a date is counted by when a movement happened (its business date), not when
-   it was posted (ADR-0018).
+   the unit cost and value of every lot, 22,586.2 baht in all: the first chicken lot is 19.800 kg and
+   11 birds, because the demo's approved write-off (step 12) took a damaged bird off it. Every figure
+   is the ledger's exact decimal, never rounded. Set **As of** to two days ago: nothing, because the
+   opening balance is dated yesterday. Stock as of a date is counted by when a movement happened (its
+   business date), not when it was posted (ADR-0018).
 11. Sign in as **plant**, open **Opening balances** and **New opening balance** at a branch: a line of
    whole chicken (kilograms and birds) and a line of drumsticks. `2.5` drumsticks is refused on its
    line — pieces have no decimals (ADR-0019). **Save draft**: it is numbered at once (`OB-2026-00002`)
@@ -405,7 +408,21 @@ undoes them.
    at the same moment. A lot already expired on its business date is refused too. Every posting and
    every refusal is a `ledger.posting.succeeded` or `ledger.posting.refused` log line carrying the
    `document_number` (and the `rule` that refused it), counted in `erp_postings_total`.
-12. Every one of those changes, and every refused sign-in, is in the audit trail with who, when and
+12. Open **Stock adjustments** (any account): `AD-2026-00001`, the seed's write-off of one damaged bird
+   (−1.800 kg, −1 piece, valued at the lot's own cost: −130.5 baht), raised by **plant** and approved
+   by **finance**. The next steps need the Docker install; on the public demo, raising an adjustment
+   says it needs a real installation. Sign in as **plant**, **New stock adjustment** at `PLANT-01`:
+   pick a chicken lot (only lots held there are offered), **Take out (−)** `1.8` kg and `1` bird, and a
+   reason — every line needs one. **Save draft**, then **Submit for approval**: its lines are now fixed.
+   Sign in as **finance** and **Approve and post**: stock on hand drops at once, the approval is in the
+   audit trail, and `document.approved` is logged. Now give one user both **plant** and **finance**
+   (step 4): whatever it raises, it cannot approve — the console says so, and the API refuses with
+   `self_approval`, counted in `erp_postings_total`. Taking more than a plant lot holds is refused,
+   naming the lot (`negative_stock_plant`), even when two approvals race for the same lot. At a
+   branch it is allowed: the lot shows **Negative: count it** in stock on hand, and
+   `erp_negative_branch_balances` counts it for that branch. An approver can also **Reject**, with a
+   reason the raiser sees; a rejected adjustment is final.
+13. Every one of those changes, and every refused sign-in, is in the audit trail with who, when and
    the request's correlation id. Read it through the API with the admin's access token:
    `GET /api/v1/audit-logs` (filters: `action`, `entityId`, `actorUserId`, `correlationId`, `from`,
    `to`). A refused sign-in is also a `WARNING` line with `"event":"auth.sign_in.failed"` in

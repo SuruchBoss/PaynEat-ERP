@@ -16,6 +16,7 @@ export {
   DEMO_RECOVERY_CODES,
   DEMO_SUPPLIERS,
   DEMO_USERS,
+  DEMO_WRITE_OFF,
 } from '@backend/prisma/demo-data';
 
 /**

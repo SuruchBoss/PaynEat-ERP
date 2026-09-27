@@ -32,6 +32,10 @@ export const Permission = {
   SUPPLIER_MANAGE: 'supplier:manage',
   /** Draft, post and reverse opening balances: the plant role (#7). Reading needs none. */
   OPENING_BALANCE_MANAGE: 'opening_balance:manage',
+  /** Draft, edit and submit stock adjustments: plant and branch managers (#8). */
+  STOCK_ADJUSTMENT_RAISE: 'stock_adjustment:raise',
+  /** Approve (which posts) or reject them: finance, never on one they raised (#8). */
+  STOCK_ADJUSTMENT_APPROVE: 'stock_adjustment:approve',
 } as const;
 
 export type PermissionKey = (typeof Permission)[keyof typeof Permission];

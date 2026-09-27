@@ -42,4 +42,6 @@ export const qk = {
   stockOnHandAll: ['stock-on-hand'] as const,
   openingBalances: ['opening-balances'] as const,
   openingBalance: (id: string) => ['opening-balances', id] as const,
+  stockAdjustments: ['stock-adjustments'] as const,
+  stockAdjustment: (id: string) => ['stock-adjustments', id] as const,
 };

@@ -39,12 +39,20 @@ export interface ReversalRef extends DocumentRef {
   postedBy: PersonRef;
 }
 
+export type StockDocumentType = 'opening_balance' | 'reversal' | 'stock_adjustment';
+
+/**
+ * draft → posted for an opening balance; draft → submitted → approved → posted, or rejected,
+ * for a document a second person approves (stock adjustments, #8, ADR-0008).
+ */
+export type StockDocumentStatus = 'draft' | 'submitted' | 'approved' | 'posted' | 'rejected';
+
 /** The header every stock document shares. */
 export interface StockDocumentView {
   id: string;
   number: string;
-  type: 'opening_balance' | 'reversal';
-  status: 'draft' | 'posted';
+  type: StockDocumentType;
+  status: StockDocumentStatus;
   businessDate: string;
   note: string | null;
   revision: number;
@@ -83,12 +91,20 @@ export interface StockOnHandRow {
   value: string;
   /** Past its expiry date on the as-of date: it cannot be issued, only written off (ADR-0006). */
   expired: boolean;
+  /**
+   * Below zero at a branch: allowed, because a branch's stock follows sales that already
+   * happened, and flagged, because it means the records and the shelf disagree and the lot
+   * should be counted (ADR-0003, #8).
+   */
+  countRecommended: boolean;
 }
 
 export interface StockOnHandView {
   asOf: string;
   rows: StockOnHandRow[];
   totalValue: string;
+  /** How many of the rows are flagged `countRecommended`. */
+  negativeBranchBalances: number;
 }
 
 /** Where the balance snapshot and the ledger disagree for one lot at one location. */

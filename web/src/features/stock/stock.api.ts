@@ -17,12 +17,16 @@ export interface StockOnHandRow {
   value: string;
   /** Past its expiry date on the as-of date. */
   expired: boolean;
+  /** Below zero at a branch: allowed, and flagged, because the lot should be counted (#8). */
+  countRecommended: boolean;
 }
 
 export interface StockOnHandView {
   asOf: string;
   rows: StockOnHandRow[];
   totalValue: string;
+  /** How many rows are flagged `countRecommended`. */
+  negativeBranchBalances: number;
 }
 
 export interface StockOnHandQuery {

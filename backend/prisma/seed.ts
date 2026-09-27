@@ -10,7 +10,8 @@
  * account it creates as a demo account: a production API refuses to start while one is
  * enabled without ERP_DEMO=1, and refuses their sign-in (#5, `domain/demo-mode.ts`).
  * Today it creates the company, one user per role (#4), the items (#5), the plant, three
- * branches and two suppliers (#6), and the plant's opening balance (#7); later tickets extend
+ * branches and two suppliers (#6), the plant's opening balance (#7) and one approved write-off
+ * (#8); later tickets extend
  * it along the supplier-to-plate path, so that one command still builds everything.
  *
  * Safe to re-run: every write is an upsert keyed on a natural key, and re-running puts
@@ -38,6 +39,7 @@ import {
   DEMO_RECOVERY_CODES,
   DEMO_SUPPLIERS,
   DEMO_USERS,
+  DEMO_WRITE_OFF,
 } from './demo-data';
 
 // The demo data lives in its own module so the console's public demo can import it (ADR-0021);
@@ -335,6 +337,21 @@ async function seedSuppliers(prisma: PrismaClient): Promise<void> {
   }
 }
 
+/** A demo user as the services see the person acting. */
+async function demoActor(prisma: PrismaClient, role: 'plant' | 'finance') {
+  const user = await prisma.user.findUniqueOrThrow({
+    where: { email: DEMO_USERS.find((u) => u.role === role)!.email },
+  });
+  return {
+    userId: user.id,
+    email: user.email,
+    displayName: user.displayName,
+    roles: [role],
+    permissions: [],
+    sessionId: 'demo-seed',
+  };
+}
+
 /**
  * Posts the demo opening balance through the same services the API uses, as the demo plant
  * user. Once: a plant that already has an opening balance (posted, reversed or still a draft)
@@ -346,17 +363,7 @@ async function seedOpeningBalance(prisma: PrismaClient): Promise<string | null> 
   });
   if (await prisma.openingBalance.findFirst({ where: { locationId: plant.id } })) return null;
 
-  const plantUser = await prisma.user.findUniqueOrThrow({
-    where: { email: DEMO_USERS.find((u) => u.role === 'plant')!.email },
-  });
-  const actor = {
-    userId: plantUser.id,
-    email: plantUser.email,
-    displayName: plantUser.displayName,
-    roles: ['plant' as const],
-    permissions: [],
-    sessionId: 'demo-seed',
-  };
+  const actor = await demoActor(prisma, 'plant');
   const items = await prisma.item.findMany({
     where: { code: { in: DEMO_OPENING_BALANCE.lines.map((l) => l.itemCode) } },
   });
@@ -381,6 +388,59 @@ async function seedOpeningBalance(prisma: PrismaClient): Promise<string | null> 
   );
   const posted = await openingBalances.post(draft.id, { revision: draft.revision }, actor);
   return `${posted.number} (${posted.lines.length} lots, value ${posted.totalValue})`;
+}
+
+/**
+ * The approved write-off (#8): raised and submitted by the plant user, approved — and so
+ * posted — by the finance user, through the same service the API runs. Once: a plant that
+ * already has a stock adjustment is left as it is. Returns its number, or null.
+ */
+async function seedWriteOff(prisma: PrismaClient): Promise<string | null> {
+  const plant = await prisma.location.findUniqueOrThrow({
+    where: { code: DEMO_WRITE_OFF.locationCode },
+  });
+  if (await prisma.stockAdjustment.findFirst({ where: { locationId: plant.id } })) return null;
+  const opening = await prisma.openingBalance.findFirst({ where: { locationId: plant.id } });
+  const lot = opening
+    ? await prisma.lot.findFirst({
+        where: {
+          originDocumentId: opening.documentId,
+          originLineNo: DEMO_WRITE_OFF.openingBalanceLineNo,
+        },
+      })
+    : null;
+  // The opening balance was left as someone changed it: nothing known to write off.
+  if (!lot) return null;
+
+  const { stockAdjustments } = ledgerServices(prisma, { quiet: true });
+  const raiser = await demoActor(prisma, 'plant');
+  const approver = await demoActor(prisma, 'finance');
+  const draft = await stockAdjustments.create(
+    {
+      locationId: plant.id,
+      note: DEMO_WRITE_OFF.note,
+      lines: [
+        {
+          lotId: lot.id,
+          quantity: DEMO_WRITE_OFF.quantity,
+          secondaryQuantity: DEMO_WRITE_OFF.secondaryQuantity,
+          reason: DEMO_WRITE_OFF.reason,
+        },
+      ],
+    },
+    raiser,
+  );
+  const submitted = await stockAdjustments.submit(draft.id, { revision: draft.revision }, raiser);
+  const approved = await stockAdjustments.approve(
+    submitted.id,
+    { revision: submitted.revision },
+    approver,
+    {},
+  );
+  if (approved.postingRefusal) {
+    throw new Error(`The demo write-off was not posted: ${approved.postingRefusal.message}`);
+  }
+  return `${approved.number} (lot ${lot.number}, ${DEMO_WRITE_OFF.quantity} kg, value ${approved.totalValue})`;
 }
 
 async function main(): Promise<void> {
@@ -419,6 +479,12 @@ async function main(): Promise<void> {
       openingBalance
         ? `Demo opening balance posted at ${DEMO_OPENING_BALANCE.locationCode}: ${openingBalance}`
         : `Demo opening balance at ${DEMO_OPENING_BALANCE.locationCode}: already there, left as it is`,
+    );
+    const writeOff = await seedWriteOff(prisma);
+    console.log(
+      writeOff
+        ? `Demo write-off approved and posted at ${DEMO_WRITE_OFF.locationCode}: ${writeOff}`
+        : `Demo write-off at ${DEMO_WRITE_OFF.locationCode}: already there, left as it is`,
     );
     console.log(`\nDemo accounts (password for all: ${DEMO_PASSWORD}):`);
     for (const demo of DEMO_USERS) {

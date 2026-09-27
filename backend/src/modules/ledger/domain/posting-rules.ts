@@ -33,13 +33,16 @@ export type PostingRule =
   | 'not_posted'
   | 'reversal_of_reversal'
   | 'already_reversed'
-  | 'business_date_before_original';
+  | 'business_date_before_original'
+  | 'not_approved'
+  | 'self_approval';
 
 /** Refusals that describe a race with another person rather than a wrong document: 409. */
 export const CONFLICT_RULES: ReadonlySet<PostingRule> = new Set([
   'already_posted',
   'stale_revision',
   'already_reversed',
+  'not_approved',
 ]);
 
 export type LocationType = 'plant' | 'warehouse' | 'branch' | 'in_transit' | 'subcontractor';
@@ -193,8 +196,8 @@ export function businessDateProblem(businessDate: string, today: string): Postin
 }
 
 export interface ReversibleDocument {
-  type: 'opening_balance' | 'reversal';
-  status: 'draft' | 'posted';
+  type: 'opening_balance' | 'reversal' | 'stock_adjustment';
+  status: 'draft' | 'submitted' | 'approved' | 'posted' | 'rejected';
   businessDate: string;
   reversedBy: string | null;
 }

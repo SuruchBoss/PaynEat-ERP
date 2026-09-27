@@ -5,7 +5,13 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { stockValue, sumValues } from '@backend/src/core/quantity/domain/stock-value';
 import { thaiTaxIdProblem } from '@backend/src/modules/suppliers/domain/thai-tax-id';
 import { hotp, timeStep } from './totp';
-import { DEMO_MFA_SECRET, DEMO_OPENING_BALANCE, DEMO_PASSWORD, DEMO_RECOVERY_CODES } from './seed';
+import {
+  DEMO_MFA_SECRET,
+  DEMO_OPENING_BALANCE,
+  DEMO_PASSWORD,
+  DEMO_RECOVERY_CODES,
+  DEMO_WRITE_OFF,
+} from './seed';
 import { DemoServer, type DemoResponse } from './server';
 
 /** 10:00 in Bangkok on 26 September 2026: the demo's business date is 2026-09-26. */
@@ -106,7 +112,7 @@ describe('the demo API: signing in', () => {
     expect(me).toMatchObject({
       email: EMAIL.plant,
       roles: ['plant'],
-      permissions: ['opening_balance:manage'],
+      permissions: ['opening_balance:manage', 'stock_adjustment:raise'],
       mfaEnabled: false,
     });
   });
@@ -352,9 +358,12 @@ describe('the demo API: master data', () => {
 });
 
 describe('the demo API: stock', () => {
-  const SEED_VALUE = sumValues(
-    DEMO_OPENING_BALANCE.lines.map((l) => stockValue(l.quantity, l.unitCost)),
-  );
+  // The opening balance, less the approved write-off on one of its lots (#8).
+  const writtenOff = DEMO_OPENING_BALANCE.lines[DEMO_WRITE_OFF.openingBalanceLineNo - 1];
+  const SEED_VALUE = sumValues([
+    ...DEMO_OPENING_BALANCE.lines.map((l) => stockValue(l.quantity, l.unitCost)),
+    stockValue(DEMO_WRITE_OFF.quantity, writtenOff.unitCost),
+  ]);
 
   it('shows the seed stock at the plant today, and none before it was brought in', async () => {
     const token = await signIn('finance');
@@ -367,6 +376,13 @@ describe('the demo API: stock', () => {
       lot: { number: 'OB-2026-00001/1' },
       quantity: '250.000',
     });
+    expect(
+      today.rows.find(
+        (r: { lot: { number: string } }) =>
+          r.lot.number === `OB-2026-00001/${DEMO_WRITE_OFF.openingBalanceLineNo}`,
+      ),
+    ).toMatchObject({ quantity: '19.800', secondaryQuantity: '11', countRecommended: false });
+    expect(today.negativeBranchBalances).toBe(0);
     const before = json(await call('GET', '/api/v1/stock-on-hand?asOf=2026-09-24', { token }));
     expect(before.rows).toEqual([]);
     const future = await call('GET', '/api/v1/stock-on-hand?asOf=2026-09-27', { token });
@@ -480,5 +496,41 @@ describe('the demo API: stock', () => {
       body: { revision: expired.revision, businessDate: '2026-09-27' },
     });
     expectRefusal(edit, 422, 'BUSINESS_DATE_IN_FUTURE');
+  });
+});
+
+describe('the demo API: stock adjustments', () => {
+  it("shows the seed's approved write-off, and leaves raising one to a real installation", async () => {
+    const token = await signIn('plant');
+    const list = json(await call('GET', '/api/v1/stock-adjustments', { token }));
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({
+      number: 'AD-2026-00001',
+      type: 'stock_adjustment',
+      status: 'posted',
+      lineCount: 1,
+      totalValue: '-130.5',
+      createdBy: { displayName: 'Demo plant' },
+      postedBy: { displayName: 'Demo finance' },
+    });
+    const one = json(await call('GET', `/api/v1/stock-adjustments/${list[0].id}`, { token }));
+    expect(one).toMatchObject({
+      approved: { by: { displayName: 'Demo finance' } },
+      rejected: null,
+      lines: [
+        {
+          lot: { number: `OB-2026-00001/${DEMO_WRITE_OFF.openingBalanceLineNo}` },
+          quantity: DEMO_WRITE_OFF.quantity,
+          secondaryQuantity: DEMO_WRITE_OFF.secondaryQuantity,
+          reason: DEMO_WRITE_OFF.reason,
+          value: '-130.5',
+        },
+      ],
+    });
+    const raise = await call('POST', '/api/v1/stock-adjustments', {
+      token,
+      body: { locationId: one.location.id, lines: [] },
+    });
+    expectRefusal(raise, 404, 'NOT_IN_DEMO');
   });
 });

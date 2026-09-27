@@ -138,11 +138,21 @@ describe('user administration', () => {
     });
     expect(res.body[3]).toEqual({
       key: 'plant',
-      permissions: ['opening_balance:manage'],
+      permissions: ['opening_balance:manage', 'stock_adjustment:raise'],
+      requiresSecondFactor: false,
+    });
+    expect(res.body[5]).toEqual({
+      key: 'branch_manager',
+      permissions: ['stock_adjustment:raise'],
+      requiresSecondFactor: false,
+    });
+    expect(res.body[6]).toEqual({
+      key: 'finance',
+      permissions: ['stock_adjustment:approve'],
       requiresSecondFactor: false,
     });
     for (const role of res.body.filter(
-      (r: Body) => !['admin', 'purchasing', 'plant'].includes(r.key),
+      (r: Body) => !['admin', 'purchasing', 'plant', 'branch_manager', 'finance'].includes(r.key),
     )) {
       expect(role).toMatchObject({ permissions: [], requiresSecondFactor: false });
     }

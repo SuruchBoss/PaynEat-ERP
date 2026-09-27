@@ -61,6 +61,10 @@ model User {
   stockDocumentsPosted  StockDocument[] @relation("StockDocumentPostedBy")
   ledgerEntriesPosted   LedgerEntry[]   @relation("LedgerEntryPostedBy")
 
+  stockAdjustmentsSubmitted StockAdjustment[] @relation("StockAdjustmentSubmittedBy")
+  stockAdjustmentsApproved  StockAdjustment[] @relation("StockAdjustmentApprovedBy")
+  stockAdjustmentsRejected  StockAdjustment[] @relation("StockAdjustmentRejectedBy")
+
   @@map("users")
 }
 

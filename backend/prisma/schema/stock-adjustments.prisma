@@ -1,0 +1,55 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
+// Stock adjustments — owned by the stock-adjustments module (#8; docs/GLOSSARY.md
+// "Adjustment", "Write-off"). An increase or decrease on existing lots at one location, each line
+// with its reason. It posts only after someone other than its creator approves it (ADR-0008).
+
+/// The adjustment part of a stock document: where, and who moved it through its steps. The
+/// document's status lives on `stock_documents`, like every other document's.
+model StockAdjustment {
+  documentId      String        @id @map("document_id") @db.Uuid
+  document        StockDocument @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  locationId      String        @map("location_id") @db.Uuid
+  location        Location      @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  submittedById   String?       @map("submitted_by_id") @db.Uuid
+  submittedBy     User?         @relation("StockAdjustmentSubmittedBy", fields: [submittedById], references: [id], onDelete: Restrict)
+  submittedAt     DateTime?     @map("submitted_at") @db.Timestamptz(3)
+  /// Who approved it. Never its creator: the service refuses it, and a trigger refuses it again
+  /// (ADR-0008). Set once, never changed.
+  approvedById    String?       @map("approved_by_id") @db.Uuid
+  approvedBy      User?         @relation("StockAdjustmentApprovedBy", fields: [approvedById], references: [id], onDelete: Restrict)
+  approvedAt      DateTime?     @map("approved_at") @db.Timestamptz(3)
+  /// Who turned it down and why: a submitted adjustment, or an approved one the ledger refused
+  /// to post (the stock had gone). Set once, never changed; the approval, if any, stays.
+  rejectedById    String?       @map("rejected_by_id") @db.Uuid
+  rejectedBy      User?         @relation("StockAdjustmentRejectedBy", fields: [rejectedById], references: [id], onDelete: Restrict)
+  rejectedAt      DateTime?     @map("rejected_at") @db.Timestamptz(3)
+  rejectionReason String?       @map("rejection_reason")
+
+  lines StockAdjustmentLine[]
+
+  @@index([locationId])
+  @@map("stock_adjustments")
+}
+
+/// One change to one lot. Changes only while its document is a draft (a trigger refuses otherwise).
+model StockAdjustmentLine {
+  documentId        String          @map("document_id") @db.Uuid
+  adjustment        StockAdjustment @relation(fields: [documentId], references: [documentId], onDelete: Cascade)
+  lineNo            Int             @map("line_no")
+  lotId             String          @map("lot_id") @db.Uuid
+  itemId            String          @map("item_id") @db.Uuid
+  /// Through (lot, item), so a line can never name one item and another item's lot.
+  lot               Lot             @relation(fields: [lotId, itemId], references: [id, itemId], onDelete: Restrict)
+  item              Item            @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  /// Signed, in the item's base unit: more than zero brings stock in, less takes it out.
+  quantity          Decimal         @db.Decimal(18, 3)
+  /// Variable-weight items only: the piece count, with the same sign (ADR-0005).
+  secondaryQuantity Decimal?        @map("secondary_quantity") @db.Decimal(18, 0)
+  /// Why, in the words of the person who raised it: "damaged in the cold room".
+  reason            String
+
+  @@id([documentId, lineNo])
+  @@map("stock_adjustment_lines")
+}
