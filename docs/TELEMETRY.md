@@ -10,7 +10,7 @@ names**. A deployment on Google Cloud — where SherWhyve's live connectors run 
 metrics are identical everywhere; on Google Cloud, Managed Service for Prometheus collects them into
 Cloud Monitoring.
 
-## Additions to v1.2 (2026-09-27, ERP #9; proposed, awaiting the product owner's review)
+## Additions to v1.2 (2026-09-27, ERP #9)
 
 Additive only; nothing is renamed.
 

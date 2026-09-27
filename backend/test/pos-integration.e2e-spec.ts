@@ -521,4 +521,50 @@ describe('POS integration', () => {
       ).toBe(before);
     });
   });
+
+  describe('a branch catching up after an outage', () => {
+    it('slows to the rate limit with Retry-After, loses nothing, and leaves other routes alone', async () => {
+      // Two tablets at one branch, so one address: they share the sales-event budget.
+      const branch = await newBranch();
+      const front = await register([branch.code]);
+      const back = await register([branch.code]);
+      await ctx.close();
+      ctx = await createTestApp({ env: { THROTTLE_LIMIT: '3', THROTTLE_TTL: '2' } });
+
+      const backlog = [
+        event(front.instance, branch.code),
+        event(back.instance, branch.code),
+        event(front.instance, branch.code),
+        event(back.instance, branch.code),
+      ];
+      const credentialOf = (body: Body) =>
+        body.posInstance === front.instance.code ? front.credential : back.credential;
+      const statuses: number[] = [];
+      for (const body of backlog) statuses.push((await send(credentialOf(body), body)).status);
+      expect(statuses).toEqual([201, 201, 201, 429]);
+      const limited = await send(credentialOf(backlog[3]), backlog[3]);
+      expect(limited.status).toBe(429);
+      conforms(CONTRACT.error, limited.body);
+      expect(limited.body.code).toBe('RATE_LIMITED');
+      const wait = Number(limited.headers['retry-after']);
+      expect(wait).toBeGreaterThanOrEqual(1);
+
+      // The count is per route and per address: the same tablet can still pull, and a person
+      // at the same branch can still use the console, while the sales events wait.
+      expect(
+        (await machine(front.credential).get('/master-data/changes').query({ since: 0 })).status,
+      ).toBe(200);
+      const manager = await signInAsAdmin(ctx.server);
+      expect((await as(manager).get('/locations')).status).toBe(200);
+
+      // Waiting as told and sending the same event again stores it: nothing is lost.
+      await new Promise((done) => setTimeout(done, wait * 1000 + 100));
+      expect((await send(credentialOf(backlog[3]), backlog[3])).status).toBe(201);
+      expect(
+        await prisma.salesEvent.count({
+          where: { idempotencyKey: { in: backlog.map((b) => b.idempotencyKey as string) } },
+        }),
+      ).toBe(4);
+    });
+  });
 });
