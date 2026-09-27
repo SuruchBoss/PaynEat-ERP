@@ -39,6 +39,7 @@ model Item {
   ledgerEntries       LedgerEntry[]
   stockBalances       StockBalance[]
   openingBalanceLines OpeningBalanceLine[]
+  adjustmentLines     StockAdjustmentLine[]
 
   @@map("items")
 }

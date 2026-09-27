@@ -202,7 +202,8 @@ describe('stock ledger and opening balances', () => {
       ]);
       const chickens = rows.filter((r) => r.item.code === 'WHOLE-CHICKEN');
       expect(new Set(chickens.map((r) => r.lot.expiryDate)).size).toBe(3);
-      expect(chickens.map((r) => r.secondaryQuantity).sort()).toEqual(['10', '12', '24']);
+      // The first lot had 12 chickens; the demo write-off (#8) took one damaged bird off it.
+      expect(chickens.map((r) => r.secondaryQuantity).sort()).toEqual(['10', '11', '24']);
     });
   });
 
@@ -552,7 +553,7 @@ describe('stock ledger and opening balances', () => {
       ).rejects.toThrow(/documents are never deleted/);
       await expect(
         prisma.$executeRaw`UPDATE "opening_balance_lines" SET "quantity" = 1 WHERE "document_id" = ${doc.id}::uuid`,
-      ).rejects.toThrow(/fixed once the document is posted/);
+      ).rejects.toThrow(/fixed once the document leaves draft/);
 
       expect((await entriesOf(doc.id))[0]).toMatchObject({ quantity: '250.000' });
     });
@@ -690,9 +691,17 @@ describe('stock ledger and opening balances', () => {
       expect(allowed.status).toBe(200);
       const serial = (n: string) => Number(n.split('-')[2]);
       expect(serial(allowed.body.reversedBy.number)).toBe(serial(before) + 1);
-      expect((await stock({ locationId: branch.id })).rows).toMatchObject([
-        { location: { type: 'branch' }, quantity: '-5.000', value: '-362.5' },
+      // Allowed at a branch, and flagged for a count (#8).
+      const branchStock = await stock({ locationId: branch.id });
+      expect(branchStock.rows).toMatchObject([
+        {
+          location: { type: 'branch' },
+          quantity: '-5.000',
+          value: '-362.5',
+          countRecommended: true,
+        },
       ]);
+      expect(branchStock.negativeBranchBalances).toBe(1);
     });
   });
 

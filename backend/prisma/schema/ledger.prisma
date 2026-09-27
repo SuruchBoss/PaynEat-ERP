@@ -12,11 +12,18 @@
 enum StockDocumentType {
   opening_balance
   reversal
+  stock_adjustment
 }
 
+/// draft → posted for opening balances; draft → submitted → approved → posted, or rejected, for
+/// documents that need a second person's approval (stock adjustments, #8, ADR-0008). Posted and
+/// rejected are final.
 enum StockDocumentStatus {
   draft
   posted
+  submitted
+  approved
+  rejected
 }
 
 /// A document header. A draft is edited freely and affects nothing; posting it writes all of
@@ -50,9 +57,10 @@ model StockDocument {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  lots           Lot[]
-  entries        LedgerEntry[]
-  openingBalance OpeningBalance?
+  lots            Lot[]
+  entries         LedgerEntry[]
+  openingBalance  OpeningBalance?
+  stockAdjustment StockAdjustment?
 
   @@index([type, status])
   @@map("stock_documents")
@@ -78,8 +86,9 @@ model Lot {
   secondaryQuantity Decimal?      @map("secondary_quantity") @db.Decimal(18, 0)
   createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  entries  LedgerEntry[]
-  balances StockBalance[]
+  entries         LedgerEntry[]
+  balances        StockBalance[]
+  adjustmentLines StockAdjustmentLine[]
 
   @@unique([id, itemId])
   @@unique([originDocumentId, originLineNo])

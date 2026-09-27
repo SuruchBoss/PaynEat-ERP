@@ -43,6 +43,16 @@ describe('roles and permissions (ADR-0008)', () => {
     }
   });
 
+  it('lets plant and branch managers raise stock adjustments, and finance approve them (#8)', () => {
+    for (const role of ROLE_KEYS) {
+      const held = permissionsFor([role]);
+      expect(held.includes(Permission.STOCK_ADJUSTMENT_RAISE)).toBe(
+        role === 'plant' || role === 'branch_manager',
+      );
+      expect(held.includes(Permission.STOCK_ADJUSTMENT_APPROVE)).toBe(role === 'finance');
+    }
+  });
+
   it('merges several roles without duplicates', () => {
     expect(permissionsFor(['admin', 'finance', 'admin'])).toEqual([
       Permission.USER_READ,
@@ -51,6 +61,7 @@ describe('roles and permissions (ADR-0008)', () => {
       Permission.ITEM_MANAGE,
       Permission.LOCATION_MANAGE,
       Permission.SUPPLIER_MANAGE,
+      Permission.STOCK_ADJUSTMENT_APPROVE,
     ]);
     expect(permissionsFor([])).toEqual([]);
   });

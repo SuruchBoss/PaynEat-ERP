@@ -27,6 +27,13 @@ export const Permission = {
    * permission.
    */
   OPENING_BALANCE_MANAGE: 'opening_balance:manage',
+  /** Draft, edit and submit stock adjustments (#8). Reading them needs no permission. */
+  STOCK_ADJUSTMENT_RAISE: 'stock_adjustment:raise',
+  /**
+   * Approve or reject a submitted stock adjustment, which posts it, and retry the posting of an
+   * approved one the ledger refused (#8). Never for a document the approver created (ADR-0008).
+   */
+  STOCK_ADJUSTMENT_APPROVE: 'stock_adjustment:approve',
 } as const;
 
 export type PermissionKey = (typeof Permission)[keyof typeof Permission];
@@ -65,14 +72,16 @@ export const ROLE_PERMISSIONS: Record<Role, readonly PermissionKey[]> = {
   // ADR-0008: approve purchase orders above the approval threshold (from #10).
   purchasing_approver: [],
   // ADR-0008: receive goods, run production orders, manage plant stock. Bringing existing
-  // stock in with an opening balance is managing it (#7).
-  plant: [Permission.OPENING_BALANCE_MANAGE],
+  // stock in with an opening balance is managing it (#7), and so is adjusting it (#8).
+  plant: [Permission.OPENING_BALANCE_MANAGE, Permission.STOCK_ADJUSTMENT_RAISE],
   // ADR-0008: dispatch transfers.
   logistics: [],
-  // ADR-0008: raise requisitions, receive transfers, count branch stock.
-  branch_manager: [],
-  // ADR-0008: view costs, variances and valuation; export financial data.
-  finance: [],
+  // ADR-0008: raise requisitions, receive transfers, count branch stock. Adjusting branch
+  // stock after a count is raising an adjustment (#8).
+  branch_manager: [Permission.STOCK_ADJUSTMENT_RAISE],
+  // ADR-0008: view costs, variances and valuation; export financial data. An adjustment
+  // changes the value of stock, so finance approves it (#8): never one it created itself.
+  finance: [Permission.STOCK_ADJUSTMENT_APPROVE],
 };
 
 /**

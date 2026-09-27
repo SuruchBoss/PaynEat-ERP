@@ -150,7 +150,8 @@ Prometheus exposition at `GET /metrics` on each API, not exposed publicly.
 
 `erp_postings_total` label values:
 
-- `document_type`: the ERP's stock document type, as stored: `opening_balance` and `reversal` so far.
+- `document_type`: the ERP's stock document type, as stored: `opening_balance`, `reversal` and
+  `stock_adjustment` so far.
   Each ticket that adds a document type adds its value here.
 - `outcome`: `succeeded` or `refused`.
 - `rule`: the rule that refused the posting (for example `negative_stock_plant`, `expired_lot`,

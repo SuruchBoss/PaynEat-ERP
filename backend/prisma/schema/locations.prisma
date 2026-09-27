@@ -49,6 +49,7 @@ model Location {
   ledgerEntries   LedgerEntry[]
   stockBalances   StockBalance[]
   openingBalances OpeningBalance[]
+  adjustments     StockAdjustment[]
 
   @@index([type])
   @@map("locations")
