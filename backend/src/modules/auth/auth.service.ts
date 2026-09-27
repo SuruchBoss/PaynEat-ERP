@@ -8,11 +8,13 @@
 //    `auth_sign_in_failures_total` (docs/TELEMETRY.md) and audited, including attempts
 //    against an email no account has (the email itself is never stored).
 //  - A correct password does not reset the failure count while a second factor is still
-//    owed: in Cwork it does, which lets someone who knows the password try codes forever
-//    in batches just under the lockout. The count resets when the sign-in completes.
-//  - Cwork's /auth/mfa/complete-enrolment accepts the challenge of an account that is
-//    already enrolled, which is a session for a password alone. Here the sign-in of an
-//    account that had to enrol completes inside activation instead (`activateMfa`).
+//    owed; the count resets only when the sign-in completes.
+//  - The sign-in of an account that had to enrol completes inside activation
+//    (`activateMfa`): a session is issued only for a second-factor code verified in the
+//    same request.
+//  These two were differences until Cwork 0.3.1, which fixed both upstream
+//  (GHSA-3cgw-73cr-r8c6); the behaviour now agrees. ADR-0022 says how a weakness in
+//  another project is written about here.
 import { Inject, Injectable } from '@nestjs/common';
 import { AuditAction, UserStatus } from '@prisma/client';
 import { APP_CONFIG } from '../../core/config/config.token';
