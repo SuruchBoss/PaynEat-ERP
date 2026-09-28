@@ -40,6 +40,20 @@ calling the ERP, keeps every sale waiting to be sent, and tells its administrato
 new credential is saved. The ERP logs and counts every such refusal, so the chain's investigator sees
 it too.
 
+### Transport
+
+**The POS sends its machine credential only over HTTPS**, except:
+- to a loopback address; or
+- when the POS server's operator has explicitly allowed plain HTTP for a closed network, such as the
+  one-command demo of ERP #27.
+
+The allowance is a server setting (on the POS, `ERP_ALLOW_INSECURE_HTTP=true` in the backend
+environment). It can never be turned on from a screen, and while it is on, the POS shows a
+permanent warning. Otherwise an `http://` ERP address is refused when it is saved.
+
+Certificates are always verified. An ERP that uses a chain's internal certificate authority
+(ERP #60) needs that authority trusted on the POS server. It is never switched off.
+
 ## Master data: pull by version
 
 - Master data flows ERP → POS only. In contract 1.0 that is **items** (mirrored as ingredients,
