@@ -33,13 +33,16 @@ import {
   DEMO_COMPANY,
   DEMO_ITEMS,
   DEMO_LOCATIONS,
+  DEMO_MENU_ITEMS,
   DEMO_MFA_SECRET,
+  DEMO_MODIFIER_GROUPS,
   DEMO_OPENING_BALANCE,
   DEMO_PASSWORD,
   DEMO_RECOVERY_CODES,
   DEMO_SUPPLIERS,
   DEMO_USERS,
   DEMO_WRITE_OFF,
+  type DemoRecipeVersion,
 } from './demo-data';
 
 // The demo data lives in its own module so the console's public demo can import it (ADR-0021);
@@ -443,6 +446,255 @@ async function seedWriteOff(prisma: PrismaClient): Promise<string | null> {
   return `${approved.number} (lot ${lot.number}, ${DEMO_WRITE_OFF.quantity} kg, value ${approved.totalValue})`;
 }
 
+/**
+ * Creates the demo menu (#16): modifier groups with their option recipes, then menu items with
+ * their prices and recipe versions. Each one written takes a master data version and a change,
+ * as the API does, so a POS pulling from version 0 sees the menu. Prices and first recipes start
+ * yesterday, the day of the opening balance: a script may write that history, the API never
+ * backdates. Anything already there is left as an evaluator left it, because recipe versions
+ * and prices that have started are never rewritten. (Mirrors the menu services.)
+ */
+async function seedMenu(prisma: PrismaClient): Promise<number> {
+  const { ledger } = ledgerServices(prisma, { quiet: true });
+  const today = ledger.today();
+  const day = (fromDay: number) => new Date(`${addDays(today, fromDay)}T00:00:00.000Z`);
+  const items = await prisma.item.findMany({
+    select: { id: true, code: true, baseUnitCode: true },
+  });
+  const itemByCode = new Map(items.map((i) => [i.code, i]));
+  const branches = await prisma.location.findMany({
+    where: { type: 'branch' },
+    select: { id: true, code: true },
+  });
+  const branchByCode = new Map(branches.map((b) => [b.code, b]));
+  let written = 0;
+
+  const change = async (
+    tx: Prisma.TransactionClient,
+    version: bigint,
+    entityType: string,
+    entityId: string,
+    entityCode: string,
+    data: Record<string, unknown>,
+    audit: { entityType: string; summary: string },
+  ) => {
+    await tx.masterDataChange.create({
+      data: {
+        version,
+        entityType,
+        entityId,
+        entityCode,
+        action: MasterDataAction.created,
+        data: { ...data, version: Number(version) } as Prisma.InputJsonValue,
+      },
+    });
+    await tx.auditLog.create({
+      data: {
+        action: AuditAction.CREATE,
+        entityType: audit.entityType,
+        entityId,
+        summary: `Demo seed created ${audit.summary}`,
+        changes: data as Prisma.InputJsonValue,
+      },
+    });
+    written += 1;
+  };
+
+  const recipes = async (
+    tx: Prisma.TransactionClient,
+    subject: { menuItemId: string } | { modifierOptionId: string },
+    entityType: 'menu_recipe' | 'modifier_recipe',
+    subjectCode: Record<string, string>,
+    versions: readonly DemoRecipeVersion[],
+  ) => {
+    for (const [index, demo] of versions.entries()) {
+      const version = await nextMasterDataVersion(tx);
+      const row = await tx.recipeVersion.create({
+        data: {
+          ...subject,
+          number: index + 1,
+          effectiveFrom: day(demo.fromDay),
+          version,
+          lines: {
+            create: demo.lines.map(([itemCode, quantity], i) => ({
+              lineNo: i + 1,
+              itemId: itemByCode.get(itemCode)!.id,
+              quantity,
+            })),
+          },
+        },
+      });
+      const code = subjectCode.menuItemCode ?? subjectCode.modifierCode;
+      await change(
+        tx,
+        version,
+        entityType,
+        row.id,
+        code,
+        {
+          id: row.id,
+          ...subjectCode,
+          number: row.number,
+          effectiveFrom: addDays(today, demo.fromDay),
+          lines: demo.lines.map(([itemCode, quantity]) => ({
+            itemCode,
+            quantity,
+            unitCode: itemByCode.get(itemCode)!.baseUnitCode,
+          })),
+        },
+        {
+          entityType: 'RecipeVersion',
+          summary: `version ${row.number} of the recipe for ${code}`,
+        },
+      );
+    }
+  };
+
+  for (const demo of DEMO_MODIFIER_GROUPS) {
+    if (await prisma.modifierGroup.findUnique({ where: { code: demo.code } })) continue;
+    await prisma.$transaction(async (tx) => {
+      const version = await nextMasterDataVersion(tx);
+      const group = await tx.modifierGroup.create({
+        data: {
+          code: demo.code,
+          nameTh: demo.nameTh,
+          nameEn: demo.nameEn,
+          minSelections: demo.minSelections,
+          maxSelections: demo.maxSelections,
+          version,
+          options: {
+            create: demo.options.map((o, position) => ({
+              code: o.code,
+              nameTh: o.nameTh,
+              nameEn: o.nameEn,
+              priceChange: o.priceChange,
+              position,
+            })),
+          },
+        },
+        include: { options: true },
+      });
+      await change(
+        tx,
+        version,
+        'modifier_group',
+        group.id,
+        group.code,
+        {
+          id: group.id,
+          groupCode: group.code,
+          nameTh: group.nameTh,
+          nameEn: group.nameEn,
+          minSelections: group.minSelections,
+          maxSelections: group.maxSelections,
+          active: true,
+          options: demo.options.map((o) => ({
+            modifierCode: o.code,
+            nameTh: o.nameTh,
+            nameEn: o.nameEn,
+            priceChange: o.priceChange,
+            active: true,
+          })),
+        },
+        { entityType: 'ModifierGroup', summary: `modifier group ${group.code} (${group.nameEn})` },
+      );
+      for (const option of demo.options) {
+        const row = group.options.find((o) => o.code === option.code)!;
+        await recipes(
+          tx,
+          { modifierOptionId: row.id },
+          'modifier_recipe',
+          { modifierCode: option.code },
+          option.recipes,
+        );
+      }
+    });
+  }
+
+  const groups = await prisma.modifierGroup.findMany({ select: { id: true, code: true } });
+  const groupByCode = new Map(groups.map((g) => [g.code, g]));
+  for (const demo of DEMO_MENU_ITEMS) {
+    if (await prisma.menuItem.findUnique({ where: { code: demo.code } })) continue;
+    await prisma.$transaction(async (tx) => {
+      const version = await nextMasterDataVersion(tx);
+      const item = await tx.menuItem.create({
+        data: {
+          code: demo.code,
+          nameTh: demo.nameTh,
+          nameEn: demo.nameEn,
+          categoryTh: demo.categoryTh,
+          categoryEn: demo.categoryEn,
+          soldBy: demo.soldBy,
+          version,
+          modifierGroups: {
+            create: demo.modifierGroupCodes.map((code, position) => ({
+              groupId: groupByCode.get(code)!.id,
+              position,
+            })),
+          },
+        },
+      });
+      await change(
+        tx,
+        version,
+        'menu_item',
+        item.id,
+        item.code,
+        {
+          id: item.id,
+          menuItemCode: item.code,
+          nameTh: item.nameTh,
+          nameEn: item.nameEn,
+          categoryTh: item.categoryTh,
+          categoryEn: item.categoryEn,
+          soldBy: item.soldBy,
+          active: true,
+          modifierGroupCodes: demo.modifierGroupCodes,
+        },
+        { entityType: 'MenuItem', summary: `menu item ${item.code} (${item.nameEn})` },
+      );
+      for (const price of demo.prices) {
+        const priceVersion = await nextMasterDataVersion(tx);
+        const row = await tx.menuPrice.create({
+          data: {
+            menuItemId: item.id,
+            locationId: price.locationCode ? branchByCode.get(price.locationCode)!.id : null,
+            effectiveFrom: day(price.fromDay),
+            price: price.price,
+            version: priceVersion,
+          },
+        });
+        await change(
+          tx,
+          priceVersion,
+          'menu_price',
+          row.id,
+          item.code,
+          {
+            id: row.id,
+            menuItemCode: item.code,
+            locationCode: price.locationCode,
+            effectiveFrom: addDays(today, price.fromDay),
+            price: price.price,
+          },
+          {
+            entityType: 'MenuPrice',
+            summary: `the ${price.locationCode ?? 'chain-wide'} price of ${item.code}`,
+          },
+        );
+      }
+      await recipes(
+        tx,
+        { menuItemId: item.id },
+        'menu_recipe',
+        { menuItemCode: item.code, per: demo.soldBy === 'weight' ? 'kg' : 'portion' },
+        demo.recipes,
+      );
+    });
+  }
+  return written;
+}
+
 async function main(): Promise<void> {
   const refusal = seedRefusal({ erpDemo: process.env.ERP_DEMO, nodeEnv: process.env.NODE_ENV });
   if (refusal) throw new SeedRefused(`${refusal}\nNothing has been written.`);
@@ -473,6 +725,13 @@ async function main(): Promise<void> {
       changedItems === 0
         ? `Demo items ready: ${DEMO_ITEMS.length}, already as described (no new master data version)`
         : `Demo items ready: ${DEMO_ITEMS.length}, ${changedItems} created or put back (one master data version each)`,
+    );
+    const menuWritten = await seedMenu(prisma);
+    console.log(
+      `Demo menu ready: ${DEMO_MENU_ITEMS.length} menu items, ${DEMO_MODIFIER_GROUPS.length} modifier groups` +
+        (menuWritten === 0
+          ? ' (already there, left as it is)'
+          : ` (${menuWritten} records written)`),
     );
     const openingBalance = await seedOpeningBalance(prisma);
     console.log(

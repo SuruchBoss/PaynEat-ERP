@@ -201,6 +201,14 @@ type DocumentRow = Prisma.StockDocumentGetPayload<{ include: typeof DOCUMENT_INC
  * lot it touches in one order, checks the rules, and writes all entries or none. Every posting
  * and every refusal is logged with the document number and counted by rule (ADR-0011).
  */
+/** An item's current lot cost: what a recipe is priced at for its theoretical cost (#16). */
+export interface CurrentLotCost {
+  /** Per base unit, shortest exact spelling (ADR-0019). */
+  unitCost: string;
+  lotNumber: string;
+  expiryDate: string;
+}
+
 @Injectable()
 export class LedgerService {
   constructor(
@@ -619,6 +627,42 @@ export class LedgerService {
       totalValue: sumValues(rows.map((r) => r.value)),
       negativeBranchBalances: rows.filter((r) => r.countRecommended).length,
     };
+  }
+
+  /**
+   * Each item's current lot cost (#16, docs/GLOSSARY.md): the unit cost of the lot FEFO would
+   * take next, which is the unexpired lot with stock left anywhere that expires first, the
+   * oldest of those first. It prices a recipe as an estimate; consumption still takes the
+   * cost of the lot FEFO picks at its own location and time (ADR-0004). An item with no such
+   * lot is absent: it has no current cost, not a cost of zero.
+   */
+  async currentLotCosts(itemIds: readonly string[]): Promise<Map<string, CurrentLotCost>> {
+    const ids = [...new Set(itemIds)];
+    if (ids.length === 0) return new Map();
+    const rows = await this.prisma.$queryRaw<
+      Array<{ itemId: string; number: string; unitCost: string; expiryDate: Date }>
+    >`
+      SELECT DISTINCT ON (l."item_id")
+             l."item_id" AS "itemId", l."number", l."unit_cost"::text AS "unitCost",
+             l."expiry_date" AS "expiryDate"
+      FROM "lots" l
+      WHERE l."item_id" = ANY(${ids}::uuid[])
+        AND l."expiry_date" >= ${this.today()}::date
+        AND EXISTS (
+          SELECT 1 FROM "stock_balances" b WHERE b."lot_id" = l."id" AND b."quantity" > 0
+        )
+      ORDER BY l."item_id", l."expiry_date", l."created_at", l."number"
+    `;
+    return new Map(
+      rows.map((row) => [
+        row.itemId,
+        {
+          unitCost: normaliseDecimal(row.unitCost),
+          lotNumber: row.number,
+          expiryDate: dateText(row.expiryDate),
+        },
+      ]),
+    );
   }
 
   /** Where the balance snapshot disagrees with the ledger; empty when they agree. */

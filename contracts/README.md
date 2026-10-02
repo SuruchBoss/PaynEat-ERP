@@ -1,6 +1,6 @@
 # PaynEat ERP ↔ PaynEat POS contract
 
-**Version 1.0.0** · ภาษาไทย: [README.th.md](README.th.md)
+**Version 1.1.0** · ภาษาไทย: [README.th.md](README.th.md)
 
 This folder is the integration contract between PaynEat ERP and PaynEat POS (ADR-0002). It is the
 source of truth: the ERP is built to it, the POS is built to it, and **both repositories test
@@ -18,8 +18,8 @@ check what it receives; the POS validates the events it produces and the ERP ans
 | [`pos/v1/examples/`](pos/v1/examples) | Valid examples of each, and invalid sales events (`invalid/`) that must be refused |
 
 The prose below is part of the contract: it says **when** a POS calls what, and what it does with
-each answer. The POS tickets built on it are `25-erp-connected-mode`, `26-erp-sales-outbox` and
-`28-erp-connect-from-config` in the PaynEat POS repository.
+each answer. The POS tickets built on it are `25-erp-connected-mode`, `26-erp-sales-outbox`,
+`27-erp-menu-pull` and `28-erp-connect-from-config` in the PaynEat POS repository.
 
 ## Connecting a POS instance
 
@@ -56,9 +56,10 @@ Certificates are always verified. An ERP that uses a chain's internal certificat
 
 ## Master data: pull by version
 
-- Master data flows ERP → POS only. In contract 1.0 that is **items** (mirrored as ingredients,
-  matched by `itemCode`) and **branches** (matched by `locationCode`). Menu items, prices, options
-  and recipes arrive in contract 1.1 (ERP #16).
+- Master data flows ERP → POS only. Since contract 1.0 that is **items** (mirrored as ingredients,
+  matched by `itemCode`) and **branches** (matched by `locationCode`). Since 1.1 it is also the
+  **menu**: menu items, prices, modifier groups and recipes (ERP #16), described in
+  [The menu](#the-menu-contract-11) below.
 - Every change takes the next company-wide version. Versions are committed in order: a reader never
   sees version N+1 before N.
 - The POS stores the last version it applied (0 before its first pull) and calls
@@ -75,7 +76,58 @@ Certificates are always verified. An ERP that uses a chain's internal certificat
 - Each successful pull is the instance's "last pull" in the ERP. The chain's investigator watches
   `erp_master_data_last_pull_timestamp_seconds{pos_instance}` to see a POS that stopped pulling.
 
-## Sales events: an outbox, delivered exactly once
+## The menu (contract 1.1)
+
+In connected mode the ERP is the system of record for what branches sell (ADR-0002): the POS
+mirrors the menu read-only and sells only menu items the ERP knows. Five kinds carry it, in the same
+change log and under the same rules as above: whole record in `data`, applied in version order,
+nothing ever deleted. Codes have the ecosystem shape `^[A-Z0-9][A-Z0-9-]{1,31}$` and are the codes a
+sales event carries. Money is baht as the POS shows it, a decimal string with satang at most; dates
+are business dates, `YYYY-MM-DD` in the chain's time zone (ERP ADR-0018).
+
+| `entityType` | `entityCode` | What the POS does with it |
+|---|---|---|
+| `menu_item` | the menu item code | Create or overwrite the menu item matched by `menuItemCode`. `soldBy: portion` lines carry `quantity`; `soldBy: weight` lines carry `weightKg`. `modifierGroupCodes` lists the groups it offers, in display order. With `active: false` it is no longer offered for sale. |
+| `menu_price` | the menu item code | Store the price row by its `id`, overwriting it if the same `id` arrives again (a scheduled price corrected before its day). See the price rule below. |
+| `modifier_group` | the group code | Create or overwrite the group matched by `groupCode`, with **all** its options in display order. A customer chooses between `minSelections` and `maxSelections` options. An option with `active: false` is not offered any more; options never disappear from the list. |
+| `menu_recipe` | the menu item code | The POS needs nothing from it and **may skip it**. The ERP turns sales into usage itself (ADR-0002). A POS may store it to show what a menu item is made of. |
+| `modifier_recipe` | the option code | As `menu_recipe`: the POS may skip it. |
+
+**Prices.**
+- A price applies from its `effectiveFrom` date onwards, until a later price for the same scope
+  starts.
+- A row with `locationCode: null` is the chain-wide price. A row with a branch's code is that
+  branch's own price.
+- On a given day, a branch charges:
+  - its own price in force that day, if it has one;
+  - otherwise the chain-wide price in force that day.
+- A branch's own price is never mixed with a later chain-wide change: it wins for as long as one is
+  in force.
+- A menu item with no price in force cannot be sold.
+- The price is the selling price as shown; tax stays in the POS.
+- Each modifier option's `priceChange` (zero or negative allowed) is added per unit sold: per
+  portion, or per kilogram for a weighed line.
+- The ERP sets a price only from today onwards. It corrects one only before its day, by sending
+  the same `id` again with `action: updated`. So a POS never sees the price of a day that has
+  passed change.
+
+**Modifier quantities and recipes.**
+- A sales event's `modifiers[].quantity` is per one unit sold on the line: per piece for
+  `quantity`, per kilogram for `weightKg`.
+- A modifier recipe is stored per one unit sold of the line it is on. It adds an item (a quantity
+  above zero) or removes one (below zero, as "no sauce" does).
+- The ERP computes theoretical usage as:
+  - menu recipe × line `quantity` (or `weightKg`), plus
+  - option recipe × modifier `quantity` × line `quantity` (or `weightKg`), for each modifier.
+- A menu recipe of a weighed item is per kilogram sold (`per: kg`).
+- Recipes are versioned. A version is in force from its `effectiveFrom` until the next `number`
+  starts, never changes once in force, and the ERP uses the version in force on the sale's business
+  date.
+
+**A 1.0 POS.** It has no menu to mirror: it skips these five kinds, as forward compatibility requires,
+and keeps working. `GET /api/v1/pos/instance` reports `contractVersion: "1.1.0"`.
+
+
 
 **When a sales event exists.** When a **sale line is paid** (its bill is paid in full, or a payment
 covering that line is made, as when a bill is split), the POS creates one sales event for that line,

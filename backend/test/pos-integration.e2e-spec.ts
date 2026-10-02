@@ -225,7 +225,7 @@ describe('POS integration', () => {
       expect(res.body).toEqual({
         code: instance.code,
         name: 'Front counter',
-        contractVersion: '1.0.0',
+        contractVersion: '1.1.0',
         branches: [a, b]
           .sort((x, y) => x.code.localeCompare(y.code))
           .map((x) => ({ code: x.code, nameTh: x.nameTh, nameEn: x.nameEn, active: true })),
@@ -256,7 +256,19 @@ describe('POS integration', () => {
       }
       const versions = seen.map((c) => c.version);
       expect(versions).toEqual([...versions].sort((x, y) => x - y));
-      expect(new Set(seen.map((c) => c.entityType))).toEqual(new Set(['item', 'location']));
+      // Contract 1.0's kinds and the menu kinds 1.1 adds (#16), each page checked against the
+      // 1.1 schema above.
+      expect(new Set(seen.map((c) => c.entityType))).toEqual(
+        new Set([
+          'item',
+          'location',
+          'menu_item',
+          'menu_price',
+          'menu_recipe',
+          'modifier_group',
+          'modifier_recipe',
+        ]),
+      );
       expect(seen.find((c) => c.entityCode === branch.code)).toMatchObject({
         entityType: 'location',
         data: { locationCode: branch.code, type: 'branch', supersededBy: null },

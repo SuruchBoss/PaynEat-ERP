@@ -1,0 +1,154 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
+// What branches sell: menu items, their prices, modifiers and versioned recipes — owned by
+// the menu module (#16, ADR-0002, ADR-0005, ADR-0023; docs/GLOSSARY.md "Menu").
+
+/// How a menu item is sold. Fixed once the item exists: its prices and recipes depend on it.
+enum MenuSoldBy {
+  /// A sale line carries a quantity; price and recipe are per portion.
+  portion
+  /// A sale line carries `weightKg`; price and recipe are per kilogram sold (ADR-0005).
+  weight
+}
+
+/// Something a branch sells. Deactivated, never deleted; code and `soldBy` never change.
+model MenuItem {
+  id         String     @id @default(uuid()) @db.Uuid
+  /// The code sales events carry as `menuItemCode` (contract 1.x).
+  code       String     @unique
+  nameTh     String     @map("name_th")
+  nameEn     String     @map("name_en")
+  categoryTh String     @map("category_th")
+  categoryEn String     @map("category_en")
+  soldBy     MenuSoldBy @map("sold_by")
+  active     Boolean    @default(true)
+  /// The master data version of this item's latest change.
+  version    BigInt
+  createdAt  DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  modifierGroups MenuItemModifierGroup[]
+  prices         MenuPrice[]
+  recipeVersions RecipeVersion[]
+
+  @@map("menu_items")
+}
+
+/// The modifier groups a menu item offers, in the order the POS shows them.
+model MenuItemModifierGroup {
+  menuItemId String        @map("menu_item_id") @db.Uuid
+  menuItem   MenuItem      @relation(fields: [menuItemId], references: [id], onDelete: Restrict)
+  groupId    String        @map("group_id") @db.Uuid
+  group      ModifierGroup @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  position   Int
+
+  @@id([menuItemId, groupId])
+  @@map("menu_item_modifier_groups")
+}
+
+/// A selling price from an effective-from date: chain-wide when `locationId` is null, else
+/// for that branch. One per menu item, branch (or none) and date: the migration enforces it
+/// with NULLS NOT DISTINCT. Changed only before it takes effect; never deleted.
+model MenuPrice {
+  id            String    @id @default(uuid()) @db.Uuid
+  menuItemId    String    @map("menu_item_id") @db.Uuid
+  menuItem      MenuItem  @relation(fields: [menuItemId], references: [id], onDelete: Restrict)
+  locationId    String?   @map("location_id") @db.Uuid
+  location      Location? @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  effectiveFrom DateTime  @map("effective_from") @db.Date
+  /// Baht as the POS shows it: per portion, or per kilogram for an item sold by weight.
+  price         Decimal   @db.Decimal(12, 2)
+  /// The master data version of this price's latest change.
+  version       BigInt
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([menuItemId, effectiveFrom])
+  @@map("menu_prices")
+}
+
+/// Choices a menu item offers, such as a sauce. Deactivated, never deleted; code fixed.
+model ModifierGroup {
+  id            String   @id @default(uuid()) @db.Uuid
+  code          String   @unique
+  nameTh        String   @map("name_th")
+  nameEn        String   @map("name_en")
+  /// The fewest options a customer must choose from this group (0: optional).
+  minSelections Int      @map("min_selections")
+  /// The most options a customer may choose from this group.
+  maxSelections Int      @map("max_selections")
+  active        Boolean  @default(true)
+  /// The master data version of this group's latest change, options included.
+  version       BigInt
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  options   ModifierOption[]
+  menuItems MenuItemModifierGroup[]
+
+  @@map("modifier_groups")
+}
+
+/// One choice in a modifier group. Its code is unique across groups: sales events carry
+/// only `modifiers[].code`. Deactivated, never deleted; code fixed.
+model ModifierOption {
+  id          String        @id @default(uuid()) @db.Uuid
+  groupId     String        @map("group_id") @db.Uuid
+  group       ModifierGroup @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  code        String        @unique
+  nameTh      String        @map("name_th")
+  nameEn      String        @map("name_en")
+  /// Added to the line's price per unit sold; may be negative.
+  priceChange Decimal       @map("price_change") @db.Decimal(12, 2)
+  active      Boolean       @default(true)
+  position    Int
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  recipeVersions RecipeVersion[]
+
+  @@index([groupId])
+  @@map("modifier_options")
+}
+
+/// One version of a menu item's or a modifier option's recipe (exactly one of the two),
+/// in force from `effectiveFrom` until the next version of the same recipe starts. Its
+/// lines never change once it is in force, and it is never deleted.
+model RecipeVersion {
+  id               String          @id @default(uuid()) @db.Uuid
+  menuItemId       String?         @map("menu_item_id") @db.Uuid
+  menuItem         MenuItem?       @relation(fields: [menuItemId], references: [id], onDelete: Restrict)
+  modifierOptionId String?         @map("modifier_option_id") @db.Uuid
+  modifierOption   ModifierOption? @relation(fields: [modifierOptionId], references: [id], onDelete: Restrict)
+  /// 1, 2, 3… per recipe, in the order versions were created.
+  number           Int
+  effectiveFrom    DateTime        @map("effective_from") @db.Date
+  /// The master data version of this recipe version's latest change.
+  version          BigInt
+  createdAt        DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  lines RecipeLine[]
+
+  @@unique([menuItemId, effectiveFrom])
+  @@unique([menuItemId, number])
+  @@unique([modifierOptionId, effectiveFrom])
+  @@unique([modifierOptionId, number])
+  @@map("recipe_versions")
+}
+
+/// An item a recipe version consumes (or, for a modifier, adds or removes), in the item's
+/// base unit, per portion or per kilogram sold (menu) or per unit sold of the line (modifier).
+model RecipeLine {
+  recipeVersionId String        @map("recipe_version_id") @db.Uuid
+  recipeVersion   RecipeVersion @relation(fields: [recipeVersionId], references: [id], onDelete: Cascade)
+  lineNo          Int           @map("line_no")
+  itemId          String        @map("item_id") @db.Uuid
+  item            Item          @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  quantity        Decimal       @db.Decimal(18, 6)
+
+  @@id([recipeVersionId, lineNo])
+  @@unique([recipeVersionId, itemId])
+  @@map("recipe_lines")
+}
