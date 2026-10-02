@@ -4,6 +4,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { qk } from '@/app/query-client';
+import { DateField } from '@/components/DateField';
 import { ErrorCallout } from '@/components/ErrorCallout';
 import { listItems, listUnits, unitName } from '@/features/items/items.api';
 import { listLocations } from '@/features/locations/locations.api';
@@ -529,12 +530,11 @@ function DraftForm({
         </div>
         <div className="field">
           <label htmlFor="ad-business-date">{t('adjustments.field.businessDate')}</label>
-          <input
+          <DateField
             id="ad-business-date"
-            type="date"
-            aria-describedby="ad-business-date-hint"
+            describedBy="ad-business-date-hint"
             value={businessDate}
-            onChange={(e) => setBusinessDate(e.target.value)}
+            onChange={setBusinessDate}
           />
           <p id="ad-business-date-hint" className="subtle">
             {t('adjustments.field.businessDateHint')}

@@ -25,6 +25,16 @@ export const th = {
   'language.th': 'ไทย',
   'language.en': 'English',
 
+  'dateField.format': 'วัน เดือน ปี พ.ศ. เช่น 26/9/2569 หรือ 26 ก.ย. 2569',
+  'dateField.example': 'เช่น 26/9/2569',
+  'dateField.error.format': 'อ่านวันที่นี้ไม่ออก พิมพ์ วัน เดือน ปี พ.ศ. เช่น 26/9/2569',
+  'dateField.error.noSuchDay': 'ไม่มีวันนี้ในปฏิทิน ตรวจวันและเดือนอีกครั้ง',
+  'dateField.error.gregorianYear':
+    'ปี {year} ดูเหมือนปี ค.ศ. ช่องนี้ใช้ปี พ.ศ. ถ้าหมายถึง ค.ศ. {year} ให้พิมพ์ {buddhistYear}',
+  'dateField.error.buddhistYear':
+    'ปี {year} ดูเหมือนปี พ.ศ. ช่องนี้ใช้ปี ค.ศ. ถ้าหมายถึง พ.ศ. {year} ให้พิมพ์ {gregorianYear}',
+  'dateField.error.outOfRange': 'ปี {year} อยู่นอกช่วงปีที่ใช้ได้ ตรวจปีอีกครั้ง',
+
   'status.title': 'สถานะระบบ',
   'status.intro': 'ตรวจว่า API และฐานข้อมูลของ ERP ตอบสนองตามปกติหรือไม่',
   'status.refresh': 'ตรวจอีกครั้ง',
@@ -396,7 +406,7 @@ export const th = {
   'stock.allItems': 'ทุกสินค้า',
   'stock.loading': 'กำลังโหลดสต๊อก…',
   'stock.error.future': 'ดูสต๊อกได้ถึงวันนี้เท่านั้น เลือกวันที่ไม่เกินวันนี้',
-  'stock.error.date': 'วันที่ไม่ถูกต้อง เลือกวันที่จากปฏิทิน',
+  'stock.error.date': 'วันที่ไม่ถูกต้อง พิมพ์ วัน เดือน ปี พ.ศ. ใหม่อีกครั้ง',
   'stock.summary': 'ณ สิ้นวันที่ {date}: {count} รายการ มูลค่ารวม {value} บาท',
   'stock.empty': 'ไม่มีสต๊อกที่ตรงกับเงื่อนไขนี้ ณ วันที่เลือก',
   'stock.table.caption': 'สต๊อกคงเหลือ ณ วันที่ {date}',
@@ -448,7 +458,7 @@ export const th = {
     'ยอดยกมาอยู่ที่โรงงาน คลัง หรือสาขาเท่านั้น ไม่ใช่สถานที่ระหว่างขนส่ง',
   'openingBalances.error.locationInactive': 'สถานที่นี้ปิดใช้งานแล้ว',
   'openingBalances.error.futureDate': 'วันที่เกิดรายการต้องไม่เกินวันนี้',
-  'openingBalances.error.date': 'วันที่ไม่ถูกต้อง เลือกวันที่จากปฏิทิน',
+  'openingBalances.error.date': 'วันที่ไม่ถูกต้อง พิมพ์ วัน เดือน ปี พ.ศ. ใหม่อีกครั้ง',
   'openingBalances.error.invalid': 'ข้อมูลบางช่องไม่ครบหรือไม่ถูกต้อง ตรวจสถานที่ สินค้า และวันที่',
   'openingBalances.rule.already_posted': 'เอกสารนี้ post ไปแล้ว',
   'openingBalances.rule.stale_revision':
@@ -480,7 +490,7 @@ export const th = {
   'openingBalances.line.costNegative':
     'บรรทัดที่ {lineNo}: ต้นทุนติดลบไม่ได้ (ของที่ไม่มีต้นทุนใส่ 0)',
   'openingBalances.line.costPrecise': 'บรรทัดที่ {lineNo}: ต้นทุนมีทศนิยมได้ไม่เกิน 6 ตำแหน่ง',
-  'openingBalances.line.expiry': 'บรรทัดที่ {lineNo}: เลือกวันหมดอายุจากปฏิทิน',
+  'openingBalances.line.expiry': 'บรรทัดที่ {lineNo}: วันหมดอายุไม่ถูกต้อง พิมพ์ วัน เดือน ปี พ.ศ.',
   'openingBalances.line.item': 'บรรทัดที่ {lineNo}: เลือกสินค้าที่ยังใช้งานอยู่',
   'openingBalances.created': 'สร้างร่าง {number} แล้ว ตรวจแล้วค่อย post',
   'openingBalances.saved': 'บันทึกร่าง {number} แล้ว',
@@ -573,7 +583,7 @@ export const th = {
     'ปรับยอดได้ที่โรงงาน คลัง หรือสาขาเท่านั้น ไม่ใช่สถานที่ระหว่างขนส่ง',
   'adjustments.error.locationInactive': 'สถานที่นี้ปิดใช้งานแล้ว',
   'adjustments.error.futureDate': 'วันที่เกิดรายการต้องไม่เกินวันนี้',
-  'adjustments.error.date': 'วันที่ไม่ถูกต้อง เลือกวันที่จากปฏิทิน',
+  'adjustments.error.date': 'วันที่ไม่ถูกต้อง พิมพ์ วัน เดือน ปี พ.ศ. ใหม่อีกครั้ง',
   'adjustments.error.invalid': 'ข้อมูลบางช่องไม่ครบหรือไม่ถูกต้อง ตรวจสถานที่ lot จำนวน และเหตุผล',
   'adjustments.error.rejectionReason':
     'บอกเหตุผลที่ไม่อนุมัติ เพื่อให้คนที่สร้างเอกสารรู้ว่าต้องแก้อะไร',

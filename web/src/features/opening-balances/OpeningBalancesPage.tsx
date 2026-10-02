@@ -4,6 +4,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { qk } from '@/app/query-client';
+import { DateField } from '@/components/DateField';
 import { ErrorCallout } from '@/components/ErrorCallout';
 import { listItems, listUnits, unitName, type ItemView } from '@/features/items/items.api';
 import { listLocations } from '@/features/locations/locations.api';
@@ -466,12 +467,11 @@ function DraftForm({
         </div>
         <div className="field">
           <label htmlFor="ob-business-date">{t('openingBalances.field.businessDate')}</label>
-          <input
+          <DateField
             id="ob-business-date"
-            type="date"
-            aria-describedby="ob-business-date-hint"
+            describedBy="ob-business-date-hint"
             value={businessDate}
-            onChange={(e) => setBusinessDate(e.target.value)}
+            onChange={setBusinessDate}
           />
           <p id="ob-business-date-hint" className="subtle">
             {t('openingBalances.field.businessDateHint')}
@@ -563,11 +563,11 @@ function DraftForm({
                 <label htmlFor={`ob-expiry-${line.key}`}>
                   {t('openingBalances.line.expiryLabel', { n })}
                 </label>
-                <input
+                <DateField
+                  compact
                   id={`ob-expiry-${line.key}`}
-                  type="date"
                   value={line.expiryDate}
-                  onChange={(e) => setLine(line.key, { expiryDate: e.target.value })}
+                  onChange={(expiryDate) => setLine(line.key, { expiryDate })}
                 />
               </div>
               <button
@@ -821,12 +821,11 @@ function PostedDocument({
             <div className="field-grid">
               <div className="field">
                 <label htmlFor="reverse-date">{t('openingBalances.reverse.date')}</label>
-                <input
+                <DateField
                   id="reverse-date"
-                  type="date"
-                  aria-describedby="reverse-date-hint"
+                  describedBy="reverse-date-hint"
                   value={reverseDate}
-                  onChange={(e) => setReverseDate(e.target.value)}
+                  onChange={setReverseDate}
                 />
                 <p id="reverse-date-hint" className="subtle">
                   {t('openingBalances.reverse.dateHint')}

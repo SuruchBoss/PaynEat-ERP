@@ -22,6 +22,16 @@ export const en: Messages = {
   'language.th': 'ไทย',
   'language.en': 'English',
 
+  'dateField.format': 'Day month year, e.g. 26/9/2026 or 26 Sep 2026',
+  'dateField.example': 'e.g. 26/9/2026',
+  'dateField.error.format': "That date can't be read. Type day, month and year, e.g. 26/9/2026.",
+  'dateField.error.noSuchDay': "That day isn't in the calendar. Check the day and the month.",
+  'dateField.error.gregorianYear':
+    '{year} looks like a Gregorian year. This field uses the Buddhist era: for {year}, type {buddhistYear}.',
+  'dateField.error.buddhistYear':
+    '{year} looks like a Buddhist-era year. This field uses the Gregorian year: for {year} BE, type {gregorianYear}.',
+  'dateField.error.outOfRange': '{year} is outside the years a date can have here. Check the year.',
+
   'status.title': 'System status',
   'status.intro': "Checks whether the ERP's API and its database are answering normally.",
   'status.refresh': 'Check again',
@@ -406,7 +416,7 @@ export const en: Messages = {
   'stock.allItems': 'All items',
   'stock.loading': 'Loading stock…',
   'stock.error.future': 'Stock is known up to today. Choose today or an earlier date.',
-  'stock.error.date': 'That is not a valid date. Pick one from the calendar.',
+  'stock.error.date': 'That is not a valid date. Type the day, month and year again.',
   'stock.summary': 'End of {date}: {count} lines, total value {value} baht',
   'stock.empty': 'No stock matches on that date.',
   'stock.table.caption': 'Stock on hand as of {date}',
@@ -459,7 +469,7 @@ export const en: Messages = {
     'An opening balance is kept at a plant, warehouse or branch, never in transit.',
   'openingBalances.error.locationInactive': 'That location is no longer in use.',
   'openingBalances.error.futureDate': 'The business date cannot be later than today.',
-  'openingBalances.error.date': 'That is not a valid date. Pick one from the calendar.',
+  'openingBalances.error.date': 'That is not a valid date. Type the day, month and year again.',
   'openingBalances.error.invalid':
     'Some fields are missing or not valid. Check the location, items and dates.',
   'openingBalances.rule.already_posted': 'This document has already been posted.',
@@ -493,7 +503,8 @@ export const en: Messages = {
   'openingBalances.line.costNegative':
     'Line {lineNo}: the cost cannot be negative (enter 0 for stock that cost nothing).',
   'openingBalances.line.costPrecise': 'Line {lineNo}: the cost has at most 6 decimals.',
-  'openingBalances.line.expiry': 'Line {lineNo}: pick the expiry date from the calendar.',
+  'openingBalances.line.expiry':
+    'Line {lineNo}: the expiry date is not valid. Type day, month and year.',
   'openingBalances.line.item': 'Line {lineNo}: choose an item that is in use.',
   'openingBalances.created': 'Draft {number} created. Check it, then post it.',
   'openingBalances.saved': 'Draft {number} saved.',
@@ -587,7 +598,7 @@ export const en: Messages = {
     'Stock is adjusted at a plant, warehouse or branch, never in transit.',
   'adjustments.error.locationInactive': 'That location is no longer in use.',
   'adjustments.error.futureDate': 'The business date cannot be later than today.',
-  'adjustments.error.date': 'That is not a valid date. Pick one from the calendar.',
+  'adjustments.error.date': 'That is not a valid date. Type the day, month and year again.',
   'adjustments.error.invalid':
     'Some fields are missing or not valid. Check the location, lots, quantities and reasons.',
   'adjustments.error.rejectionReason':

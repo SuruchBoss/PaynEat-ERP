@@ -1030,7 +1030,8 @@ h1:focus {
   display: flex;
   flex-wrap: wrap;
   gap: 0 16px;
-  align-items: flex-end;
+  /* Labels on one line; a field with hints under it grows downwards (#48). */
+  align-items: flex-start;
 }
 
 .filters .field {

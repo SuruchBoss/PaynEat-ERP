@@ -14,8 +14,8 @@ describe('formatting ledger figures', () => {
   });
 
   it('shows a business date as the calendar day it is, in either language', () => {
-    expect(formatBusinessDate('2026-09-26', 'en')).toBe('26 Sept 2026');
-    expect(formatBusinessDate('2026-09-26', 'th')).toContain('2569');
+    expect(formatBusinessDate('2026-09-26', 'en')).toBe('26 Sep 2026');
+    expect(formatBusinessDate('2026-09-26', 'th')).toBe('26 ก.ย. 2569');
     expect(formatBusinessDate('2026-01-01', 'en')).toBe('1 Jan 2026');
   });
 });
