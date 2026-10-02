@@ -99,6 +99,22 @@ An item has one base unit and exact purchase units — 1 bag = 25 kilograms — 
 
 **Try it:** Sign in as purchasing, press “Add supplier” and mistype one digit of the tax ID.
 
+### Know what every portion should use, and what it should cost.
+
+<p align="center">
+  <img src="docs/landing/img/en-menu.webp" width="720" alt="A bucket’s prices, with Silom’s own price, and its recipe priced at current lot costs">
+</p>
+
+**The problem:** The recipe lives in the head chef’s notebook, a branch quietly charges its own price, and nobody can say what a bucket costs to make.
+
+Menu items, prices and modifiers live in the ERP and every connected POS mirrors them. A price starts on a date, and a branch can have its own. Recipes are versioned: a new version starts on a date, and one in force never changes. Each recipe is priced at the cost of the lot FEFO would take next, shown as the estimate it is.
+
+- **Prices from a date** — Chain-wide or per branch, scheduled ahead, never rewritten once started.
+- **Versioned recipes** — Per portion or per kilogram sold; “no sauce” takes the cup off.
+- **Costed honestly** — An ingredient with no lot has no cost, not a cost of zero.
+
+**Try it:** Sign in as finance, open “Menu and prices” and open the bucket of eight pieces.
+
 ### The right people. Only the right people.
 
 <p align="center">
@@ -214,6 +230,7 @@ The "why" matters more than the "what" in an ERP, so every decision is written d
 | [0020](docs/adr/0020-distribution-and-installation.md) | The console installs from the browser on phones, tablets and PCs (v1, caches no data); after v1 a chain installs the server without a developer (first-run setup, one-command installer, backups and upgrades from the console); PaynEat Cloud hosting after the pilot; self-hosting always supported |
 | [0021](docs/adr/0021-public-demo-in-the-browser.md) | A public demo of the console on GitHub Pages, answered inside the browser by the backend's own rules and demo data, never a copy of them; a screen the demo does not serve says so; a normal build carries none of it |
 | [0022](docs/adr/0022-vulnerability-disclosure-across-the-ecosystem.md) | A vulnerability is reported privately to the project that owns the code, never written anywhere public while unfixed; another project's is referenced only by its fixed version and advisory; code adapted between projects is fixed in both before any advisory; `SECURITY.md` names the channel |
+| [0023](docs/adr/0023-menu-prices-and-versioned-recipes.md) | Menu prices and recipe versions start on a business date; a recipe never changes for a day that has begun, and nothing changes once in force; a branch's own price wins while in force; a modifier recipe is per unit sold; the theoretical cost is an estimate at the next FEFO lot's cost (proposed with #16) |
 
 Domain vocabulary, in English and Thai: [`docs/GLOSSARY.md`](docs/GLOSSARY.md).
 
@@ -271,9 +288,11 @@ of [ADR-0008](docs/adr/0008-roles-and-segregation-of-duties.md); an append-only 
 and Cwork; suppliers — each change to an item or a branch a new master data version a POS can pull;
 the **stock ledger** — opening balances, stock adjustments approved by a second person, and stock on
 hand by item, lot and location, as of any date, with branch lots below zero flagged for a count; the
-**POS integration** of [`contracts/`](contracts/README.md) — POS instances registered with a machine
-credential (API), the master-data pull by version, and sales events stored exactly once by idempotency
-key;
+**menu** — menu items sold by portion or by weight, prices from a date with a branch's own price,
+modifier groups, and menu and modifier recipes versioned by effective date, each priced at current lot
+costs as an estimate; the **POS integration** of [`contracts/`](contracts/README.md) (contract 1.1) —
+POS instances registered with a machine credential (API), the master-data pull by version (items,
+branches and the menu), and sales events stored exactly once by idempotency key;
 and the skeleton under them — an API that reports its own health and its database's, writes every request as
 structured JSON (the ecosystem's [telemetry contract](docs/TELEMETRY.md)) and counts requests,
 failed sign-ins and postings in Prometheus metrics.
@@ -381,7 +400,7 @@ undoes them.
    base unit cannot change (ADR-0019). **Deactivate** it: it leaves the default list, nothing is
    deleted, and **Show: All** brings it back to reactivate.
 7. Every item change is a new **master data version**, the number a POS pulls by (with its machine
-   credential, step 13). Read the log with any user's access token:
+   credential, step 14). Read the log with any user's access token:
    `GET /api/v1/master-data/changes?since=0` returns each change in version order, the whole item as
    it stood after it, and `latestVersion`; ask again with `since` set to the last version you saw and
    only newer changes come back. Two admins saving at the same moment still
@@ -432,12 +451,25 @@ undoes them.
    branch it is allowed: the lot shows **Negative: count it** in stock on hand, and
    `erp_negative_branch_balances` counts it for that branch. An approver can also **Reject**, with a
    reason the raiser sees; a rejected adjustment is final.
-13. Connect a POS (Docker install; the public demo has no API for it). With the **admin**'s access
+13. Sign in as **finance** (or the branch manager) and open **Menu and prices**: single pieces, a
+   two-piece set, six wings, a bucket and fried chicken sold by weight (priced per kilogram). Open the
+   **Bucket of eight pieces**: 299 baht chain-wide, Silom's own 319, and 309 scheduled chain-wide from
+   next week, which Silom's own price still wins over. Its **recipe** lists the pieces, batter, oil and
+   a cup of dipping sauce, each line priced at the item's current lot cost (the lot FEFO would take
+   next); pieces have no stock yet, so the total says "at least" rather than pricing them at zero. The
+   **Two-piece set** has version 2 scheduled for next week, with less batter. **Modifiers**: "Spicy"
+   adds seasoning and "No sauce" takes the cup off (−1), per unit sold on the line. Finance reads all of it and changes
+   none; purchasing and plant do not see the menu. As **admin** (Docker install; the public demo shows
+   the menu read-only): set a price from a date — today or later, the same day again corrects it until
+   it comes, a started price is refused; add a recipe version — once one is in force, a new one starts
+   tomorrow at the earliest, two never start on one day, and one in force never changes (ADR-0023).
+   Every change is a new master data version a POS pulls (contract 1.1).
+14. Connect a POS (Docker install; the public demo has no API for it). With the **admin**'s access
    token, `POST /api/v1/pos-instances` with a `code` (`POS-SILOM-1`), a `name` and the `branchCodes` it
    sells for (`["BR-SILOM"]`): the answer carries the machine credential, `pnepos_…`, **once** — the ERP
    keeps only its hash. With that credential as the bearer token, `GET /api/v1/pos/instance` answers who
    the instance is and which branches it serves, and `GET /api/v1/master-data/changes?since=0` pulls
-   the items and branches page by page, recorded as its last pull
+   the items, branches and menu page by page, recorded as its last pull
    (`erp_master_data_last_pull_timestamp_seconds{pos_instance}`). `POST /api/v1/sales-events` with
    [`contracts/pos/v1/examples/sales-event.counted.json`](contracts/pos/v1/examples/sales-event.counted.json)
    (changed to your instance's code and branch) answers `201`; send it again, or eight times at once,
@@ -447,7 +479,7 @@ undoes them.
    Every one of these is a `sales_event.*` or `master_data.*` log line carrying `pos_instance`, the
    branch's `location_code`, and the event's idempotency key as its `correlation_id`, counted in
    `erp_sales_events_total` — and the credential itself never appears in a log.
-14. Every one of those changes, and every refused sign-in, is in the audit trail with who, when and
+15. Every one of those changes, and every refused sign-in, is in the audit trail with who, when and
    the request's correlation id. Read it through the API with the admin's access token:
    `GET /api/v1/audit-logs` (filters: `action`, `entityId`, `actorUserId`, `correlationId`, `from`,
    `to`). A refused sign-in is also a `WARNING` line with `"event":"auth.sign_in.failed"` in
