@@ -48,6 +48,20 @@ export const NAV: readonly NavSection[] = [
     ],
   },
   {
+    id: 'menu',
+    headingKey: 'nav.section.menu',
+    // Recipes and their costs are commercial: admin, finance and branch managers read them (#16).
+    items: [
+      { to: '/menu', labelKey: 'nav.menu', icon: 'utensils', permission: Permission.MENU_READ },
+      {
+        to: '/modifiers',
+        labelKey: 'nav.modifiers',
+        icon: 'sliders',
+        permission: Permission.MENU_READ,
+      },
+    ],
+  },
+  {
     id: 'administration',
     headingKey: 'nav.section.administration',
     items: [

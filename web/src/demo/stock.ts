@@ -218,6 +218,37 @@ function openingBalanceView(state: DemoState, record: OpeningBalanceRecord) {
 
 // --- Stock on hand (backend ledger.service.ts stockOnHand) -----------------------------------
 
+/**
+ * Each item's current lot cost, as `LedgerService.currentLotCosts` gives it (#16): the
+ * unexpired lot with stock left anywhere that expires first, the oldest of those first.
+ */
+export function currentLotCosts(
+  state: DemoState,
+  now: number,
+): Map<string, { unitCost: string; lotNumber: string }> {
+  const day = today(now);
+  const withStock = new Set(
+    balances(state)
+      .filter((b) => sign(parseDecimal(b.quantity)!) > 0)
+      .map((b) => b.lotId),
+  );
+  const costs = new Map<string, { unitCost: string; lotNumber: string; expiryDate: string }>();
+  for (const lot of state.lots) {
+    if (!withStock.has(lot.id) || compareDates(lot.expiryDate, day) < 0) continue;
+    const best = costs.get(lot.itemId);
+    if (!best || compareDates(lot.expiryDate, best.expiryDate) < 0) {
+      costs.set(lot.itemId, {
+        unitCost: lot.unitCost,
+        lotNumber: lot.number,
+        expiryDate: lot.expiryDate,
+      });
+    }
+  }
+  return new Map(
+    [...costs].map(([itemId, c]) => [itemId, { unitCost: c.unitCost, lotNumber: c.lotNumber }]),
+  );
+}
+
 export function stockOnHand(state: DemoState, ctx: Context) {
   const asOfInput = queryValue(ctx.query, 'asOf', { isoDate: true });
   const locationId = queryValue(ctx.query, 'locationId', { uuid: true });

@@ -35,6 +35,8 @@ export const ADMIN: SessionUser = {
     'item:manage',
     'location:manage',
     'supplier:manage',
+    'menu:read',
+    'menu:manage',
   ],
   mfaEnabled: true,
 };
@@ -65,6 +67,12 @@ export const PLANT: SessionUser = {
 export const APPROVER: SessionUser = {
   ...STAFF,
   permissions: ['stock_adjustment:approve'],
+};
+
+/** Finance or a branch manager: reads the menu, its prices and recipes, and changes none (#16). */
+export const MENU_READER: SessionUser = {
+  ...STAFF,
+  permissions: ['menu:read'],
 };
 
 export const TOKENS = { accessToken: 'test-access-token', refreshToken: 'test-refresh-token' };

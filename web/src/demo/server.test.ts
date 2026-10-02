@@ -6,7 +6,10 @@ import { stockValue, sumValues } from '@backend/src/core/quantity/domain/stock-v
 import { thaiTaxIdProblem } from '@backend/src/modules/suppliers/domain/thai-tax-id';
 import { hotp, timeStep } from './totp';
 import {
+  DEMO_ITEMS,
+  DEMO_MENU_ITEMS,
   DEMO_MFA_SECRET,
+  DEMO_MODIFIER_GROUPS,
   DEMO_OPENING_BALANCE,
   DEMO_PASSWORD,
   DEMO_RECOVERY_CODES,
@@ -238,7 +241,7 @@ describe('the demo API: master data', () => {
   it('lists the seed items by code and refuses a stale edit', async () => {
     const token = await signIn('admin');
     const items = json(await call('GET', '/api/v1/items?status=all', { token }));
-    expect(items).toHaveLength(9);
+    expect(items).toHaveLength(DEMO_ITEMS.length);
     expect(items[0].code).toBe('CHICKEN-BREAST');
 
     const flour = items.find((i: { code: string }) => i.code === 'FLOUR');
@@ -532,5 +535,71 @@ describe('the demo API: stock adjustments', () => {
       body: { locationId: one.location.id, lines: [] },
     });
     expectRefusal(raise, 404, 'NOT_IN_DEMO');
+  });
+});
+
+describe('the demo API: the menu (#16)', () => {
+  it('serves the demo menu to finance, with Silom’s own bucket price', async () => {
+    const token = await signIn('finance');
+    const menu = json(await call('GET', '/api/v1/menu-items?status=all', { token }));
+    expect(menu.map((m: { code: string }) => m.code)).toEqual(DEMO_MENU_ITEMS.map((m) => m.code));
+    const bucket = menu.find((m: { code: string }) => m.code === 'BUCKET-8');
+    expect(bucket).toMatchObject({ currentPrice: '299', soldBy: 'portion' });
+    const detail = json(await call('GET', `/api/v1/menu-items/${bucket.id}`, { token }));
+    expect(
+      detail.prices.map(
+        (p: { location: { code: string } | null; price: string; status: string }) => [
+          p.location?.code ?? null,
+          p.price,
+          p.status,
+        ],
+      ),
+    ).toEqual([
+      [null, '309', 'scheduled'],
+      [null, '299', 'current'],
+      ['BR-SILOM', '319', 'current'],
+    ]);
+  });
+
+  it('prices a recipe at the demo’s current lot costs with the backend’s own rule', async () => {
+    const token = await signIn('finance');
+    const menu = json(await call('GET', '/api/v1/menu-items', { token }));
+    const byWeight = menu.find((m: { code: string }) => m.code === 'FRIED-CHICKEN-BY-WEIGHT');
+    const recipe = json(await call('GET', `/api/v1/menu-items/${byWeight.id}/recipe`, { token }));
+    expect(recipe.subject).toMatchObject({ kind: 'menu', per: 'kg' });
+    const [current] = recipe.versions;
+    // The whole-chicken lot that expires first (72.5 baht/kg), flour (32.5) and oil (48).
+    expect(
+      current.lines.map((l: { item: { code: string }; cost: string }) => [l.item.code, l.cost]),
+    ).toEqual([
+      ['WHOLE-CHICKEN', '90.625'],
+      ['FLOUR', '4.875'],
+      ['FRYING-OIL', '3.84'],
+    ]);
+    expect(current.theoreticalCost).toEqual({ total: '99.34', complete: true });
+
+    const groups = json(await call('GET', '/api/v1/modifier-groups', { token }));
+    const noSauce = groups
+      .flatMap((g: { options: Array<{ id: string; code: string }> }) => g.options)
+      .find((o: { code: string }) => o.code === 'NO-SAUCE');
+    const option = json(
+      await call('GET', `/api/v1/modifier-options/${noSauce.id}/recipe`, { token }),
+    );
+    expect(option.versions[0].lines[0]).toMatchObject({ quantity: '-1', unitCost: null });
+    expect(DEMO_MODIFIER_GROUPS.map((g) => g.code)).toEqual(
+      groups.map((g: { code: string }) => g.code),
+    );
+  });
+
+  it('keeps the menu from roles that may not read it, and changing it is not in the demo', async () => {
+    const purchasing = await signIn('purchasing');
+    expectRefusal(
+      await call('GET', '/api/v1/menu-items', { token: purchasing }),
+      403,
+      'ACCESS_DENIED',
+    );
+    const admin = await signIn('admin');
+    const create = await call('POST', '/api/v1/menu-items', { token: admin, body: {} });
+    expectRefusal(create, 404, 'NOT_IN_DEMO');
   });
 });

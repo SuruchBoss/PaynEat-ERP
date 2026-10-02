@@ -14,6 +14,7 @@ import { Permission, type PermissionKey } from '@backend/src/core/security/permi
 import * as auth from './auth';
 import { DemoError, type Context } from './http';
 import * as masterData from './master-data';
+import * as menu from './menu';
 import { seedState, type DemoState } from './state';
 import * as stock from './stock';
 
@@ -125,6 +126,23 @@ const ROUTES: readonly Route[] = [
   // NOT_IN_DEMO, as ADR-0021 allows a screen added after the demo to.
   route('GET', `${V1}/stock-adjustments`, stock.listStockAdjustments),
   route('GET', `${V1}/stock-adjustments/:id`, stock.getStockAdjustment),
+
+  // The menu (#16) is read only here too: changing a menu item, a price, a modifier group or a
+  // recipe answers NOT_IN_DEMO.
+  route('GET', `${V1}/menu-items`, menu.listMenuItems, { permission: Permission.MENU_READ }),
+  route('GET', `${V1}/menu-items/:id`, menu.getMenuItem, { permission: Permission.MENU_READ }),
+  route('GET', `${V1}/menu-items/:id/recipe`, menu.menuRecipe, {
+    permission: Permission.MENU_READ,
+  }),
+  route('GET', `${V1}/modifier-groups`, menu.listModifierGroups, {
+    permission: Permission.MENU_READ,
+  }),
+  route('GET', `${V1}/modifier-groups/:id`, menu.getModifierGroup, {
+    permission: Permission.MENU_READ,
+  }),
+  route('GET', `${V1}/modifier-options/:id/recipe`, menu.modifierRecipe, {
+    permission: Permission.MENU_READ,
+  }),
 ];
 
 export interface DemoRequest {
