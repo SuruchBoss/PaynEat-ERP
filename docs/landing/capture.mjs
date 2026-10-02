@@ -8,12 +8,10 @@
 //   cd web && VITE_ERP_DEMO=1 VITE_BASE_PATH=/ npm run build && npx vite preview --port 4174 --strictPort &
 //   NODE_PATH="$(npm root -g)" node docs/landing/capture.mjs      # needs a global `playwright`
 //
-// The flows run twice, once per language, each in its own browser. Chromium draws <input type="date"> in
-// the format of the browser's own locale, taken from LANG when it starts (not from the page's language, and
-// not from a per-page locale override), so the Thai pictures come from a browser started as a Thai one and
-// show dd/mm/yyyy the way a Thai user sees it. Each flow is driven in English, and the Thai pass then uses
-// the console's own language switch to redraw the same state in Thai, because a reload would start the
-// demo from its seed again.
+// The flows run twice, once per language, each in its own browser, the Thai one started as a Thai user's
+// browser would be. Dates follow the console's language, not the browser's (#48). Each flow is driven in
+// English, and the Thai pass then uses the console's own language switch to redraw the same state in Thai,
+// because a reload would start the demo from its seed again.
 import { createRequire } from 'node:module';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -147,8 +145,13 @@ async function flows() {
     await choose(page, '#ob-item-1', 'CHICKEN-DRUMSTICK');
     await page.fill('#ob-quantity-1', '2.5');
     await page.fill('#ob-cost-1', '14.5');
-    const expiry = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
-    await page.fill('#ob-expiry-1', expiry);
+    // Typed the way a person types it in the English console: "5 Oct 2026" (#48).
+    const expiry = new Date(Date.now() + 3 * 86400000);
+    const month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    await page.fill(
+      '#ob-expiry-1',
+      `${expiry.getUTCDate()} ${month[expiry.getUTCMonth()]} ${expiry.getUTCFullYear()}`,
+    );
     await page.getByRole('button', { name: 'Save draft' }).click();
     await page.getByText('Line 1:').waitFor();
     await both(page, 'opening-refused');

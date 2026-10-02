@@ -150,7 +150,7 @@ describe('stock on hand', () => {
 
     expect(await screen.findByText('ไม่มีสต๊อกที่ตรงกับเงื่อนไขนี้ ณ วันที่เลือก')).toBeVisible();
     await u.selectOptions(await screen.findByLabelText('สถานที่'), 'BR-SILOM · สาขาสีลม');
-    await u.type(screen.getByLabelText('ณ วันที่'), '2026-09-20');
+    await u.type(screen.getByLabelText('ณ วันที่'), '20/9/2569');
     await screen.findByText(/20 ก.ย. 2569/);
     expect(seen.map((search) => Object.fromEntries(new URLSearchParams(search)))).toContainEqual({
       asOf: '2026-09-20',
@@ -158,7 +158,7 @@ describe('stock on hand', () => {
     });
 
     await u.clear(screen.getByLabelText('ณ วันที่'));
-    await u.type(screen.getByLabelText('ณ วันที่'), '2030-01-01');
+    await u.type(screen.getByLabelText('ณ วันที่'), '1/1/2573');
     expect(
       await screen.findByText('ดูสต๊อกได้ถึงวันนี้เท่านั้น เลือกวันที่ไม่เกินวันนี้'),
     ).toBeVisible();

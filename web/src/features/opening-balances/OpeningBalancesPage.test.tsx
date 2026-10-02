@@ -204,7 +204,7 @@ describe('opening balances', () => {
     await u.type(within(form).getByLabelText('จำนวนเป็นกิโลกรัม (บรรทัดที่ 1)'), '21.6');
     await u.type(within(form).getByLabelText('จำนวนชิ้น (บรรทัดที่ 1)'), '12');
     await u.type(within(form).getByLabelText('ต้นทุนต่อกิโลกรัม (บรรทัดที่ 1)'), '72.5');
-    await u.type(within(form).getByLabelText('วันหมดอายุ (บรรทัดที่ 1)'), '2026-09-29');
+    await u.type(within(form).getByLabelText('วันหมดอายุ (บรรทัดที่ 1)'), '29/9/2569');
     await u.click(within(form).getByRole('button', { name: 'เพิ่มบรรทัด' }));
     await u.selectOptions(
       within(form).getByLabelText('สินค้า (บรรทัดที่ 2)'),
@@ -213,7 +213,7 @@ describe('opening balances', () => {
     expect(within(form).queryByLabelText('จำนวนชิ้น (บรรทัดที่ 2)')).toBeNull();
     await u.type(within(form).getByLabelText('จำนวนเป็นกิโลกรัม (บรรทัดที่ 2)'), '250');
     await u.type(within(form).getByLabelText('ต้นทุนต่อกิโลกรัม (บรรทัดที่ 2)'), '32.5');
-    await u.type(within(form).getByLabelText('วันหมดอายุ (บรรทัดที่ 2)'), '2027-02-23');
+    await u.type(within(form).getByLabelText('วันหมดอายุ (บรรทัดที่ 2)'), '23 ก.พ. 2570');
     expect(await axeViolations()).toEqual([]);
     await u.click(within(form).getByRole('button', { name: 'บันทึกร่าง' }));
 

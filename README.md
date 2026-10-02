@@ -404,7 +404,10 @@ undoes them.
    11 birds, because the demo's approved write-off (step 12) took a damaged bird off it. Every figure
    is the ledger's exact decimal, never rounded. Set **As of** to two days ago: nothing, because the
    opening balance is dated yesterday. Stock as of a date is counted by when a movement happened (its
-   business date), not when it was posted (ADR-0018).
+   business date), not when it was posted (ADR-0018). Every date field takes the day first, in the
+   console's language: `26/9/2026` or `26 Sep 2026` in English, and the Buddhist year in Thai (`26/9/2569`
+   or `26 ก.ย. 2569`); a Gregorian year typed in Thai is refused with the year it probably means, never
+   shifted, and the API always receives an ISO `YYYY-MM-DD` date.
 11. Sign in as **plant**, open **Opening balances** and **New opening balance** at a branch: a line of
    whole chicken (kilograms and birds) and a line of drumsticks. `2.5` drumsticks is refused on its
    line — pieces have no decimals (ADR-0019). **Save draft**: it is numbered at once (`OB-2026-00002`)

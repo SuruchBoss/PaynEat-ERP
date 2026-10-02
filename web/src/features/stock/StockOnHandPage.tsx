@@ -4,6 +4,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { qk } from '@/app/query-client';
+import { DateField } from '@/components/DateField';
 import { ErrorCallout } from '@/components/ErrorCallout';
 import { listItems, listUnits, unitName } from '@/features/items/items.api';
 import { listLocations } from '@/features/locations/locations.api';
@@ -51,12 +52,11 @@ export function StockOnHandPage() {
       <div className="filters">
         <div className="field">
           <label htmlFor="stock-as-of">{t('stock.asOf')}</label>
-          <input
+          <DateField
             id="stock-as-of"
-            type="date"
-            aria-describedby="stock-as-of-hint"
+            describedBy="stock-as-of-hint"
             value={query.asOf ?? ''}
-            onChange={(e) => set('asOf')(e.target.value)}
+            onChange={set('asOf')}
           />
           <p id="stock-as-of-hint" className="subtle">
             {t('stock.asOfHint')}

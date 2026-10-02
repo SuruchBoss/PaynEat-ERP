@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import type { Language } from '@/i18n/catalogue';
+import { showBusinessDate } from './business-date';
 
 /**
  * Groups the whole part of a decimal string in threes: "22716.7" → "22,716.7". Works on
@@ -17,20 +18,25 @@ export function groupDigits(text: string): string {
 
 /**
  * A business date (YYYY-MM-DD, a calendar day in the company's time zone) in the person's
- * language. Formatted as a calendar day, so the browser's own time zone never moves it.
+ * language: "26 ก.ย. 2569" or "26 Sep 2026". A calendar day, so the browser's own time zone
+ * never moves it, and exactly the text the date field shows and accepts (#48).
  */
 export function formatBusinessDate(date: string, language: Language): string {
-  const [year, month, day] = date.split('-').map(Number);
-  if (!year || !month || !day) return date;
-  return new Intl.DateTimeFormat(language === 'th' ? 'th-TH' : 'en-GB', {
-    dateStyle: 'medium',
-    timeZone: 'UTC',
-  }).format(new Date(Date.UTC(year, month - 1, day)));
+  return showBusinessDate(date, language);
 }
 
+/**
+ * A moment (an ISO timestamp) in the browser's time zone: the day as `formatBusinessDate`
+ * writes it, so a screen never mixes two spellings of a month, then the time.
+ */
 export function formatDateTime(value: string, language: Language): string {
-  return new Intl.DateTimeFormat(language === 'th' ? 'th-TH' : 'en-GB', {
-    dateStyle: 'medium',
+  const moment = new Date(value);
+  if (Number.isNaN(moment.getTime())) return value;
+  const day = `${moment.getFullYear()}-${String(moment.getMonth() + 1).padStart(2, '0')}-${String(
+    moment.getDate(),
+  ).padStart(2, '0')}`;
+  const time = new Intl.DateTimeFormat(language === 'th' ? 'th-TH' : 'en-GB', {
     timeStyle: 'short',
-  }).format(new Date(value));
+  }).format(moment);
+  return `${showBusinessDate(day, language)}${language === 'en' ? ',' : ''} ${time}`;
 }

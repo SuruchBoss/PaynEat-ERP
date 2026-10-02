@@ -5,9 +5,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { qk } from '@/app/query-client';
 import { ErrorCallout } from '@/components/ErrorCallout';
-import type { Language, MessageKey } from '@/i18n/catalogue';
+import type { MessageKey } from '@/i18n/catalogue';
 import { useI18n } from '@/i18n/useI18n';
 import { Permission, ROLE_DESCRIPTION, ROLE_LABEL, ROLES, type Role } from '@/lib/access';
+import { formatDateTime } from '@/lib/format';
 import { useAuthStore } from '@/stores/auth.store';
 import {
   createUser,
@@ -27,13 +28,6 @@ const CREATE_ERRORS: Record<string, MessageKey> = {
 const ROLE_ERRORS: Record<string, MessageKey> = {
   LAST_ADMIN: 'users.error.lastAdmin',
 };
-
-function formatDateTime(value: string, language: Language): string {
-  return new Intl.DateTimeFormat(language === 'th' ? 'th-TH' : 'en-GB', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(value));
-}
 
 function secondFactorKey(user: UserView): MessageKey {
   if (user.mfaEnabled) return 'users.mfa.on';
