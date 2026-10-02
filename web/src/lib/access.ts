@@ -38,6 +38,10 @@ export const Permission = {
   STOCK_ADJUSTMENT_APPROVE: 'stock_adjustment:approve',
   /** Register PaynEat POS instances and manage their credentials: the admin (#9, API only). */
   POS_INSTANCE_MANAGE: 'pos_instance:manage',
+  /** Read the menu, its recipes and their theoretical cost: admin, finance, branch managers (#16). */
+  MENU_READ: 'menu:read',
+  /** Change menu items, prices, modifiers and recipe versions: the admin (#16). */
+  MENU_MANAGE: 'menu:manage',
 } as const;
 
 export type PermissionKey = (typeof Permission)[keyof typeof Permission];

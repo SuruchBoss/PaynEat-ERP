@@ -52,6 +52,7 @@ model Location {
   adjustments     StockAdjustment[]
   posInstances    PosInstanceBranch[]
   salesEvents     SalesEvent[]
+  menuPrices      MenuPrice[]
 
   @@index([type])
   @@map("locations")

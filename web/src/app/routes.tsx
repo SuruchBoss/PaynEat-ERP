@@ -5,6 +5,8 @@ import type { RouteObject } from 'react-router-dom';
 import { SignInPage } from '@/features/auth/SignInPage';
 import { ItemsPage } from '@/features/items/ItemsPage';
 import { LocationsPage } from '@/features/locations/LocationsPage';
+import { MenuPage } from '@/features/menu/MenuPage';
+import { ModifierGroupsPage } from '@/features/menu/ModifierGroupsPage';
 import { NotFoundPage } from '@/features/not-found/NotFoundPage';
 import { OpeningBalancesPage } from '@/features/opening-balances/OpeningBalancesPage';
 import { StatusPage } from '@/features/status/StatusPage';
@@ -33,6 +35,13 @@ export const routes: RouteObject[] = [
           { path: 'stock', element: <StockOnHandPage /> },
           { path: 'opening-balances', element: <OpeningBalancesPage /> },
           { path: 'stock-adjustments', element: <StockAdjustmentsPage /> },
+          {
+            element: <RequirePermission permission={Permission.MENU_READ} />,
+            children: [
+              { path: 'menu', element: <MenuPage /> },
+              { path: 'modifiers', element: <ModifierGroupsPage /> },
+            ],
+          },
           {
             element: <RequirePermission permission={Permission.USER_READ} />,
             children: [{ path: 'users', element: <UsersPage /> }],

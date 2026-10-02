@@ -30,6 +30,7 @@ edited to change their meaning; a new ADR supersedes them.
 | 0020 | [Distribution and installation: installable console, no-developer server install, PaynEat Cloud later](0020-distribution-and-installation.md) | [การแจกจ่ายและการติดตั้ง: console ติดตั้งลงเครื่องได้ ติดตั้งเซิร์ฟเวอร์ได้โดยไม่ต้องมีนักพัฒนา และ PaynEat Cloud ในภายหลัง](0020-distribution-and-installation.th.md) | Accepted |
 | 0021 | [A public demo of the console that runs in the browser, on the backend's own rules](0021-public-demo-in-the-browser.md) | [เดโมสาธารณะของ console ที่ทำงานในเบราว์เซอร์ ด้วยกฎชุดเดียวกับ backend](0021-public-demo-in-the-browser.th.md) | Accepted |
 | 0022 | [Vulnerabilities are reported privately; another project's are referenced only once fixed](0022-vulnerability-disclosure-across-the-ecosystem.md) | [ช่องโหว่ต้องรายงานแบบส่วนตัว และของโปรเจกต์อื่นอ้างถึงได้เมื่อแก้แล้วเท่านั้น](0022-vulnerability-disclosure-across-the-ecosystem.th.md) | Accepted |
+| 0023 | [Menu prices and recipes start on a business date, and never change once in force](0023-menu-prices-and-versioned-recipes.md) | [ราคาและสูตรของเมนูเริ่มมีผลตามวันที่ทางธุรกิจ และไม่เปลี่ยนอีกเมื่อมีผลแล้ว](0023-menu-prices-and-versioned-recipes.th.md) | Proposed |
 
 ## Template
 
