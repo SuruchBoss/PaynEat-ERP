@@ -137,6 +137,16 @@ export const DEMO_ITEMS: readonly DemoItem[] = [
     shelfLifeDays: 365,
     purchaseUnits: [{ unitCode: 'bag', factor: '5' }],
   },
+  {
+    // One sealed cup of dipping sauce comes with each portion; "no sauce" takes it off (#16).
+    code: 'DIPPING-SAUCE',
+    nameTh: 'น้ำจิ้มไก่ (ถ้วย)',
+    nameEn: 'Dipping sauce (cup)',
+    baseUnitCode: 'piece',
+    variableWeight: false,
+    shelfLifeDays: 180,
+    purchaseUnits: [{ unitCode: 'case', factor: '200' }],
+  },
 ];
 
 /**
@@ -227,3 +237,242 @@ export const DEMO_WRITE_OFF = {
   secondaryQuantity: '-1',
   reason: 'Damaged in the chiller',
 } as const;
+
+/** A recipe line: an item code and its quantity in the item's base unit, a decimal string. */
+export type DemoRecipeLine = readonly [itemCode: string, quantity: string];
+
+export interface DemoRecipeVersion {
+  /** Days from the day the seed runs: -1 is yesterday, the day the opening balance is dated. */
+  fromDay: number;
+  lines: readonly DemoRecipeLine[];
+}
+
+export interface DemoModifierGroup {
+  code: string;
+  nameTh: string;
+  nameEn: string;
+  minSelections: number;
+  maxSelections: number;
+  options: ReadonlyArray<{
+    code: string;
+    nameTh: string;
+    nameEn: string;
+    priceChange: string;
+    /** Per one unit sold of the line the option is on (contract 1.1). */
+    recipes: readonly DemoRecipeVersion[];
+  }>;
+}
+
+/**
+ * The chain's modifiers (#16): a spicy flavour that adds seasoning, and a sauce choice. Option
+ * codes are the `modifiers[].code` sales events carry; `SAUCE-HOT` is the contract's example.
+ */
+export const DEMO_MODIFIER_GROUPS: readonly DemoModifierGroup[] = [
+  {
+    code: 'FLAVOUR',
+    nameTh: 'รสชาติ',
+    nameEn: 'Flavour',
+    minSelections: 0,
+    maxSelections: 1,
+    options: [
+      {
+        code: 'SPICY',
+        nameTh: 'สูตรเผ็ด',
+        nameEn: 'Spicy',
+        priceChange: '0',
+        recipes: [{ fromDay: -1, lines: [['SEASONING', '0.005']] }],
+      },
+    ],
+  },
+  {
+    code: 'SAUCE',
+    nameTh: 'น้ำจิ้ม',
+    nameEn: 'Sauce',
+    minSelections: 0,
+    maxSelections: 1,
+    options: [
+      {
+        code: 'SAUCE-HOT',
+        nameTh: 'เพิ่มน้ำจิ้มเผ็ด',
+        nameEn: 'Extra hot sauce',
+        priceChange: '10',
+        recipes: [{ fromDay: -1, lines: [['DIPPING-SAUCE', '1']] }],
+      },
+      {
+        code: 'NO-SAUCE',
+        nameTh: 'ไม่รับน้ำจิ้ม',
+        nameEn: 'No sauce',
+        priceChange: '0',
+        recipes: [{ fromDay: -1, lines: [['DIPPING-SAUCE', '-1']] }],
+      },
+    ],
+  },
+];
+
+export interface DemoMenuItem {
+  code: string;
+  nameTh: string;
+  nameEn: string;
+  categoryTh: string;
+  categoryEn: string;
+  soldBy: 'portion' | 'weight';
+  modifierGroupCodes: readonly string[];
+  /** Chain-wide when `locationCode` is null; `fromDay` as for recipes. */
+  /** A branch row with a null price returns that branch to the chain-wide price (ADR-0023). */
+  prices: ReadonlyArray<{ locationCode: string | null; fromDay: number; price: string | null }>;
+  /** Per portion, or per kilogram sold for an item sold by weight. */
+  recipes: readonly DemoRecipeVersion[];
+}
+
+const piece = (
+  code: string,
+  nameTh: string,
+  nameEn: string,
+  itemCode: string,
+  price: string,
+  flour: string,
+): DemoMenuItem => ({
+  code,
+  nameTh,
+  nameEn,
+  categoryTh: 'ไก่ทอดชิ้นเดี่ยว',
+  categoryEn: 'Single pieces',
+  soldBy: 'portion',
+  modifierGroupCodes: ['FLAVOUR', 'SAUCE'],
+  prices: [{ locationCode: null, fromDay: -1, price }],
+  recipes: [
+    {
+      fromDay: -1,
+      lines: [
+        [itemCode, '1'],
+        ['FLOUR', flour],
+        ['FRYING-OIL', '0.02'],
+        ['DIPPING-SAUCE', '1'],
+      ],
+    },
+  ],
+});
+
+/**
+ * The chain's menu (#16): single pieces by cut, a two-piece set, six wings, a bucket and fried
+ * chicken sold by weight. Recipes consume the items above, so a sale explodes into the stock the
+ * plant cuts. Two things are scheduled, to show versioning: the two-piece set's recipe uses less
+ * batter from next week, and the bucket's chain-wide price goes up; Silom charges its own price.
+ * Prices and figures are fictional.
+ */
+export const DEMO_MENU_ITEMS: readonly DemoMenuItem[] = [
+  piece('BREAST-1', 'อกไก่ทอด 1 ชิ้น', 'Fried breast, 1 piece', 'CHICKEN-BREAST', '49', '0.035'),
+  piece('THIGH-1', 'สะโพกไก่ทอด 1 ชิ้น', 'Fried thigh, 1 piece', 'CHICKEN-THIGH', '45', '0.03'),
+  piece(
+    'DRUMSTICK-1',
+    'น่องไก่ทอด 1 ชิ้น',
+    'Fried drumstick, 1 piece',
+    'CHICKEN-DRUMSTICK',
+    '39',
+    '0.025',
+  ),
+  piece('WING-1', 'ปีกไก่ทอด 1 ชิ้น', 'Fried wing, 1 piece', 'CHICKEN-WING', '29', '0.02'),
+  {
+    code: 'SET-2PC',
+    nameTh: 'ชุดไก่ทอด 2 ชิ้น (น่อง + สะโพก)',
+    nameEn: 'Two-piece set (drumstick + thigh)',
+    categoryTh: 'ชุด',
+    categoryEn: 'Sets',
+    soldBy: 'portion',
+    modifierGroupCodes: ['FLAVOUR', 'SAUCE'],
+    prices: [{ locationCode: null, fromDay: -1, price: '79' }],
+    recipes: [
+      {
+        fromDay: -1,
+        lines: [
+          ['CHICKEN-DRUMSTICK', '1'],
+          ['CHICKEN-THIGH', '1'],
+          ['FLOUR', '0.06'],
+          ['FRYING-OIL', '0.04'],
+          ['DIPPING-SAUCE', '1'],
+        ],
+      },
+      {
+        fromDay: 7,
+        lines: [
+          ['CHICKEN-DRUMSTICK', '1'],
+          ['CHICKEN-THIGH', '1'],
+          ['FLOUR', '0.055'],
+          ['FRYING-OIL', '0.04'],
+          ['DIPPING-SAUCE', '1'],
+        ],
+      },
+    ],
+  },
+  {
+    code: 'SET-WINGS-6',
+    nameTh: 'ปีกไก่ทอด 6 ชิ้น',
+    nameEn: 'Six fried wings',
+    categoryTh: 'ชุด',
+    categoryEn: 'Sets',
+    soldBy: 'portion',
+    modifierGroupCodes: ['FLAVOUR', 'SAUCE'],
+    prices: [{ locationCode: null, fromDay: -1, price: '129' }],
+    recipes: [
+      {
+        fromDay: -1,
+        lines: [
+          ['CHICKEN-WING', '6'],
+          ['FLOUR', '0.12'],
+          ['FRYING-OIL', '0.05'],
+          ['DIPPING-SAUCE', '1'],
+        ],
+      },
+    ],
+  },
+  {
+    code: 'BUCKET-8',
+    nameTh: 'ไก่ทอดถัง 8 ชิ้น',
+    nameEn: 'Bucket of eight pieces',
+    categoryTh: 'ถัง',
+    categoryEn: 'Buckets',
+    soldBy: 'portion',
+    modifierGroupCodes: ['FLAVOUR', 'SAUCE'],
+    prices: [
+      { locationCode: null, fromDay: -1, price: '299' },
+      { locationCode: 'BR-SILOM', fromDay: -1, price: '319' },
+      { locationCode: null, fromDay: 7, price: '309' },
+      { locationCode: 'BR-SILOM', fromDay: 14, price: null },
+    ],
+    recipes: [
+      {
+        fromDay: -1,
+        lines: [
+          ['CHICKEN-BREAST', '2'],
+          ['CHICKEN-THIGH', '2'],
+          ['CHICKEN-DRUMSTICK', '2'],
+          ['CHICKEN-WING', '2'],
+          ['FLOUR', '0.24'],
+          ['FRYING-OIL', '0.16'],
+          ['DIPPING-SAUCE', '2'],
+        ],
+      },
+    ],
+  },
+  {
+    // The contract's weighed example (contracts/pos/v1/examples/sales-event.weighed.json).
+    code: 'FRIED-CHICKEN-BY-WEIGHT',
+    nameTh: 'ไก่ทอดชั่งกิโล',
+    nameEn: 'Fried chicken by weight',
+    categoryTh: 'ขายตามน้ำหนัก',
+    categoryEn: 'By weight',
+    soldBy: 'weight',
+    modifierGroupCodes: ['FLAVOUR'],
+    prices: [{ locationCode: null, fromDay: -1, price: '320' }],
+    recipes: [
+      {
+        fromDay: -1,
+        lines: [
+          ['WHOLE-CHICKEN', '1.25'],
+          ['FLOUR', '0.15'],
+          ['FRYING-OIL', '0.08'],
+        ],
+      },
+    ],
+  },
+];

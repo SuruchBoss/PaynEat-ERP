@@ -8,7 +8,7 @@
  */
 
 /** The contract version the ERP serves (contracts/CHANGELOG.md). */
-export const CONTRACT_VERSION = '1.0.0';
+export const CONTRACT_VERSION = '1.1.0';
 
 /** The ecosystem-wide code shape (docs/GLOSSARY.md "Location code"), used for instances too. */
 export const POS_INSTANCE_CODE_PATTERN = /^[A-Z0-9][A-Z0-9-]{1,31}$/;

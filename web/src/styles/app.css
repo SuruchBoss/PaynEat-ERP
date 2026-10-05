@@ -1589,3 +1589,42 @@ h1:focus {
 .facts dd {
   margin: 0;
 }
+
+/* Menu recipes (#16): versions stacked, newest first, each with its theoretical cost. */
+.recipe {
+  margin-top: 24px;
+}
+
+.recipe__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+
+.recipe__header h3,
+.recipe-version h4,
+.recipe-form h4 {
+  margin: 0;
+}
+
+.recipe-version,
+.recipe-form {
+  margin: 16px 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.recipe-version h4,
+.recipe-form h4 {
+  margin-bottom: 8px;
+}
+
+.recipe-version__cost {
+  margin: 8px 0;
+  font-weight: 600;
+}
+
+.option-rows .document-line {
+  align-items: end;
+}

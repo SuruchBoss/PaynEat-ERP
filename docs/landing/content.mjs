@@ -99,6 +99,20 @@ export const en = {
       try: 'Sign in as purchasing, press “Add supplier” and mistype one digit of the tax ID.',
     },
     {
+      id: 'menu',
+      kicker: 'Menu and recipes',
+      title: 'Know what every portion should use, and what it should cost.',
+      pain: 'The recipe lives in the head chef’s notebook, a branch quietly charges its own price, and nobody can say what a bucket costs to make.',
+      body: 'Menu items, prices and modifiers live in the ERP and every connected POS mirrors them. A price starts on a date, and a branch can have its own. Recipes are versioned: a new version starts on a date, and one in force never changes. Each recipe is priced at the cost of the lot FEFO would take next, shown as the estimate it is.',
+      points: [
+        ['Prices from a date', 'Chain-wide or per branch, scheduled ahead, never rewritten once started. A branch can go back to the chain price.'],
+        ['Versioned recipes', 'Per portion or per kilogram sold; “no sauce” takes the cup off.'],
+        ['Costed honestly', 'An ingredient with no lot has no cost, not a cost of zero.'],
+      ],
+      shots: [['menu', 'desktop', 'A bucket’s prices, with Silom’s own price, and its recipe priced at current lot costs']],
+      try: 'Sign in as finance, open “Menu and prices” and open the bucket of eight pieces.',
+    },
+    {
       id: 'access',
       kicker: 'Access and audit',
       title: 'The right people. Only the right people.',
@@ -276,6 +290,20 @@ export const th = {
         ['supplier-tax-id', 'desktop', 'ซัพพลายเออร์ใหม่ถูกปฏิเสธ เพราะเลขประจำตัวผู้เสียภาษีไม่ผ่านหลักตรวจสอบ'],
       ],
       try: 'เข้าสู่ระบบเป็น purchasing กด “เพิ่มซัพพลายเออร์” แล้วพิมพ์เลขผู้เสียภาษีผิดหนึ่งหลัก',
+    },
+    {
+      id: 'menu',
+      kicker: 'เมนูและสูตร',
+      title: 'รู้ว่าแต่ละที่ควรใช้อะไร และควรมีต้นทุนเท่าไร',
+      pain: 'สูตรอยู่ในสมุดของหัวหน้าครัว สาขาแอบคิดราคาเอง และไม่มีใครบอกได้ว่าไก่หนึ่งถังมีต้นทุนเท่าไร',
+      body: 'รายการเมนู ราคา และตัวเลือกเสริมอยู่ใน ERP และ POS ที่เชื่อมต่อทุกเครื่องดึงไปใช้ ราคาเริ่มมีผลตามวันที่ และสาขามีราคาของตัวเองได้ สูตรมีเวอร์ชัน เวอร์ชันใหม่เริ่มตามวันที่ และเวอร์ชันที่มีผลแล้วไม่เปลี่ยน ทุกสูตรคิดต้นทุนจาก lot ที่ FEFO จะใช้ถัดไป และบอกชัดว่าเป็นค่าประมาณ',
+      points: [
+        ['ราคาตามวันที่', 'ราคากลางหรือราคาสาขา ตั้งล่วงหน้าได้ ไม่ถูกเขียนทับเมื่อเริ่มแล้ว และสาขากลับไปใช้ราคากลางได้'],
+        ['สูตรมีเวอร์ชัน', 'ต่อที่หรือต่อกิโลกรัมที่ขาย “ไม่รับน้ำจิ้ม” หักน้ำจิ้มออกหนึ่งถ้วย'],
+        ['ต้นทุนตรงไปตรงมา', 'วัตถุดิบที่ไม่มี lot คือไม่มีต้นทุน ไม่ใช่ต้นทุนเป็นศูนย์'],
+      ],
+      shots: [['menu', 'desktop', 'ราคาของไก่ทอดถัง พร้อมราคาของสาขาสีลม และสูตรที่คิดต้นทุนจาก lot ปัจจุบัน']],
+      try: 'เข้าสู่ระบบเป็น finance เปิด “เมนูและราคา” แล้วเปิดไก่ทอดถัง 8 ชิ้น',
     },
     {
       id: 'access',

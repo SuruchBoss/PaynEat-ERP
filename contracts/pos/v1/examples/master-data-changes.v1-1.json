@@ -1,0 +1,167 @@
+{
+  "latestVersion": 53,
+  "changes": [
+    {
+      "version": 46,
+      "entityType": "modifier_group",
+      "entityId": "4d2b9a57-3d0e-4a8b-9c1f-2a6e7b5c8d01",
+      "entityCode": "SAUCE",
+      "action": "created",
+      "data": {
+        "id": "4d2b9a57-3d0e-4a8b-9c1f-2a6e7b5c8d01",
+        "groupCode": "SAUCE",
+        "nameTh": "ซอส",
+        "nameEn": "Sauce",
+        "minSelections": 0,
+        "maxSelections": 1,
+        "active": true,
+        "options": [
+          {
+            "modifierCode": "SAUCE-HOT",
+            "nameTh": "ซอสเผ็ด",
+            "nameEn": "Hot sauce",
+            "priceChange": "10",
+            "active": true
+          },
+          {
+            "modifierCode": "NO-SAUCE",
+            "nameTh": "ไม่รับน้ำจิ้ม",
+            "nameEn": "No sauce",
+            "priceChange": "0",
+            "active": true
+          }
+        ],
+        "version": 46
+      },
+      "changedAt": "2026-10-02T03:00:00.000Z"
+    },
+    {
+      "version": 47,
+      "entityType": "menu_item",
+      "entityId": "8a1f6c2e-5b4d-4e3a-9f7c-1d2e3f4a5b60",
+      "entityCode": "SET-WINGS-6",
+      "action": "created",
+      "data": {
+        "id": "8a1f6c2e-5b4d-4e3a-9f7c-1d2e3f4a5b60",
+        "menuItemCode": "SET-WINGS-6",
+        "nameTh": "ปีกไก่ทอด 6 ชิ้น",
+        "nameEn": "Six fried wings",
+        "categoryTh": "ชุด",
+        "categoryEn": "Sets",
+        "soldBy": "portion",
+        "active": true,
+        "modifierGroupCodes": ["SAUCE"],
+        "version": 47
+      },
+      "changedAt": "2026-10-02T03:01:00.000Z"
+    },
+    {
+      "version": 48,
+      "entityType": "menu_price",
+      "entityId": "b3c4d5e6-f708-4192-a3b4-c5d6e7f80912",
+      "entityCode": "SET-WINGS-6",
+      "action": "created",
+      "data": {
+        "id": "b3c4d5e6-f708-4192-a3b4-c5d6e7f80912",
+        "menuItemCode": "SET-WINGS-6",
+        "locationCode": null,
+        "effectiveFrom": "2026-10-01",
+        "price": "129",
+        "version": 48
+      },
+      "changedAt": "2026-10-02T03:02:00.000Z"
+    },
+    {
+      "version": 49,
+      "entityType": "menu_price",
+      "entityId": "c4d5e6f7-0819-42a3-b4c5-d6e7f8091a23",
+      "entityCode": "SET-WINGS-6",
+      "action": "created",
+      "data": {
+        "id": "c4d5e6f7-0819-42a3-b4c5-d6e7f8091a23",
+        "menuItemCode": "SET-WINGS-6",
+        "locationCode": "BR-SILOM",
+        "effectiveFrom": "2026-10-15",
+        "price": "139.5",
+        "version": 49
+      },
+      "changedAt": "2026-10-02T03:03:00.000Z"
+    },
+    {
+      "version": 50,
+      "entityType": "menu_recipe",
+      "entityId": "d5e6f708-192a-43b4-c5d6-e7f8091a2b34",
+      "entityCode": "SET-WINGS-6",
+      "action": "created",
+      "data": {
+        "id": "d5e6f708-192a-43b4-c5d6-e7f8091a2b34",
+        "menuItemCode": "SET-WINGS-6",
+        "per": "portion",
+        "number": 1,
+        "effectiveFrom": "2026-10-01",
+        "lines": [
+          { "itemCode": "CHICKEN-WING", "quantity": "6", "unitCode": "piece" },
+          { "itemCode": "FLOUR", "quantity": "0.12", "unitCode": "kg" },
+          { "itemCode": "FRYING-OIL", "quantity": "0.05", "unitCode": "l" },
+          { "itemCode": "DIPPING-SAUCE", "quantity": "1", "unitCode": "piece" }
+        ],
+        "version": 50
+      },
+      "changedAt": "2026-10-02T03:04:00.000Z"
+    },
+    {
+      "version": 51,
+      "entityType": "menu_recipe",
+      "entityId": "e6f7081a-2a3b-44c5-d6e7-f8091a2b3c45",
+      "entityCode": "FRIED-CHICKEN-BY-WEIGHT",
+      "action": "created",
+      "data": {
+        "id": "e6f7081a-2a3b-44c5-d6e7-f8091a2b3c45",
+        "menuItemCode": "FRIED-CHICKEN-BY-WEIGHT",
+        "per": "kg",
+        "number": 1,
+        "effectiveFrom": "2026-10-01",
+        "lines": [
+          { "itemCode": "WHOLE-CHICKEN", "quantity": "1.25", "unitCode": "kg" },
+          { "itemCode": "FLOUR", "quantity": "0.15", "unitCode": "kg" },
+          { "itemCode": "FRYING-OIL", "quantity": "0.08", "unitCode": "l" }
+        ],
+        "version": 51
+      },
+      "changedAt": "2026-10-02T03:05:00.000Z"
+    },
+    {
+      "version": 52,
+      "entityType": "modifier_recipe",
+      "entityId": "f7081a2b-3b4c-45d6-e7f8-091a2b3c4d56",
+      "entityCode": "NO-SAUCE",
+      "action": "created",
+      "data": {
+        "id": "f7081a2b-3b4c-45d6-e7f8-091a2b3c4d56",
+        "modifierCode": "NO-SAUCE",
+        "number": 1,
+        "effectiveFrom": "2026-10-01",
+        "lines": [{ "itemCode": "DIPPING-SAUCE", "quantity": "-1", "unitCode": "piece" }],
+        "version": 52
+      },
+      "changedAt": "2026-10-02T03:06:00.000Z"
+    },
+    {
+      "version": 53,
+      "entityType": "menu_price",
+      "entityId": "0819a2b3-c4d5-46e7-f809-1a2b3c4d5e67",
+      "entityCode": "SET-WINGS-6",
+      "action": "created",
+      "data": {
+        "id": "0819a2b3-c4d5-46e7-f809-1a2b3c4d5e67",
+        "menuItemCode": "SET-WINGS-6",
+        "locationCode": "BR-SILOM",
+        "effectiveFrom": "2026-11-01",
+        "price": null,
+        "version": 53
+      },
+      "changedAt": "2026-10-02T03:07:00.000Z"
+    }
+  ],
+  "hasMore": false
+}

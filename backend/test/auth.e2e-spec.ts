@@ -235,6 +235,8 @@ describe('signing in', () => {
           'location:manage',
           'supplier:manage',
           'pos_instance:manage',
+          'menu:read',
+          'menu:manage',
         ],
         mfaEnabled: true,
       });

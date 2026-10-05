@@ -169,6 +169,18 @@ async function flows() {
     await page.context().close();
   }
 
+  // Finance: the bucket's prices, with Silom's own, and its recipe at current lot costs (#16).
+  {
+    const page = await open(DESKTOP);
+    await signIn(page, 'finance');
+    await page.goto(`${BASE}/menu`);
+    await page.getByRole('button', { name: 'Open Bucket of eight pieces' }).click();
+    await page.getByText('Recipe of Bucket of eight pieces').waitFor();
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await both(page, 'menu');
+    await page.context().close();
+  }
+
   // Purchasing: a supplier whose tax identification number has a mistyped digit.
   {
     const page = await open(DESKTOP);

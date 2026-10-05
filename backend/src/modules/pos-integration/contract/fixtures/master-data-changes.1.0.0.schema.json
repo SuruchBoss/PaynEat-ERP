@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/SuruchBoss/PaynEat-ERP/contracts/pos/v1/master-data-changes.schema.json",
+  "title": "Master-data changes page v1",
+  "description": "One page of `GET /api/v1/master-data/changes?since=N`: every master-data change after version N, in version order. A POS applies them in order, stores the last `version` it applied, and asks again with that as `since` while `hasMore` is true.",
+  "type": "object",
+  "required": ["latestVersion", "changes", "hasMore"],
+  "properties": {
+    "latestVersion": {
+      "description": "The company-wide master-data version when this page was read.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "changes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/change" }
+    },
+    "hasMore": {
+      "description": "More changes follow: ask again with `since` set to the last version on this page.",
+      "type": "boolean"
+    }
+  },
+  "$defs": {
+    "code": {
+      "type": "string",
+      "pattern": "^[A-Z0-9][A-Z0-9-]{1,31}$"
+    },
+    "change": {
+      "description": "One master-data change. `data` is the whole record as it stood after the change, so a mirror simply overwrites. A POS skips an `entityType` it does not know, and ignores fields it does not know: contract 1.x only ever adds them.",
+      "type": "object",
+      "required": ["version", "entityType", "entityId", "entityCode", "action", "data", "changedAt"],
+      "properties": {
+        "version": {
+          "description": "The change's master-data version. Versions are handed out and committed in order, so a reader never sees N+1 before N.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "entityType": {
+          "description": "`item` and `location` (branches) in contract 1.0; later minor versions add kinds (menu items, prices, options and recipes with ERP #16).",
+          "type": "string"
+        },
+        "entityId": { "type": "string", "format": "uuid" },
+        "entityCode": { "$ref": "#/$defs/code" },
+        "action": { "enum": ["created", "updated"] },
+        "data": { "type": "object" },
+        "changedAt": { "type": "string", "format": "date-time" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "entityType": { "const": "item" } } },
+          "then": { "properties": { "data": { "$ref": "#/$defs/item" } } }
+        },
+        {
+          "if": { "properties": { "entityType": { "const": "location" } } },
+          "then": { "properties": { "data": { "$ref": "#/$defs/location" } } }
+        }
+      ]
+    },
+    "item": {
+      "description": "An item the company stocks (ERP #5). A POS in connected mode mirrors it as an ingredient, matched by `itemCode`.",
+      "type": "object",
+      "required": [
+        "id",
+        "itemCode",
+        "nameTh",
+        "nameEn",
+        "baseUnitCode",
+        "variableWeight",
+        "shelfLifeDays",
+        "active",
+        "purchaseUnits",
+        "version"
+      ],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "itemCode": { "$ref": "#/$defs/code" },
+        "nameTh": { "type": "string" },
+        "nameEn": { "type": "string" },
+        "baseUnitCode": {
+          "description": "The unit every quantity of the item is in: `kg`, `piece`, `l`… Never changes.",
+          "type": "string"
+        },
+        "variableWeight": {
+          "description": "Weighed, with a piece count alongside (whole birds): ADR-0005.",
+          "type": "boolean"
+        },
+        "shelfLifeDays": { "type": "integer", "minimum": 0 },
+        "active": {
+          "description": "False once the item is no longer in use. Items are never deleted.",
+          "type": "boolean"
+        },
+        "purchaseUnits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["unitCode", "factor"],
+            "properties": {
+              "unitCode": { "type": "string" },
+              "factor": {
+                "description": "How many base units one purchase unit holds, an exact decimal string.",
+                "type": "string"
+              }
+            }
+          }
+        },
+        "version": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "location": {
+      "description": "A branch (ERP #6), matched on the POS by its ecosystem `locationCode`. Only branches appear: plants and warehouses are not a POS's business.",
+      "type": "object",
+      "required": [
+        "id",
+        "locationCode",
+        "type",
+        "nameTh",
+        "nameEn",
+        "active",
+        "supersededBy",
+        "version"
+      ],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "locationCode": { "$ref": "#/$defs/code" },
+        "type": { "const": "branch" },
+        "nameTh": { "type": "string" },
+        "nameEn": { "type": "string" },
+        "active": { "type": "boolean" },
+        "supersededBy": {
+          "description": "Set when a code already in use turned out wrong: the branch was replaced by the one named here, and this one deactivated. A POS moves the branch to the new code, keeping its sales history.",
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "required": ["id", "locationCode"],
+              "properties": {
+                "id": { "type": "string", "format": "uuid" },
+                "locationCode": { "$ref": "#/$defs/code" }
+              }
+            }
+          ]
+        },
+        "version": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

@@ -33,6 +33,15 @@ describe('roles and permissions (ADR-0008)', () => {
       expect(held.includes(Permission.ITEM_MANAGE)).toBe(isAdmin);
       expect(held.includes(Permission.LOCATION_MANAGE)).toBe(isAdmin);
       expect(held.includes(Permission.POS_INSTANCE_MANAGE)).toBe(isAdmin);
+      expect(held.includes(Permission.MENU_MANAGE)).toBe(isAdmin);
+    }
+  });
+
+  it('lets admin, finance and branch managers, and nobody else, read the menu (#16)', () => {
+    for (const role of ROLE_KEYS) {
+      expect(permissionsFor([role]).includes(Permission.MENU_READ)).toBe(
+        role === 'admin' || role === 'finance' || role === 'branch_manager',
+      );
     }
   });
 
@@ -64,6 +73,8 @@ describe('roles and permissions (ADR-0008)', () => {
       Permission.SUPPLIER_MANAGE,
       Permission.STOCK_ADJUSTMENT_APPROVE,
       Permission.POS_INSTANCE_MANAGE,
+      Permission.MENU_READ,
+      Permission.MENU_MANAGE,
     ]);
     expect(permissionsFor([])).toEqual([]);
   });

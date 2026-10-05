@@ -36,7 +36,7 @@
           "minimum": 1
         },
         "entityType": {
-          "description": "`item` and `location` (branches) in contract 1.0; later minor versions add kinds (menu items, prices, options and recipes with ERP #16).",
+          "description": "`item` and `location` (branches) since contract 1.0; `menu_item`, `menu_price`, `modifier_group`, `menu_recipe` and `modifier_recipe` since 1.1 (ERP #16). Later minor versions may add more: a POS skips a kind it does not know.",
           "type": "string"
         },
         "entityId": { "type": "string", "format": "uuid" },
@@ -53,6 +53,26 @@
         {
           "if": { "properties": { "entityType": { "const": "location" } } },
           "then": { "properties": { "data": { "$ref": "#/$defs/location" } } }
+        },
+        {
+          "if": { "properties": { "entityType": { "const": "menu_item" } } },
+          "then": { "properties": { "data": { "$ref": "#/$defs/menuItem" } } }
+        },
+        {
+          "if": { "properties": { "entityType": { "const": "menu_price" } } },
+          "then": { "properties": { "data": { "$ref": "#/$defs/menuPrice" } } }
+        },
+        {
+          "if": { "properties": { "entityType": { "const": "modifier_group" } } },
+          "then": { "properties": { "data": { "$ref": "#/$defs/modifierGroup" } } }
+        },
+        {
+          "if": { "properties": { "entityType": { "const": "menu_recipe" } } },
+          "then": { "properties": { "data": { "$ref": "#/$defs/menuRecipe" } } }
+        },
+        {
+          "if": { "properties": { "entityType": { "const": "modifier_recipe" } } },
+          "then": { "properties": { "data": { "$ref": "#/$defs/modifierRecipe" } } }
         }
       ]
     },
@@ -139,6 +159,186 @@
               }
             }
           ]
+        },
+        "version": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "date": {
+      "description": "A business date, YYYY-MM-DD, in the chain's time zone (ERP ADR-0018).",
+      "type": "string",
+      "format": "date"
+    },
+    "money": {
+      "description": "Baht as the POS shows it, an exact decimal string with satang at most: \"59\", \"59.5\".",
+      "type": "string",
+      "pattern": "^-?[0-9]{1,8}(\\.[0-9]{1,2})?$"
+    },
+    "quantity": {
+      "description": "An exact decimal string in the item's base unit, never a JSON number (ERP ADR-0019).",
+      "type": "string",
+      "pattern": "^-?[0-9]+(\\.[0-9]+)?$"
+    },
+    "menuItem": {
+      "description": "Since 1.1. Something a branch sells (ERP #16). Its code is the `menuItemCode` a sales event carries.",
+      "type": "object",
+      "required": [
+        "id",
+        "menuItemCode",
+        "nameTh",
+        "nameEn",
+        "categoryTh",
+        "categoryEn",
+        "soldBy",
+        "active",
+        "modifierGroupCodes",
+        "version"
+      ],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "menuItemCode": { "$ref": "#/$defs/code" },
+        "nameTh": { "type": "string" },
+        "nameEn": { "type": "string" },
+        "categoryTh": {
+          "description": "The heading the POS lists it under, in Thai. A label, not a code: items with the same label share a heading, and a renamed category arrives as a changed label on each item.",
+          "type": "string"
+        },
+        "categoryEn": { "description": "The same heading in English.", "type": "string" },
+        "soldBy": {
+          "description": "`portion`: a sale line carries `quantity`. `weight`: a sale line carries `weightKg`, and the price is per kilogram. Never changes.",
+          "enum": ["portion", "weight"]
+        },
+        "active": {
+          "description": "False once it is no longer sold. Menu items are never deleted.",
+          "type": "boolean"
+        },
+        "modifierGroupCodes": {
+          "description": "The modifier groups it offers, in the order the POS shows them.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/code" }
+        },
+        "version": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "menuPrice": {
+      "description": "Since 1.1. A selling price from a business date, chain-wide (`locationCode` null) or for one branch. Tax is the POS's business: this is the price as the POS shows it. A branch row with `price` null ends that branch's own price: from `effectiveFrom` the branch charges the chain-wide price in force again. A chain-wide row always has a price.",
+      "type": "object",
+      "required": ["id", "menuItemCode", "locationCode", "effectiveFrom", "price", "version"],
+      "if": { "properties": { "locationCode": { "type": "null" } } },
+      "then": { "properties": { "price": { "type": "string" } } },
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "menuItemCode": { "$ref": "#/$defs/code" },
+        "locationCode": {
+          "description": "The branch whose price this is, or null for every branch without a price of its own.",
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/code" }]
+        },
+        "effectiveFrom": { "$ref": "#/$defs/date" },
+        "price": {
+          "description": "Per portion, or per kilogram for a menu item sold by weight. Never negative. Null only on a branch row: from `effectiveFrom` that branch charges the chain-wide price in force again, including chain-wide prices that start later, until it gets a price of its own again.",
+          "oneOf": [
+            { "type": "null" },
+            { "allOf": [{ "$ref": "#/$defs/money" }, { "type": "string", "pattern": "^[0-9]" }] }
+          ]
+        },
+        "version": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "modifierGroup": {
+      "description": "Since 1.1. A set of options a menu item offers, with all its options in order. Each option's code is the `modifiers[].code` a sales event carries, unique across groups.",
+      "type": "object",
+      "required": [
+        "id",
+        "groupCode",
+        "nameTh",
+        "nameEn",
+        "minSelections",
+        "maxSelections",
+        "active",
+        "options",
+        "version"
+      ],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "groupCode": { "$ref": "#/$defs/code" },
+        "nameTh": { "type": "string" },
+        "nameEn": { "type": "string" },
+        "minSelections": {
+          "description": "The fewest options a customer must choose (0: optional).",
+          "type": "integer",
+          "minimum": 0
+        },
+        "maxSelections": {
+          "description": "The most options a customer may choose.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "active": { "type": "boolean" },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["modifierCode", "nameTh", "nameEn", "priceChange", "active"],
+            "properties": {
+              "modifierCode": { "$ref": "#/$defs/code" },
+              "nameTh": { "type": "string" },
+              "nameEn": { "type": "string" },
+              "priceChange": {
+                "description": "Added to the line's price per unit sold (per portion, or per kilogram); may be zero or negative.",
+                "$ref": "#/$defs/money"
+              },
+              "active": {
+                "description": "False once it is no longer offered. Options are never removed from the list.",
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "version": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "recipeLine": {
+      "type": "object",
+      "required": ["itemCode", "quantity", "unitCode"],
+      "properties": {
+        "itemCode": { "$ref": "#/$defs/code" },
+        "quantity": { "$ref": "#/$defs/quantity" },
+        "unitCode": { "description": "The item's base unit, which `quantity` is in.", "type": "string" }
+      }
+    },
+    "menuRecipe": {
+      "description": "Since 1.1. One version of a menu item's recipe, in force from `effectiveFrom` until the next version starts. The ERP explodes sales into usage with it; a POS needs it only to show it.",
+      "type": "object",
+      "required": ["id", "menuItemCode", "per", "number", "effectiveFrom", "lines", "version"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "menuItemCode": { "$ref": "#/$defs/code" },
+        "per": {
+          "description": "What the quantities are for: one portion, or one kilogram sold of a menu item sold by weight.",
+          "enum": ["portion", "kg"]
+        },
+        "number": { "type": "integer", "minimum": 1 },
+        "effectiveFrom": { "$ref": "#/$defs/date" },
+        "lines": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/recipeLine" }
+        },
+        "version": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "modifierRecipe": {
+      "description": "Since 1.1. One version of a modifier option's recipe: what the option adds (above zero) or removes (below zero) per one unit sold of the line it is on. Usage = option recipe × modifier quantity × line quantity (or `weightKg`).",
+      "type": "object",
+      "required": ["id", "modifierCode", "number", "effectiveFrom", "lines", "version"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "modifierCode": { "$ref": "#/$defs/code" },
+        "number": { "type": "integer", "minimum": 1 },
+        "effectiveFrom": { "$ref": "#/$defs/date" },
+        "lines": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/recipeLine" }
         },
         "version": { "type": "integer", "minimum": 1 }
       }

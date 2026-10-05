@@ -18,7 +18,9 @@ export type IconName =
   | 'shield'
   | 'ledger'
   | 'scale'
-  | 'layers';
+  | 'layers'
+  | 'utensils'
+  | 'sliders';
 
 const PATHS: Record<IconName, string> = {
   // System status: a heartbeat line.
@@ -42,6 +44,10 @@ const PATHS: Record<IconName, string> = {
   scale: 'M12 4v16M5 8h14M5 8l-3 6a3 3 0 0 0 6 0L5 8ZM19 8l-3 6a3 3 0 0 0 6 0l-3-6ZM8 20h8',
   // Stock on hand: lots stacked on each other.
   layers: 'M12 3 3 8l9 5 9-5-9-5ZM3 12.5l9 5 9-5M3 17l9 5 9-5',
+  // Menu (#16): a fork and a knife.
+  utensils: 'M7 3v7M5 3v5a2 2 0 0 0 4 0V3M7 10v11M17 3c-2 1-3 3.5-3 6.5V13h3M17 3v18',
+  // Modifiers (#16): sliders, a choice set on each line.
+  sliders: 'M4 7h10M18 7h2M16 5v4M4 17h4M12 17h8M10 15v4',
 };
 
 export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {

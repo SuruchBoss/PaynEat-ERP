@@ -129,6 +129,8 @@ describe('user administration', () => {
         'location:manage',
         'supplier:manage',
         'pos_instance:manage',
+        'menu:read',
+        'menu:manage',
       ],
       requiresSecondFactor: true,
     });
@@ -144,12 +146,12 @@ describe('user administration', () => {
     });
     expect(res.body[5]).toEqual({
       key: 'branch_manager',
-      permissions: ['stock_adjustment:raise'],
+      permissions: ['stock_adjustment:raise', 'menu:read'],
       requiresSecondFactor: false,
     });
     expect(res.body[6]).toEqual({
       key: 'finance',
-      permissions: ['stock_adjustment:approve'],
+      permissions: ['stock_adjustment:approve', 'menu:read'],
       requiresSecondFactor: false,
     });
     for (const role of res.body.filter(

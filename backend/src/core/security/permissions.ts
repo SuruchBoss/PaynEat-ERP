@@ -40,6 +40,16 @@ export const Permission = {
    * factor, manages them.
    */
   POS_INSTANCE_MANAGE: 'pos_instance:manage',
+  /**
+   * Read menu items, prices, modifiers and recipes with their theoretical cost (#16): the
+   * recipes and costs are commercial information, so reading needs a permission.
+   */
+  MENU_READ: 'menu:read',
+  /**
+   * Create and change menu items, prices, modifiers and recipe versions (#16). Menu master
+   * data is configuration every POS mirrors (ADR-0002), so only the admin changes it.
+   */
+  MENU_MANAGE: 'menu:manage',
 } as const;
 
 export type PermissionKey = (typeof Permission)[keyof typeof Permission];
@@ -65,7 +75,7 @@ export type Role = (typeof ROLE_KEYS)[number];
 export const ROLE_PERMISSIONS: Record<Role, readonly PermissionKey[]> = {
   // ADR-0008: manage users, roles, locations, configuration; reopen closed periods.
   // Master data is configuration: only the admin maintains items (#5). Connecting a POS is
-  // configuration too (#9).
+  // configuration too (#9), and so is the menu every POS mirrors (#16).
   admin: [
     Permission.USER_READ,
     Permission.USER_MANAGE,
@@ -74,6 +84,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly PermissionKey[]> = {
     Permission.LOCATION_MANAGE,
     Permission.SUPPLIER_MANAGE,
     Permission.POS_INSTANCE_MANAGE,
+    Permission.MENU_READ,
+    Permission.MENU_MANAGE,
   ],
   // ADR-0008: create and send purchase orders (from #10); manage suppliers (#6).
   purchasing: [Permission.SUPPLIER_MANAGE],
@@ -85,11 +97,13 @@ export const ROLE_PERMISSIONS: Record<Role, readonly PermissionKey[]> = {
   // ADR-0008: dispatch transfers.
   logistics: [],
   // ADR-0008: raise requisitions, receive transfers, count branch stock. Adjusting branch
-  // stock after a count is raising an adjustment (#8).
-  branch_manager: [Permission.STOCK_ADJUSTMENT_RAISE],
+  // stock after a count is raising an adjustment (#8). A branch sells the menu: its manager
+  // reads it, with its recipes (#16).
+  branch_manager: [Permission.STOCK_ADJUSTMENT_RAISE, Permission.MENU_READ],
   // ADR-0008: view costs, variances and valuation; export financial data. An adjustment
   // changes the value of stock, so finance approves it (#8): never one it created itself.
-  finance: [Permission.STOCK_ADJUSTMENT_APPROVE],
+  // Recipes and their theoretical cost are costs: finance reads them (#16).
+  finance: [Permission.STOCK_ADJUSTMENT_APPROVE, Permission.MENU_READ],
 };
 
 /**

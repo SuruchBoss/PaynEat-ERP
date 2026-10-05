@@ -94,13 +94,32 @@ using a new domain concept anywhere else.
 | Backward trace | การย้อนรอยย้อนกลับ | From a sale at a branch to the candidate branch lots and, through transfers and genealogy, to the supplier lots they came from. |
 | Certain / inferred link | ความเชื่อมโยงที่แน่นอน / ที่อนุมาน | A trace step backed by a posted document (receipt, genealogy, transfer) is certain; a step from branch FEFO allocation is inferred. Every trace labels each step as one or the other (ADR-0006). |
 
+## Menu · เมนู
+
+What branches sell, kept in the ERP and mirrored by the POS (ADR-0002, ADR-0023).
+
+| Term | ไทย | Meaning |
+|---|---|---|
+| Menu item | รายการเมนู | Something a branch sells, identified by its menu item code (the shape of a location code), which sales events carry as `menuItemCode`. Deactivated, never deleted. |
+| Menu category | หมวดเมนู | The heading a menu item is listed under on the POS (e.g. "Single pieces"). A label in Thai and English, not a code: renaming a category means changing the label on each item. |
+| Sold by portion / sold by weight | ขายเป็นที่ / ขายตามน้ำหนัก | How a menu item is sold. By portion: a sale line has a quantity. By weight: a sale line has `weightKg`, its price is per kilogram and its recipe per kilogram sold (ADR-0005). Fixed once the item exists. |
+| Menu price | ราคาเมนู | The selling price as the POS shows it, tax included as the POS handles it, from an effective-from date. Per portion, or per kilogram for an item sold by weight. |
+| Branch price | ราคาเฉพาะสาขา | A menu price for one branch, keyed by its location code. It replaces the chain-wide price at that branch for as long as one is in force. |
+| Return to the chain price | กลับไปใช้ราคากลาง | A branch price row without a price (`price: null`): from its effective-from date the branch's own price ends and the branch charges the chain-wide price in force again, until it gets a price of its own again (ADR-0023). |
+| Modifier group | กลุ่มตัวเลือกเสริม | A set of modifier options a menu item offers, with the fewest and most a customer may choose (e.g. "Sauce", choose 0–1). |
+| Modifier option | ตัวเลือกเสริม | One choice in a modifier group, identified by its code, which sales events carry as `modifiers[].code`. Has a price change, which may be negative. |
+| Recipe version | เวอร์ชันสูตร | One version of a menu or modifier recipe, numbered 1, 2, 3…, in force from its effective-from date until the next version starts. Never edited once in force. |
+| Effective-from date | วันที่เริ่มมีผล | The business date a price or recipe version starts to apply, in the company's time zone (ADR-0018). |
+| Theoretical recipe cost | ต้นทุนสูตรตามทฤษฎี | A recipe's quantities priced at each item's current lot cost: an estimate shown as one, never a posted cost (ADR-0023). |
+| Current lot cost | ต้นทุน lot ปัจจุบัน | The unit cost of the lot FEFO would take next for an item: the unexpired lot with stock that expires first (ADR-0004, ADR-0023). |
+
 ## Production and cost · การผลิตและต้นทุน
 
 | Term | ไทย | Meaning |
 |---|---|---|
 | Production BOM | สูตรการผลิต | For a plant: which inputs make which outputs, the expected yield, and the cost allocation ratios. |
-| Menu recipe | สูตรเมนู | For a branch: which items one menu item consumes. Versioned with an effective date. |
-| Modifier recipe | สูตรของตัวเลือกเสริม | The ingredient deltas a POS modifier adds or removes. Versioned like menu recipes. |
+| Menu recipe | สูตรเมนู | Which items one portion of a menu item consumes, in each item's base unit; per kilogram sold for an item sold by weight. Versioned with an effective-from date. |
+| Modifier recipe | สูตรของตัวเลือกเสริม | The ingredient deltas a modifier option adds (above zero) or removes (below zero), per one unit sold of the line it is on. Versioned like menu recipes. |
 | Yield | อัตราผลได้ | Output weight ÷ input weight of a production order. Expected yield lives on the BOM; actual yield is measured. |
 | Co-product | ผลิตภัณฑ์ร่วม | One of several saleable outputs of the same input (e.g. drumstick, thigh, breast from one bird). |
 | By-product | ผลิตภัณฑ์พลอยได้ | A low-value output (e.g. frames for stock). |

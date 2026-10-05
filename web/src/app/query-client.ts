@@ -44,4 +44,8 @@ export const qk = {
   openingBalance: (id: string) => ['opening-balances', id] as const,
   stockAdjustments: ['stock-adjustments'] as const,
   stockAdjustment: (id: string) => ['stock-adjustments', id] as const,
+  menuItems: ['menu-items'] as const,
+  menuItem: (id: string) => ['menu-items', id] as const,
+  modifierGroups: ['modifier-groups'] as const,
+  recipe: (kind: 'menu' | 'modifier', id: string) => ['recipe', kind, id] as const,
 };
