@@ -58,7 +58,14 @@ using a new domain concept anywhere else.
 | Late for a closed period | มาช้าสำหรับงวดที่ปิดแล้ว | Branch consumption from a sale whose time falls in a closed period, posted on the first open day and marked, keeping its original sale time (ADR-0018). |
 | Supplier | ซัพพลายเออร์ | A company the chain buys from. Owned by the ERP, never sent to a POS. Managed by `admin` and `purchasing`. |
 | Tax identification number | เลขประจำตัวผู้เสียภาษีอากร | The 13-digit Thai number of a company or a person, the last digit a check over the other twelve. Printed as 0-0000-00000-00-0. |
-| Purchase order (PO) | ใบสั่งซื้อ | Commitment to buy from a supplier. Writes no stock. |
+| Purchase order (PO) | ใบสั่งซื้อ | Commitment to buy from a supplier. Writes no stock. Delivered to a plant or a warehouse. Moves draft → submitted → approved → sent → partially received → received; it can be rejected by an approver or cancelled with a reason before anything is received. Only a draft is edited; nothing is deleted (ADR-0024). |
+| Submitted | รออนุมัติ | A purchase order handed in for approval. No longer editable. One at or below the approval threshold is approved automatically at this moment. |
+| Approved automatically | อนุมัติอัตโนมัติ | A purchase order whose gross total was at or below the approval threshold when it was submitted. Recorded with the threshold that applied. |
+| Sent | ส่งซัพพลายเออร์แล้ว | A purchase order the purchasing officer has marked as sent to its supplier. Goods receipts receive against it (#11). |
+| Rejected | ไม่อนุมัติ | A purchase order an approver turned down, with a reason. Final: a new order is raised if one is still needed. |
+| Net, VAT and gross | ยอดก่อน VAT, VAT และยอดรวม VAT | A purchase order line's amounts: net = quantity × price per purchase unit, VAT = net × rate, gross = net + VAT, each rounded once to 2 decimals. The order's totals are the sums of its lines (ADR-0024). |
+| Recoverable VAT | VAT ที่ขอคืนได้ | Input VAT the chain claims back. It is not a cost, so it is left out of the cost per base unit; VAT that is not recoverable is part of the cost. |
+| Cost per base unit | ต้นทุนต่อหน่วยฐาน | What one base unit of a purchase order line costs: price ÷ conversion factor, net of recoverable VAT, rounded once to 6 decimals. Goods receipts set lot cost from it (ADR-0004, ADR-0024). |
 | Goods receipt (GRN) | ใบรับสินค้า | Receiving supplier goods into a location, creating lots. |
 | Return to supplier | ใบส่งคืนสินค้า | Sending rejected or defective goods back to a supplier. |
 | Production order | ใบสั่งผลิต | Consumes input lots and produces output lots at a plant. |
@@ -195,7 +202,7 @@ What branches sell, kept in the ERP and mirrored by the POS (ADR-0002, ADR-0023)
 | Demo installation | ระบบเดโม | An installation started with `ERP_DEMO=1`: the only kind where the demo seed runs and demo accounts sign in. Says so in the log at every start and on every console screen. Without the flag, a production API refuses to start while a demo account is enabled. |
 | Public demo | เดโมสาธารณะ | The console built with an in-browser demo API and published on GitHub Pages (ADR-0021): the demo chain, held in the visitor's browser for one visit, with no server and no database, answered by the backend's own rules. Covers the screens that existed when it was published; a screen it does not serve says so. Not an installation: nothing is kept, and a reload starts again. |
 | Product page | หน้าแนะนำผลิตภัณฑ์ | The static page at `/PaynEat-ERP/about/`, in English and Thai, that presents what works today problem by problem, with screenshots of the public demo (#45). Generated from `docs/landing/content.mjs` together with the README section "The problems it solves today"; it claims nothing `main` cannot do. |
-| Approval threshold | เกณฑ์วงเงินที่ต้องอนุมัติ | The document value above which a second person must approve. Configuration, not code. |
+| Approval threshold | เกณฑ์วงเงินที่ต้องอนุมัติ | The document value above which a second person must approve. Configuration, not code. For purchase orders: a company setting `admin` maintains, compared with the gross total; 0 until first saved, so every order waits for an approver (ADR-0024). |
 | Segregation of duties | การแยกหน้าที่ | Nobody approves a document they created, whatever roles they hold. |
 
 ## Editions · รุ่นของระบบ
