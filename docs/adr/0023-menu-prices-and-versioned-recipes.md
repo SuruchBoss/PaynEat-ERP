@@ -1,6 +1,6 @@
 # ADR-0023: Menu prices and recipes start on a business date, and never change once in force
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-02
 - **ภาษาไทย:** [0023-menu-prices-and-versioned-recipes.th.md](0023-menu-prices-and-versioned-recipes.th.md)
 

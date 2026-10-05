@@ -1,6 +1,6 @@
 # ADR-0023: ราคาและสูตรของเมนูเริ่มมีผลตามวันที่ทางธุรกิจ และไม่เปลี่ยนอีกเมื่อมีผลแล้ว
 
-- **สถานะ:** Proposed
+- **สถานะ:** ยอมรับแล้ว
 - **วันที่:** 2026-10-02
 - **English:** [0023-menu-prices-and-versioned-recipes.md](0023-menu-prices-and-versioned-recipes.md)
 
