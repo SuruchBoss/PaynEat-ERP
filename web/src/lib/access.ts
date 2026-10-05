@@ -42,6 +42,14 @@ export const Permission = {
   MENU_READ: 'menu:read',
   /** Change menu items, prices, modifiers and recipe versions: the admin (#16). */
   MENU_MANAGE: 'menu:manage',
+  /** Read purchase orders: purchasing, purchasing approvers and finance (#10). */
+  PURCHASE_ORDER_READ: 'purchase_order:read',
+  /** Draft, edit, submit, mark sent and cancel purchase orders: purchasing (#10). */
+  PURCHASE_ORDER_RAISE: 'purchase_order:raise',
+  /** Approve or reject them: purchasing approvers, never on one they created (#10). */
+  PURCHASE_ORDER_APPROVE: 'purchase_order:approve',
+  /** Change the company's settings, such as the purchase approval threshold: the admin (#10). */
+  COMPANY_SETTINGS_MANAGE: 'company_settings:manage',
 } as const;
 
 export type PermissionKey = (typeof Permission)[keyof typeof Permission];

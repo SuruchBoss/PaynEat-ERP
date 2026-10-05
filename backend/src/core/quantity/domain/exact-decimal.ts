@@ -80,6 +80,23 @@ export function roundHalfAwayFromZero(value: ExactDecimal, places: number): Exac
   return { units: value.units < 0n ? -rounded : rounded, scale: places };
 }
 
+/**
+ * `a / b` rounded once to `places` decimals, half away from zero — the same rule as
+ * `roundHalfAwayFromZero`, applied to the exact quotient rather than to a rounded one, so
+ * 100 / 3 to 2 places is 33.33 and 2 / 3 is 0.67. Dividing by zero is a programming error.
+ */
+export function divideRounded(a: ExactDecimal, b: ExactDecimal, places: number): ExactDecimal {
+  if (b.units === 0n) throw new RangeError('Division by zero');
+  const numerator = a.units * 10n ** BigInt(places + b.scale);
+  const denominator = b.units * 10n ** BigInt(a.scale);
+  const magnitudeN = abs(numerator);
+  const magnitudeD = abs(denominator);
+  let quotient = magnitudeN / magnitudeD;
+  if ((magnitudeN % magnitudeD) * 2n >= magnitudeD) quotient += 1n;
+  const negative = numerator < 0n !== denominator < 0n;
+  return { units: negative ? -quotient : quotient, scale: places };
+}
+
 /** Exactly `places` decimals: `format({ units: 216n, scale: 1 }, 3)` is "21.600". */
 export function formatFixed(value: ExactDecimal, places: number): string {
   const { units } = roundHalfAwayFromZero(value, places);

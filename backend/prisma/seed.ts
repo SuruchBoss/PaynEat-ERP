@@ -42,6 +42,8 @@ import {
   DEMO_SUPPLIERS,
   DEMO_USERS,
   DEMO_WRITE_OFF,
+  DEMO_PURCHASE_APPROVAL_THRESHOLD,
+  DEMO_PURCHASE_ORDERS,
   type DemoRecipeVersion,
 } from './demo-data';
 
@@ -341,7 +343,10 @@ async function seedSuppliers(prisma: PrismaClient): Promise<void> {
 }
 
 /** A demo user as the services see the person acting. */
-async function demoActor(prisma: PrismaClient, role: 'plant' | 'finance') {
+async function demoActor(
+  prisma: PrismaClient,
+  role: 'plant' | 'finance' | 'admin' | 'purchasing' | 'purchasing_approver',
+) {
   const user = await prisma.user.findUniqueOrThrow({
     where: { email: DEMO_USERS.find((u) => u.role === role)!.email },
   });
@@ -444,6 +449,77 @@ async function seedWriteOff(prisma: PrismaClient): Promise<string | null> {
     throw new Error(`The demo write-off was not posted: ${approved.postingRefusal.message}`);
   }
   return `${approved.number} (lot ${lot.number}, ${DEMO_WRITE_OFF.quantity} kg, value ${approved.totalValue})`;
+}
+
+/**
+ * The demo company's purchase approval threshold (#10), set by the admin through the same
+ * service the API runs, unless an evaluator has already set one. Returns the threshold in force.
+ */
+async function seedApprovalThreshold(prisma: PrismaClient): Promise<string> {
+  const { company } = ledgerServices(prisma, { quiet: true });
+  const current = await company.settings();
+  if (current.revision > 0) return current.purchaseApprovalThreshold;
+  const admin = await demoActor(prisma, 'admin');
+  const saved = await company.updateSettings(
+    { revision: 0, purchaseApprovalThreshold: DEMO_PURCHASE_APPROVAL_THRESHOLD },
+    admin,
+    {},
+  );
+  return saved.purchaseApprovalThreshold;
+}
+
+/**
+ * The demo purchase orders (#10), raised by the purchasing user through the same service the API
+ * runs: submitted, approved by the purchasing approver when above the threshold — never by the
+ * person who raised it (ADR-0008) — and marked sent, or left as a draft. Once: if any purchase
+ * order exists they are left as they are. Returns their numbers and statuses.
+ */
+async function seedPurchaseOrders(prisma: PrismaClient): Promise<string[]> {
+  if (await prisma.purchaseOrder.findFirst()) return [];
+  const { purchaseOrders, ledger } = ledgerServices(prisma, { quiet: true });
+  const raiser = await demoActor(prisma, 'purchasing');
+  const approver = await demoActor(prisma, 'purchasing_approver');
+  const today = ledger.today();
+  const written: string[] = [];
+  for (const demo of DEMO_PURCHASE_ORDERS) {
+    const supplier = await prisma.supplier.findUniqueOrThrow({
+      where: { code: demo.supplierCode },
+    });
+    const location = await prisma.location.findUniqueOrThrow({
+      where: { code: demo.locationCode },
+    });
+    const items = await prisma.item.findMany({
+      where: { code: { in: demo.lines.map((l) => l.itemCode) } },
+    });
+    let order = await purchaseOrders.create(
+      {
+        supplierId: supplier.id,
+        deliveryLocationId: location.id,
+        expectedDeliveryDate: addDays(today, demo.deliveryInDays),
+        note: demo.note,
+        lines: demo.lines.map(({ itemCode, ...line }) => ({
+          ...line,
+          itemId: items.find((i) => i.code === itemCode)!.id,
+        })),
+      },
+      raiser,
+      {},
+    );
+    if (demo.until === 'sent') {
+      order = await purchaseOrders.submit(order.id, { revision: order.revision }, raiser, {});
+      if (order.status === 'submitted') {
+        order = await purchaseOrders.approve(order.id, { revision: order.revision }, approver, {});
+      }
+      order = await purchaseOrders.send(order.id, { revision: order.revision }, raiser, {});
+    }
+    const how = order.approved?.automatically
+      ? ', approved automatically'
+      : order.approved
+        ? `, approved by ${order.approved.by?.displayName}`
+        : '';
+    written.push(`${order.number} ${order.status}${how}, gross ${order.totals.gross}`);
+  }
+  return written;
 }
 
 /**
@@ -744,6 +820,14 @@ async function main(): Promise<void> {
       writeOff
         ? `Demo write-off approved and posted at ${DEMO_WRITE_OFF.locationCode}: ${writeOff}`
         : `Demo write-off at ${DEMO_WRITE_OFF.locationCode}: already there, left as it is`,
+    );
+    const threshold = await seedApprovalThreshold(prisma);
+    console.log(`Demo purchase approval threshold: ${threshold}`);
+    const orders = await seedPurchaseOrders(prisma);
+    console.log(
+      orders.length > 0
+        ? `Demo purchase orders: ${orders.join('; ')}`
+        : 'Demo purchase orders: already there, left as they are',
     );
     console.log(`\nDemo accounts (password for all: ${DEMO_PASSWORD}):`);
     for (const demo of DEMO_USERS) {

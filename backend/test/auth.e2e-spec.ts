@@ -85,7 +85,7 @@ describe('signing in', () => {
         user: {
           email: PURCHASING,
           roles: ['purchasing'],
-          permissions: ['supplier:manage'],
+          permissions: ['supplier:manage', 'purchase_order:read', 'purchase_order:raise'],
           mfaEnabled: false,
         },
       });
@@ -237,6 +237,7 @@ describe('signing in', () => {
           'pos_instance:manage',
           'menu:read',
           'menu:manage',
+          'company_settings:manage',
         ],
         mfaEnabled: true,
       });

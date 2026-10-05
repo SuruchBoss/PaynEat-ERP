@@ -5,7 +5,6 @@ import {
   lineProblem,
   locationProblem,
   postingRefusal,
-  segregationProblem,
   stepAllowed,
   type AdjustmentStatus,
   type LineInput,
@@ -95,13 +94,6 @@ describe('stock-adjustment rules', () => {
 
     it.each(allowed)('a %s document can take exactly %j', (status, expected) => {
       expect(steps.filter((step) => stepAllowed(status, step))).toEqual(expected);
-    });
-  });
-
-  describe('segregation of duties (ADR-0008)', () => {
-    it('refuses the creator, whatever roles they hold, and lets anyone else approve', () => {
-      expect(segregationProblem({ createdById: 'u-plant' }, 'u-plant')).toBe('self_approval');
-      expect(segregationProblem({ createdById: 'u-plant' }, 'u-finance')).toBeNull();
     });
   });
 

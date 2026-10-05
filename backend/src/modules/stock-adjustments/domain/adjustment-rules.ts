@@ -117,17 +117,6 @@ export function stepAllowed(status: AdjustmentStatus, step: Step): boolean {
   return STEP_FROM[step].includes(status);
 }
 
-/**
- * Nobody approves a document they created, whatever roles they hold (ADR-0008 decision 3). The
- * service calls this on every approval; the console only mirrors it.
- */
-export function segregationProblem(
-  document: { createdById: string },
-  approverId: string,
-): 'self_approval' | null {
-  return document.createdById === approverId ? 'self_approval' : null;
-}
-
 export interface PostingCandidate {
   businessDate: string;
   location: { active: boolean };

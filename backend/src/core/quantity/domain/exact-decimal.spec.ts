@@ -4,6 +4,7 @@
 import {
   add,
   decimalPlaces,
+  divideRounded,
   formatFixed,
   formatMinimal,
   integerDigits,
@@ -91,5 +92,25 @@ describe('exact decimals', () => {
     expect(formatMinimal(add(ZERO, d('-3')))).toBe('-3');
     expect(formatMinimal(negate(d('12.5')))).toBe('-12.5');
     expect(formatMinimal(negate(negate(d('-0.013'))))).toBe('-0.013');
+  });
+
+  it.each([
+    ['100', '3', 2, '33.33'],
+    ['2', '3', 2, '0.67'],
+    ['1', '8', 2, '0.13'],
+    ['-1', '8', 2, '-0.13'],
+    ['1', '-8', 2, '-0.13'],
+    ['1284', '20', 6, '64.200000'],
+    ['1373.88', '20', 6, '68.694000'],
+    ['850', '25', 6, '34.000000'],
+    ['0.000001', '3', 6, '0.000000'],
+    ['0.000002', '3', 6, '0.000001'],
+    ['10', '0.25', 2, '40.00'],
+  ])('divides %s by %s, rounded once to %i places half away from zero: %s', (a, b, p, out) => {
+    expect(formatFixed(divideRounded(d(a), d(b), p), p)).toBe(out);
+  });
+
+  it('refuses to divide by zero', () => {
+    expect(() => divideRounded(d('1'), d('0.000'), 2)).toThrow(RangeError);
   });
 });

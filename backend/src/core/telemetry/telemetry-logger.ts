@@ -71,6 +71,7 @@ export class TelemetryLogger implements LoggerService {
         labels: {
           ...(context?.locationCode ? { location_code: context.locationCode } : {}),
           ...(context?.posInstance ? { pos_instance: context.posInstance } : {}),
+          ...(context?.documentNumber ? { document_number: context.documentNumber } : {}),
           ...options.labels,
           app: APP_NAME,
           event: options.event,

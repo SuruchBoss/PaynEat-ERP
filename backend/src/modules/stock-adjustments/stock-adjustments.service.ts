@@ -8,6 +8,7 @@ import type { ClientMeta } from '../../core/http/client-meta';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { formatQuantity, stockValue, sumValues } from '../../core/quantity/domain/stock-value';
 import type { AuthenticatedUser } from '../../core/security/current-user';
+import { segregationProblem } from '../../core/security/domain/segregation-of-duties';
 import { labelRequestLocation } from '../../core/telemetry/request-context';
 import { TelemetryLogger } from '../../core/telemetry/telemetry-logger';
 import { AuditAction, AuditService } from '../audit/audit.service';
@@ -24,7 +25,6 @@ import {
   lineProblem,
   locationProblem,
   postingRefusal,
-  segregationProblem,
   stepAllowed,
   type AdjustmentStatus,
   type Refusal,

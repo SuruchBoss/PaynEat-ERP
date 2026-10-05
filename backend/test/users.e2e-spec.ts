@@ -131,12 +131,18 @@ describe('user administration', () => {
         'pos_instance:manage',
         'menu:read',
         'menu:manage',
+        'company_settings:manage',
       ],
       requiresSecondFactor: true,
     });
     expect(res.body[1]).toEqual({
       key: 'purchasing',
-      permissions: ['supplier:manage'],
+      permissions: ['supplier:manage', 'purchase_order:read', 'purchase_order:raise'],
+      requiresSecondFactor: false,
+    });
+    expect(res.body[2]).toEqual({
+      key: 'purchasing_approver',
+      permissions: ['purchase_order:read', 'purchase_order:approve'],
       requiresSecondFactor: false,
     });
     expect(res.body[3]).toEqual({
@@ -151,11 +157,19 @@ describe('user administration', () => {
     });
     expect(res.body[6]).toEqual({
       key: 'finance',
-      permissions: ['stock_adjustment:approve', 'menu:read'],
+      permissions: ['stock_adjustment:approve', 'menu:read', 'purchase_order:read'],
       requiresSecondFactor: false,
     });
     for (const role of res.body.filter(
-      (r: Body) => !['admin', 'purchasing', 'plant', 'branch_manager', 'finance'].includes(r.key),
+      (r: Body) =>
+        ![
+          'admin',
+          'purchasing',
+          'purchasing_approver',
+          'plant',
+          'branch_manager',
+          'finance',
+        ].includes(r.key),
     )) {
       expect(role).toMatchObject({ permissions: [], requiresSecondFactor: false });
     }

@@ -16,3 +16,21 @@ model Company {
 
   @@map("companies")
 }
+
+/// The company's settings (#10): configuration the admin maintains, never constants in code
+/// (ADR-0008). At most one row, like `companies`; until the admin saves them the defaults below
+/// apply. A separate table, so an installation can be configured before its company is recorded.
+model CompanySettings {
+  singleton                 Boolean  @id @default(true)
+  /// Purchase orders whose gross total is above this need a purchasing approver; at or below it,
+  /// submitting approves them (ADR-0024). Zero sends every order to an approver, which is where a
+  /// new installation starts until the admin sets it.
+  purchaseApprovalThreshold Decimal  @default(0) @map("purchase_approval_threshold") @db.Decimal(18, 2)
+  /// Bumped by every save: a change made from an older one is refused.
+  revision                  Int      @default(1)
+  updatedById               String   @map("updated_by_id") @db.Uuid
+  updatedBy                 User     @relation("CompanySettingsUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  updatedAt                 DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("company_settings")
+}

@@ -53,6 +53,17 @@ export interface ItemFacts {
   baseUnitDecimals: number;
 }
 
+/** A unit an item is bought in (#10): how many base units one holds, and its own decimals. */
+export interface PurchaseUnitFacts {
+  unitCode: string;
+  nameTh: string;
+  nameEn: string;
+  /** Base units in one purchase unit, as an exact decimal string. */
+  factor: string;
+  /** Decimals a quantity in this unit keeps (ADR-0019): 0 for a case. */
+  decimals: number;
+}
+
 /**
  * The item master (#5, ADR-0005): what the company stocks, in which base unit, bought in
  * which purchase units. Every create and update commits together with its master data
@@ -119,6 +130,43 @@ export class ItemsService {
     });
     return new Map(
       rows.map(({ baseUnit, ...row }) => [row.id, { ...row, baseUnitDecimals: baseUnit.decimals }]),
+    );
+  }
+
+  /**
+   * The units each of these items is bought in today, keyed by item id; an item bought in none
+   * maps to an empty list, an unknown id is absent. Pass the caller's transaction to read inside it.
+   */
+  async purchaseUnits(
+    itemIds: readonly string[],
+    tx: Prisma.TransactionClient = this.prisma,
+  ): Promise<Map<string, PurchaseUnitFacts[]>> {
+    if (itemIds.length === 0) return new Map();
+    const rows = await tx.item.findMany({
+      where: { id: { in: [...new Set(itemIds)] } },
+      select: {
+        id: true,
+        purchaseUnits: {
+          select: {
+            unitCode: true,
+            factor: true,
+            unit: { select: { nameTh: true, nameEn: true, decimals: true } },
+          },
+          orderBy: { unitCode: 'asc' },
+        },
+      },
+    });
+    return new Map(
+      rows.map((row) => [
+        row.id,
+        row.purchaseUnits.map((p) => ({
+          unitCode: p.unitCode,
+          nameTh: p.unit.nameTh,
+          nameEn: p.unit.nameEn,
+          factor: p.factor.toFixed(),
+          decimals: p.unit.decimals,
+        })),
+      ]),
     );
   }
 

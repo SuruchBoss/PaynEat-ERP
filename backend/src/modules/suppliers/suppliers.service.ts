@@ -33,6 +33,15 @@ const SUPPLIER_SELECT = {
 
 type SupplierRow = Prisma.SupplierGetPayload<{ select: typeof SUPPLIER_SELECT }>;
 
+/** What another module needs to know about a supplier to order from it (#10). */
+export interface SupplierFacts {
+  id: string;
+  code: string;
+  name: string;
+  taxId: string;
+  active: boolean;
+}
+
 const EDITABLE = ['name', 'taxId', 'contactName', 'phone', 'email', 'address', 'active'] as const;
 type Editable = (typeof EDITABLE)[number];
 
@@ -55,6 +64,22 @@ export class SuppliersService {
       orderBy: { code: 'asc' },
     });
     return rows;
+  }
+
+  /**
+   * The facts other modules need about these suppliers, keyed by id; unknown ids are absent.
+   * Pass the caller's transaction to read inside it.
+   */
+  async describe(
+    ids: readonly string[],
+    tx: Prisma.TransactionClient = this.prisma,
+  ): Promise<Map<string, SupplierFacts>> {
+    if (ids.length === 0) return new Map();
+    const rows = await tx.supplier.findMany({
+      where: { id: { in: [...new Set(ids)] } },
+      select: { id: true, code: true, name: true, taxId: true, active: true },
+    });
+    return new Map(rows.map((row) => [row.id, row]));
   }
 
   async get(id: string): Promise<SupplierView> {
