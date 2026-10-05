@@ -37,18 +37,30 @@ export const ADMIN: SessionUser = {
     'supplier:manage',
     'menu:read',
     'menu:manage',
+    'company_settings:manage',
   ],
   mfaEnabled: true,
 };
 
-/** Purchasing: manages suppliers, and nothing else yet (#6). */
+/** Purchasing: manages suppliers (#6), and drafts, submits, sends and cancels purchase orders (#10). */
 export const PURCHASING: SessionUser = {
   id: '6c1d0a52-6d8e-4c52-9a55-3d7f0b3a0003',
   email: 'purchasing@demo-chicken.example',
   displayName: 'Demo purchasing',
   locale: 'th',
   roles: ['purchasing'],
-  permissions: ['supplier:manage'],
+  permissions: ['supplier:manage', 'purchase_order:read', 'purchase_order:raise'],
+  mfaEnabled: false,
+};
+
+/** A purchasing approver: reads purchase orders and approves or rejects them (#10). */
+export const PO_APPROVER: SessionUser = {
+  id: '6c1d0a52-6d8e-4c52-9a55-3d7f0b3a0005',
+  email: 'purchasing-approver@demo-chicken.example',
+  displayName: 'Demo purchasing approver',
+  locale: 'th',
+  roles: ['purchasing_approver'],
+  permissions: ['purchase_order:read', 'purchase_order:approve'],
   mfaEnabled: false,
 };
 

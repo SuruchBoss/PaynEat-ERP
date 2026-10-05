@@ -20,7 +20,9 @@ export type IconName =
   | 'scale'
   | 'layers'
   | 'utensils'
-  | 'sliders';
+  | 'sliders'
+  | 'cart'
+  | 'gear';
 
 const PATHS: Record<IconName, string> = {
   // System status: a heartbeat line.
@@ -48,6 +50,10 @@ const PATHS: Record<IconName, string> = {
   utensils: 'M7 3v7M5 3v5a2 2 0 0 0 4 0V3M7 10v11M17 3c-2 1-3 3.5-3 6.5V13h3M17 3v18',
   // Modifiers (#16): sliders, a choice set on each line.
   sliders: 'M4 7h10M18 7h2M16 5v4M4 17h4M12 17h8M10 15v4',
+  // Purchase orders (#10): a shopping cart.
+  cart: 'M3 4h2l2.4 11h10.2L20 8H6.2M9 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2ZM17 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z',
+  // Company settings (#10): a cog.
+  gear: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2Z',
 };
 
 export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {

@@ -48,4 +48,8 @@ export const qk = {
   menuItem: (id: string) => ['menu-items', id] as const,
   modifierGroups: ['modifier-groups'] as const,
   recipe: (kind: 'menu' | 'modifier', id: string) => ['recipe', kind, id] as const,
+  purchaseOrders: ['purchase-orders'] as const,
+  purchaseOrderList: (status: string) => ['purchase-orders', 'list', status] as const,
+  purchaseOrder: (id: string) => ['purchase-orders', id] as const,
+  companySettings: ['company-settings'] as const,
 };
