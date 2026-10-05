@@ -69,12 +69,18 @@ export function newVersionProblem(
 export interface PricePoint extends Dated {
   /** The branch's location code, or null for the price every branch uses by default. */
   locationCode: string | null;
+  /**
+   * The price, in whatever form the caller keeps it. Null only on a branch row: from its day
+   * the branch charges the chain-wide price again (ADR-0023).
+   */
+  price: unknown;
 }
 
 /**
- * The price a branch charges on `date`: its own override in force then, else the
- * chain-wide price in force then. A branch override is never mixed with a later
- * chain-wide change: the branch's own price wins for as long as one is in force.
+ * The price a branch charges on `date`: its own price in force then, else the chain-wide
+ * price in force then. A branch's own price wins over a later chain-wide change for as long
+ * as it is in force; a branch row without a price ends it, and from that day the branch
+ * follows the chain-wide price again, including chain-wide changes made since.
  */
 export function priceInEffect<T extends PricePoint>(
   prices: readonly T[],
@@ -86,7 +92,7 @@ export function priceInEffect<T extends PricePoint>(
       prices.filter((p) => p.locationCode === locationCode),
       date,
     );
-    if (own) return own;
+    if (own && own.price !== null) return own;
   }
   return recipeInEffect(
     prices.filter((p) => p.locationCode === null),

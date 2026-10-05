@@ -12,7 +12,7 @@ import { AuditService } from '../audit/audit.service';
 import { LedgerService } from '../ledger/ledger.service';
 import { LocationsService } from '../locations/locations.service';
 import { MasterDataService } from '../master-data/master-data.service';
-import { moneyProblem, normalise, priceInEffect } from './domain/recipe-rules';
+import { moneyProblem, normalise, priceInEffect, recipeInEffect } from './domain/recipe-rules';
 import type {
   CreateMenuItemDto,
   MenuItemDetailView,
@@ -225,7 +225,14 @@ export class MenuItemsService {
         },
       );
     }
-    const problem = moneyProblem(dto.price, false);
+    if (dto.price === null && !dto.locationId) {
+      throw new BusinessRuleError(
+        'CHAIN_PRICE_REQUIRED',
+        'The chain-wide price always has a price: only a branch can return to the chain-wide price',
+        { field: 'price' },
+      );
+    }
+    const problem = dto.price === null ? null : moneyProblem(dto.price, false);
     if (problem) {
       throw new BusinessRuleError('INVALID_PRICE', `price is ${problem.replaceAll('_', ' ')}`, {
         field: 'price',
@@ -241,7 +248,7 @@ export class MenuItemsService {
       );
     }
     const branch = dto.locationId ? await this.branch(dto.locationId) : null;
-    const price = normalise(dto.price);
+    const price = dto.price === null ? null : normalise(dto.price);
 
     await this.prisma.$transaction(async (tx) => {
       const item = await this.lockItem(tx, menuItemId);
@@ -260,7 +267,7 @@ export class MenuItemsService {
           { priceId: existing.id },
         );
       }
-      if (existing && normalise(existing.price.toFixed()) === price) return;
+      if (existing && priceText(existing.price) === price) return;
 
       const version = await this.masterData.nextVersion(tx);
       const row = existing
@@ -288,16 +295,17 @@ export class MenuItemsService {
         data: { ...priceSnapshot(item.code, row), version: Number(row.version) },
       });
       const where = branch ? `at ${branch.code}` : 'chain-wide';
+      const what = price === null ? 'the chain-wide price again' : `${price} baht`;
       await this.audit.recordWithin(tx, {
         actorUserId: actor.userId,
         action: existing ? AuditAction.UPDATE : AuditAction.CREATE,
         entityType: 'MenuPrice',
         entityId: row.id,
         summary: existing
-          ? `Corrected the ${where} price of ${item.code} from ${dto.effectiveFrom}: ${price} baht`
-          : `Set the ${where} price of ${item.code} from ${dto.effectiveFrom}: ${price} baht`,
+          ? `Corrected the ${where} price of ${item.code} from ${dto.effectiveFrom}: ${what}`
+          : `Set the ${where} price of ${item.code} from ${dto.effectiveFrom}: ${what}`,
         changes: existing
-          ? { price: { from: normalise(existing.price.toFixed()), to: price } }
+          ? { price: { from: priceText(existing.price), to: price } }
           : priceSnapshot(item.code, row),
         ...meta,
       });
@@ -406,7 +414,7 @@ function toView(item: MenuItemRow, prices: PriceRow[], today: string): MenuItemV
     soldBy: item.soldBy,
     active: item.active,
     modifierGroups: item.modifierGroups.map((g) => g.group),
-    currentPrice: current ? normalise(current.price.toFixed()) : null,
+    currentPrice: current ? priceText(current.price) : null,
     version: Number(item.version),
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
@@ -421,8 +429,12 @@ function priceViews(prices: PriceRow[], today: string): MenuPriceView[] {
   }));
   return dated
     .map(({ row, locationCode, effectiveFrom }) => {
-      const sameScope = dated.filter((d) => d.locationCode === locationCode);
-      const inForce = priceInEffect(sameScope, locationCode, today);
+      // The row in force within its own scope: a branch's return to the chain price is
+      // "current" while it is the branch's latest row, even though the chain price is charged.
+      const inForce = recipeInEffect(
+        dated.filter((d) => d.locationCode === locationCode),
+        today,
+      );
       const status: MenuPriceView['status'] =
         compareDates(effectiveFrom, today) > 0
           ? 'scheduled'
@@ -433,7 +445,7 @@ function priceViews(prices: PriceRow[], today: string): MenuPriceView[] {
         id: row.id,
         location: row.location,
         effectiveFrom,
-        price: normalise(row.price.toFixed()),
+        price: priceText(row.price),
         status,
         version: Number(row.version),
       };
@@ -470,8 +482,13 @@ function priceSnapshot(menuItemCode: string, row: PriceRow) {
     menuItemCode,
     locationCode: row.location?.code ?? null,
     effectiveFrom: dateText(row.effectiveFrom),
-    price: normalise(row.price.toFixed()),
+    price: priceText(row.price),
   };
+}
+
+/** A price as the API and the change log carry it: a decimal string, or null for a return. */
+function priceText(price: Prisma.Decimal | null): string | null {
+  return price === null ? null : normalise(price.toFixed());
 }
 
 type Changes = Record<string, { from: unknown; to: unknown }>;

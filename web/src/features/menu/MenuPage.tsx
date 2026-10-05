@@ -57,6 +57,7 @@ const PRICE_ERRORS: Record<string, MessageKey> = {
   INVALID_PRICE: 'menu.price.error.invalid',
   PRICE_IN_EFFECT: 'menu.price.error.inEffect',
   NOT_A_BRANCH: 'menu.price.error.notABranch',
+  CHAIN_PRICE_REQUIRED: 'menu.price.error.chainRequired',
   INVALID_DATE: 'menu.price.error.date',
   VALIDATION_FAILED: 'menu.price.error.invalid',
 };
@@ -359,15 +360,23 @@ function Prices({ item, canManage }: { item: MenuItemDetailView; canManage: bool
   const [scope, setScope] = useState('');
   const [effectiveFrom, setEffectiveFrom] = useState('');
   const [price, setPrice] = useState('');
+  // A branch can end its own price and charge the chain-wide price again (ADR-0023).
+  const [backToChain, setBackToChain] = useState(false);
+  const returning = backToChain && scope !== '';
 
   const save = useMutation({
     mutationFn: () =>
-      setMenuPrice(item.id, { locationId: scope || null, effectiveFrom, price: price.trim() }),
+      setMenuPrice(item.id, {
+        locationId: scope || null,
+        effectiveFrom,
+        price: returning ? null : price.trim(),
+      }),
     onSuccess: async (saved) => {
       queryClient.setQueryData(qk.menuItem(item.id), saved);
       await queryClient.invalidateQueries({ queryKey: qk.menuItems, exact: true });
       setPrice('');
       setEffectiveFrom('');
+      setBackToChain(false);
     },
   });
 
@@ -414,7 +423,9 @@ function Prices({ item, canManage }: { item: MenuItemDetailView; canManage: bool
                     {formatBusinessDate(p.effectiveFrom, language)}
                   </td>
                   <td className="numeric" data-label={t('menu.prices.column.price')}>
-                    {t(unit, { price: groupDigits(p.price) })}
+                    {p.price === null
+                      ? t('menu.prices.backToChain')
+                      : t(unit, { price: groupDigits(p.price) })}
                   </td>
                   <td data-label={t('menu.prices.column.status')}>
                     <span className={`badge badge--${TIMING[p.status].tone}`}>
@@ -444,7 +455,10 @@ function Prices({ item, canManage }: { item: MenuItemDetailView; canManage: bool
               <select
                 id={`${formId}-scope`}
                 value={scope}
-                onChange={(e) => setScope(e.target.value)}
+                onChange={(e) => {
+                  setScope(e.target.value);
+                  if (e.target.value === '') setBackToChain(false);
+                }}
               >
                 <option value="">{t('menu.prices.chainWide')}</option>
                 {branches.map((b) => (
@@ -467,20 +481,39 @@ function Prices({ item, canManage }: { item: MenuItemDetailView; canManage: bool
                 {t('menu.price.fromHint')}
               </p>
             </div>
-            <div className="field">
-              <label htmlFor={`${formId}-price`}>
-                {t(item.soldBy === 'weight' ? 'menu.price.amountPerKg' : 'menu.price.amount')}
-              </label>
-              <input
-                id={`${formId}-price`}
-                required
-                inputMode="decimal"
-                autoComplete="off"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-              />
-            </div>
+            {!returning && (
+              <div className="field">
+                <label htmlFor={`${formId}-price`}>
+                  {t(item.soldBy === 'weight' ? 'menu.price.amountPerKg' : 'menu.price.amount')}
+                </label>
+                <input
+                  id={`${formId}-price`}
+                  required
+                  inputMode="decimal"
+                  autoComplete="off"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                />
+              </div>
+            )}
           </div>
+          {scope !== '' && (
+            <>
+              <div className="check-field">
+                <input
+                  id={`${formId}-back`}
+                  type="checkbox"
+                  checked={backToChain}
+                  aria-describedby={`${formId}-back-hint`}
+                  onChange={(e) => setBackToChain(e.target.checked)}
+                />
+                <label htmlFor={`${formId}-back`}>{t('menu.price.backToChain')}</label>
+              </div>
+              <p id={`${formId}-back-hint`} className="subtle">
+                {t('menu.price.backToChainHint')}
+              </p>
+            </>
+          )}
           {save.isError && (
             <ErrorCallout error={save.error} messages={PRICE_ERRORS} describe={describe} />
           )}

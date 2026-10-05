@@ -46,10 +46,17 @@ Each of these changes the numbers a stock report or a POS shows.
      day that has passed.
    - Nothing on the menu is ever deleted: menu items, groups and options are deactivated, and the database
      refuses deletes.
-4. **A branch's own price wins at that branch for as long as it is in force.**
+4. **A branch's own price wins at that branch for as long as it is in force, and it can end.**
    - On a given day a branch charges its own price in force that day if it has one, else the chain-wide
      price in force that day.
    - A later chain-wide change does not override a branch price that is still in force.
+   - A branch's own price ends with a branch price row that has no price (`price: null`): from its day the
+     branch charges the chain-wide price in force again, including chain-wide changes that start later,
+     until the branch gets a price of its own again. Without it, a branch that once had its own price could
+     only follow the chain by having a matching price re-entered after every chain-wide change.
+   - Such a return is a price row like any other: it starts today or later, can be corrected only before its
+     day, and is never deleted. The chain-wide price always has a price (`CHAIN_PRICE_REQUIRED`); the
+     database and the contract schema both refuse a chain-wide row without one.
    - Prices are the selling price as the POS shows it; tax stays in the POS.
 5. **A modifier recipe is per one unit sold of the line it is on**, and may remove an item (a quantity below
    zero, "no sauce"). Theoretical usage of a sale line is:
@@ -82,6 +89,8 @@ Each of these changes the numbers a stock report or a POS shows.
   accepted. The alternative would change usage that has already been reported.
 - The demo seed writes yesterday's prices and recipes directly, because a script may write history. The API
   never backdates.
+- A POS stores a return like any other price row and applies the same rule (contract 1.1 prose, "Prices").
+  Because it is in 1.1 from the start, no POS keeps charging an ended branch price without knowing it.
 
 ## Alternatives considered
 
@@ -92,5 +101,10 @@ Each of these changes the numbers a stock report or a POS shows.
 - **Weighted average cost of all lots on hand for the theoretical cost.** Rejected for v1: it is a cost the
   ledger never posts. The next FEFO lot is the cost the next sale will most likely carry, and it can be
   checked by hand against stock on hand.
+- **A branch price that can never end.** Rejected (product owner, 2026-10-05): a branch that once set its
+  own price would never follow a chain-wide change again, and adding a way to end it in a later contract
+  version would leave a 1.1 POS charging the old branch price without saying so.
+- **Ending a branch price by deleting its rows.** Rejected: nothing on the menu is deleted (decision 3), and
+  the POS must still know what the branch charged before.
 - **Opening the menu to everyone signed in, like items.** Rejected: recipes and costs are what a competitor
   would most like to see. The plant and purchasing roles have no need for them.

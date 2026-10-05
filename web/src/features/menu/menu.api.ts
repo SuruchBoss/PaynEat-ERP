@@ -19,7 +19,8 @@ export interface MenuPriceView {
   /** Null for the chain-wide price. */
   location: Ref | null;
   effectiveFrom: string;
-  price: string;
+  /** Null when a branch returns to the chain-wide price from `effectiveFrom` (ADR-0023). */
+  price: string | null;
   status: Timing;
   version: number;
 }
@@ -62,7 +63,8 @@ export interface NewPrice {
   /** A branch, or null for the chain-wide price. */
   locationId: string | null;
   effectiveFrom: string;
-  price: string;
+  /** Null only with a branch: from `effectiveFrom` the branch charges the chain-wide price again. */
+  price: string | null;
 }
 
 export interface ModifierOptionView {

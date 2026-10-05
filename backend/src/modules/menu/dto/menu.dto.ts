@@ -17,6 +17,7 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 
@@ -158,10 +159,14 @@ export class SetMenuPriceDto {
   @IsString()
   effectiveFrom!: string;
 
-  /** Baht as the POS shows it, a decimal string with satang at most ("59", "59.50"). */
+  /**
+   * Baht as the POS shows it, a decimal string with satang at most ("59", "59.50"). Null only
+   * for a branch: from `effectiveFrom` the branch charges the chain-wide price again (ADR-0023).
+   */
+  @ValidateIf((dto: SetMenuPriceDto) => dto.price !== null)
   @IsString()
   @Transform(trimmed)
-  price!: string;
+  price!: string | null;
 }
 
 // --- Modifier groups ----------------------------------------------------------------
@@ -325,7 +330,8 @@ export interface MenuPriceView {
   /** Null for the chain-wide price. */
   location: LocationRef | null;
   effectiveFrom: string;
-  price: string;
+  /** Null when a branch returns to the chain-wide price from `effectiveFrom`. */
+  price: string | null;
   /** Today it is the price in force for its branch (or for the chain), or not yet or no longer. */
   status: 'current' | 'scheduled' | 'past';
   version: number;

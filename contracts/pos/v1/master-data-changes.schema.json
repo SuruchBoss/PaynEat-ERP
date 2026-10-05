@@ -198,8 +198,11 @@
         "menuItemCode": { "$ref": "#/$defs/code" },
         "nameTh": { "type": "string" },
         "nameEn": { "type": "string" },
-        "categoryTh": { "description": "The heading the POS lists it under, in Thai.", "type": "string" },
-        "categoryEn": { "type": "string" },
+        "categoryTh": {
+          "description": "The heading the POS lists it under, in Thai. A label, not a code: items with the same label share a heading, and a renamed category arrives as a changed label on each item.",
+          "type": "string"
+        },
+        "categoryEn": { "description": "The same heading in English.", "type": "string" },
         "soldBy": {
           "description": "`portion`: a sale line carries `quantity`. `weight`: a sale line carries `weightKg`, and the price is per kilogram. Never changes.",
           "enum": ["portion", "weight"]
@@ -217,9 +220,11 @@
       }
     },
     "menuPrice": {
-      "description": "Since 1.1. A selling price from a business date, chain-wide (`locationCode` null) or for one branch. Tax is the POS's business: this is the price as the POS shows it.",
+      "description": "Since 1.1. A selling price from a business date, chain-wide (`locationCode` null) or for one branch. Tax is the POS's business: this is the price as the POS shows it. A branch row with `price` null ends that branch's own price: from `effectiveFrom` the branch charges the chain-wide price in force again. A chain-wide row always has a price.",
       "type": "object",
       "required": ["id", "menuItemCode", "locationCode", "effectiveFrom", "price", "version"],
+      "if": { "properties": { "locationCode": { "type": "null" } } },
+      "then": { "properties": { "price": { "type": "string" } } },
       "properties": {
         "id": { "type": "string", "format": "uuid" },
         "menuItemCode": { "$ref": "#/$defs/code" },
@@ -229,8 +234,11 @@
         },
         "effectiveFrom": { "$ref": "#/$defs/date" },
         "price": {
-          "description": "Per portion, or per kilogram for a menu item sold by weight. Never negative.",
-          "allOf": [{ "$ref": "#/$defs/money" }, { "type": "string", "pattern": "^[0-9]" }]
+          "description": "Per portion, or per kilogram for a menu item sold by weight. Never negative. Null only on a branch row: from `effectiveFrom` that branch charges the chain-wide price in force again, including chain-wide prices that start later, until it gets a price of its own again.",
+          "oneOf": [
+            { "type": "null" },
+            { "allOf": [{ "$ref": "#/$defs/money" }, { "type": "string", "pattern": "^[0-9]" }] }
+          ]
         },
         "version": { "type": "integer", "minimum": 1 }
       }

@@ -105,7 +105,7 @@ export const en = {
       pain: 'The recipe lives in the head chef’s notebook, a branch quietly charges its own price, and nobody can say what a bucket costs to make.',
       body: 'Menu items, prices and modifiers live in the ERP and every connected POS mirrors them. A price starts on a date, and a branch can have its own. Recipes are versioned: a new version starts on a date, and one in force never changes. Each recipe is priced at the cost of the lot FEFO would take next, shown as the estimate it is.',
       points: [
-        ['Prices from a date', 'Chain-wide or per branch, scheduled ahead, never rewritten once started.'],
+        ['Prices from a date', 'Chain-wide or per branch, scheduled ahead, never rewritten once started. A branch can go back to the chain price.'],
         ['Versioned recipes', 'Per portion or per kilogram sold; “no sauce” takes the cup off.'],
         ['Costed honestly', 'An ingredient with no lot has no cost, not a cost of zero.'],
       ],
@@ -298,7 +298,7 @@ export const th = {
       pain: 'สูตรอยู่ในสมุดของหัวหน้าครัว สาขาแอบคิดราคาเอง และไม่มีใครบอกได้ว่าไก่หนึ่งถังมีต้นทุนเท่าไร',
       body: 'รายการเมนู ราคา และตัวเลือกเสริมอยู่ใน ERP และ POS ที่เชื่อมต่อทุกเครื่องดึงไปใช้ ราคาเริ่มมีผลตามวันที่ และสาขามีราคาของตัวเองได้ สูตรมีเวอร์ชัน เวอร์ชันใหม่เริ่มตามวันที่ และเวอร์ชันที่มีผลแล้วไม่เปลี่ยน ทุกสูตรคิดต้นทุนจาก lot ที่ FEFO จะใช้ถัดไป และบอกชัดว่าเป็นค่าประมาณ',
       points: [
-        ['ราคาตามวันที่', 'ราคากลางหรือราคาสาขา ตั้งล่วงหน้าได้ ไม่ถูกเขียนทับเมื่อเริ่มแล้ว'],
+        ['ราคาตามวันที่', 'ราคากลางหรือราคาสาขา ตั้งล่วงหน้าได้ ไม่ถูกเขียนทับเมื่อเริ่มแล้ว และสาขากลับไปใช้ราคากลางได้'],
         ['สูตรมีเวอร์ชัน', 'ต่อที่หรือต่อกิโลกรัมที่ขาย “ไม่รับน้ำจิ้ม” หักน้ำจิ้มออกหนึ่งถ้วย'],
         ['ต้นทุนตรงไปตรงมา', 'วัตถุดิบที่ไม่มี lot คือไม่มีต้นทุน ไม่ใช่ต้นทุนเป็นศูนย์'],
       ],

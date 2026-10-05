@@ -239,6 +239,63 @@ describe('menu and prices (#16)', () => {
     });
   });
 
+  it('lets the admin send a branch back to the chain price, and shows the return in the history', async () => {
+    const SILOM = {
+      id: '00000000-0000-4000-8000-0000000000d1',
+      code: 'BR-SILOM',
+      type: 'branch',
+      nameTh: 'สาขาสีลม',
+      nameEn: 'Silom',
+      active: true,
+    };
+    const fetchMock = mockApi(
+      api({
+        'GET /locations': () => jsonResponse(200, [SILOM]),
+        [`POST /menu-items/${SET.id}/prices`]: () =>
+          jsonResponse(201, {
+            ...SET,
+            prices: [
+              {
+                id: '00000000-0000-4000-8000-0000000000c4',
+                location: {
+                  id: SILOM.id,
+                  code: SILOM.code,
+                  nameTh: SILOM.nameTh,
+                  nameEn: SILOM.nameEn,
+                },
+                effectiveFrom: '2026-10-20',
+                price: null,
+                status: 'scheduled',
+                version: 31,
+              },
+              ...SET.prices,
+            ],
+          }),
+      }),
+    );
+    renderApp('/menu', { as: ADMIN });
+    const u = userEvent.setup();
+
+    await u.click(await screen.findByRole('button', { name: 'เปิด ชุดไก่ทอด 2 ชิ้น' }));
+    // Only a branch can return to the chain price: no such choice for the chain-wide price.
+    expect(screen.queryByLabelText(/กลับไปใช้ราคากลาง|คิดราคากลาง/)).toBeNull();
+    await u.selectOptions(await screen.findByLabelText('ใช้ที่'), 'BR-SILOM · สาขาสีลม');
+    await u.click(screen.getByLabelText('เลิกใช้ราคาของสาขานี้ คิดราคากลางตั้งแต่วันที่เริ่มมีผล'));
+    expect(screen.queryByLabelText('ราคา (บาท)')).toBeNull();
+    await u.type(screen.getByLabelText('เริ่มมีผลวันที่'), '20/10/2569');
+    expect(await axeViolations()).toEqual([]);
+    await u.click(screen.getByRole('button', { name: 'ตั้งราคา' }));
+
+    const prices = await screen.findByRole('table', { name: 'ราคาของรายการเมนูนี้' });
+    expect(await within(prices).findByText('กลับไปใช้ราคากลาง')).toBeVisible();
+    const post = fetchMock.mock.calls.findIndex(([, init]) => init?.method === 'POST');
+    expect(sentBody(fetchMock, post)).toEqual({
+      locationId: SILOM.id,
+      effectiveFrom: '2026-10-20',
+      price: null,
+    });
+  });
+
   it('says from which day a refused recipe version could start, in the console’s calendar', async () => {
     mockApi(
       api({

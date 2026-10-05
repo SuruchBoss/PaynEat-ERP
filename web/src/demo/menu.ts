@@ -77,7 +77,7 @@ function menuItems(state: DemoState, today: string) {
           : null,
         locationCode: p.locationCode,
         effectiveFrom: addDays(today, p.fromDay),
-        price: normalise(p.price),
+        price: p.price === null ? null : normalise(p.price),
         version: 1,
       };
     });
@@ -111,8 +111,10 @@ function itemView({ prices: _prices, recipes: _recipes, ...item }: MenuItem) {
 function detailView(item: MenuItem, today: string) {
   const prices = item.prices
     .map((p) => {
+      // The row in force within its own scope, as the backend's priceViews decides it: a
+      // branch's return to the chain price is current while it is the branch's latest row.
       const scope = item.prices.filter((other) => other.locationCode === p.locationCode);
-      const inForce = priceInEffect(scope, p.locationCode, today);
+      const inForce = recipeInEffect(scope, today);
       const { locationCode: _code, ...view } = p;
       return { ...view, status: timing(p.effectiveFrom, inForce?.id === p.id, today) };
     })

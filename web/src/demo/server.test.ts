@@ -548,13 +548,14 @@ describe('the demo API: the menu (#16)', () => {
     const detail = json(await call('GET', `/api/v1/menu-items/${bucket.id}`, { token }));
     expect(
       detail.prices.map(
-        (p: { location: { code: string } | null; price: string; status: string }) => [
+        (p: { location: { code: string } | null; price: string | null; status: string }) => [
           p.location?.code ?? null,
           p.price,
           p.status,
         ],
       ),
     ).toEqual([
+      ['BR-SILOM', null, 'scheduled'],
       [null, '309', 'scheduled'],
       [null, '299', 'current'],
       ['BR-SILOM', '319', 'current'],

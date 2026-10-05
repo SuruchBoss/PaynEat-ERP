@@ -318,7 +318,8 @@ export interface DemoMenuItem {
   soldBy: 'portion' | 'weight';
   modifierGroupCodes: readonly string[];
   /** Chain-wide when `locationCode` is null; `fromDay` as for recipes. */
-  prices: ReadonlyArray<{ locationCode: string | null; fromDay: number; price: string }>;
+  /** A branch row with a null price returns that branch to the chain-wide price (ADR-0023). */
+  prices: ReadonlyArray<{ locationCode: string | null; fromDay: number; price: string | null }>;
   /** Per portion, or per kilogram sold for an item sold by weight. */
   recipes: readonly DemoRecipeVersion[];
 }
@@ -436,6 +437,7 @@ export const DEMO_MENU_ITEMS: readonly DemoMenuItem[] = [
       { locationCode: null, fromDay: -1, price: '299' },
       { locationCode: 'BR-SILOM', fromDay: -1, price: '319' },
       { locationCode: null, fromDay: 7, price: '309' },
+      { locationCode: 'BR-SILOM', fromDay: 14, price: null },
     ],
     recipes: [
       {

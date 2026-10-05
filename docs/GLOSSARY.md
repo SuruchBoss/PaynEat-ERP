@@ -101,10 +101,11 @@ What branches sell, kept in the ERP and mirrored by the POS (ADR-0002, ADR-0023)
 | Term | ไทย | Meaning |
 |---|---|---|
 | Menu item | รายการเมนู | Something a branch sells, identified by its menu item code (the shape of a location code), which sales events carry as `menuItemCode`. Deactivated, never deleted. |
-| Menu category | หมวดเมนู | The heading a menu item is listed under on the POS (e.g. "Single pieces"). A label in Thai and English, not a code. |
+| Menu category | หมวดเมนู | The heading a menu item is listed under on the POS (e.g. "Single pieces"). A label in Thai and English, not a code: renaming a category means changing the label on each item. |
 | Sold by portion / sold by weight | ขายเป็นที่ / ขายตามน้ำหนัก | How a menu item is sold. By portion: a sale line has a quantity. By weight: a sale line has `weightKg`, its price is per kilogram and its recipe per kilogram sold (ADR-0005). Fixed once the item exists. |
 | Menu price | ราคาเมนู | The selling price as the POS shows it, tax included as the POS handles it, from an effective-from date. Per portion, or per kilogram for an item sold by weight. |
 | Branch price | ราคาเฉพาะสาขา | A menu price for one branch, keyed by its location code. It replaces the chain-wide price at that branch for as long as one is in force. |
+| Return to the chain price | กลับไปใช้ราคากลาง | A branch price row without a price (`price: null`): from its effective-from date the branch's own price ends and the branch charges the chain-wide price in force again, until it gets a price of its own again (ADR-0023). |
 | Modifier group | กลุ่มตัวเลือกเสริม | A set of modifier options a menu item offers, with the fewest and most a customer may choose (e.g. "Sauce", choose 0–1). |
 | Modifier option | ตัวเลือกเสริม | One choice in a modifier group, identified by its code, which sales events carry as `modifiers[].code`. Has a price change, which may be negative. |
 | Recipe version | เวอร์ชันสูตร | One version of a menu or modifier recipe, numbered 1, 2, 3…, in force from its effective-from date until the next version starts. Never edited once in force. |

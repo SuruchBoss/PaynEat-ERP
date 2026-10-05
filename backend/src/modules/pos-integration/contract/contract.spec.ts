@@ -113,6 +113,23 @@ describe('the POS contract v1 (contracts/pos/v1)', () => {
       price.data.price = '-1';
       expect(v1_1(negativePrice)).toBe(false);
     });
+
+    it('lets only a branch row return to the chain price with a null price (ADR-0023)', () => {
+      const page = read('examples/master-data-changes.v1-1.json') as {
+        changes: Array<{ entityType: string; data: Record<string, unknown> }>;
+      };
+      const prices = page.changes.filter((c) => c.entityType === 'menu_price');
+      const returning = prices.find((c) => c.data.price === null)!;
+      expect(returning.data.locationCode).toBe('BR-SILOM');
+      expect(v1_1(page)).toBe(true);
+
+      const chainWide = structuredClone(page);
+      const chain = chainWide.changes.find(
+        (c) => c.entityType === 'menu_price' && c.data.locationCode === null,
+      )!;
+      chain.data.price = null;
+      expect(v1_1(chainWide)).toBe(false);
+    });
   });
 
   const invalid = readdirSync(join(V1, 'examples/invalid')).filter((f) => f.endsWith('.json'));

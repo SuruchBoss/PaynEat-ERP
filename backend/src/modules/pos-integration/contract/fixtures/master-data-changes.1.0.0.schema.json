@@ -28,7 +28,15 @@
     "change": {
       "description": "One master-data change. `data` is the whole record as it stood after the change, so a mirror simply overwrites. A POS skips an `entityType` it does not know, and ignores fields it does not know: contract 1.x only ever adds them.",
       "type": "object",
-      "required": ["version", "entityType", "entityId", "entityCode", "action", "data", "changedAt"],
+      "required": [
+        "version",
+        "entityType",
+        "entityId",
+        "entityCode",
+        "action",
+        "data",
+        "changedAt"
+      ],
       "properties": {
         "version": {
           "description": "The change's master-data version. Versions are handed out and committed in order, so a reader never sees N+1 before N.",

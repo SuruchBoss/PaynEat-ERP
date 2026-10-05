@@ -87,7 +87,7 @@ are business dates, `YYYY-MM-DD` in the chain's time zone (ERP ADR-0018).
 
 | `entityType` | `entityCode` | What the POS does with it |
 |---|---|---|
-| `menu_item` | the menu item code | Create or overwrite the menu item matched by `menuItemCode`. `soldBy: portion` lines carry `quantity`; `soldBy: weight` lines carry `weightKg`. `modifierGroupCodes` lists the groups it offers, in display order. With `active: false` it is no longer offered for sale. |
+| `menu_item` | the menu item code | Create or overwrite the menu item matched by `menuItemCode`. `soldBy: portion` lines carry `quantity`; `soldBy: weight` lines carry `weightKg`. `modifierGroupCodes` lists the groups it offers, in display order. With `active: false` it is no longer offered for sale. `categoryTh` and `categoryEn` are labels, not codes: the POS lists the item under the heading with that label, items with the same label share it, and a renamed category arrives as a changed label on each item, which moves it under the new heading. There is no category code. |
 | `menu_price` | the menu item code | Store the price row by its `id`, overwriting it if the same `id` arrives again (a scheduled price corrected before its day). See the price rule below. |
 | `modifier_group` | the group code | Create or overwrite the group matched by `groupCode`, with **all** its options in display order. A customer chooses between `minSelections` and `maxSelections` options. An option with `active: false` is not offered any more; options never disappear from the list. |
 | `menu_recipe` | the menu item code | The POS needs nothing from it and **may skip it**. The ERP turns sales into usage itself (ADR-0002). A POS may store it to show what a menu item is made of. |
@@ -96,13 +96,17 @@ are business dates, `YYYY-MM-DD` in the chain's time zone (ERP ADR-0018).
 **Prices.**
 - A price applies from its `effectiveFrom` date onwards, until a later price for the same scope
   starts.
-- A row with `locationCode: null` is the chain-wide price. A row with a branch's code is that
-  branch's own price.
+- A row with `locationCode: null` is the chain-wide price, and always has a `price`. A row with a
+  branch's code is that branch's own price.
+- A branch row with `price: null` ends the branch's own price: from its `effectiveFrom`, the branch
+  charges the chain-wide price again. It is a row like any other price row: store it by its `id`.
 - On a given day, a branch charges:
-  - its own price in force that day, if it has one;
-  - otherwise the chain-wide price in force that day.
-- A branch's own price is never mixed with a later chain-wide change: it wins for as long as one is
-  in force.
+  - its own price in force that day, if its latest row that has started carries a price;
+  - otherwise (no row of its own yet, or its latest one is a `price: null` return) the chain-wide
+    price in force that day.
+- A branch's own price wins over a later chain-wide change for as long as it is in force. After a
+  return, the branch follows the chain-wide price, including chain-wide changes that start later,
+  until it gets a price of its own again.
 - A menu item with no price in force cannot be sold.
 - The price is the selling price as shown; tax stays in the POS.
 - Each modifier option's `priceChange` (zero or negative allowed) is added per unit sold: per

@@ -84,9 +84,9 @@ describe('a new recipe version', () => {
 
 describe('price in effect at a branch', () => {
   const prices = [
-    { id: 'chain-old', locationCode: null, effectiveFrom: '2026-09-01' },
-    { id: 'chain-new', locationCode: null, effectiveFrom: '2026-10-15' },
-    { id: 'silom', locationCode: 'BR-SILOM', effectiveFrom: '2026-10-01' },
+    { id: 'chain-old', locationCode: null, effectiveFrom: '2026-09-01', price: '299' },
+    { id: 'chain-new', locationCode: null, effectiveFrom: '2026-10-15', price: '309' },
+    { id: 'silom', locationCode: 'BR-SILOM', effectiveFrom: '2026-10-01', price: '319' },
   ];
 
   it('is the branch override once it starts, and the chain price elsewhere', () => {
@@ -103,6 +103,32 @@ describe('price in effect at a branch', () => {
 
   it('is none before any price starts', () => {
     expect(priceInEffect(prices, 'BR-ARI', '2026-08-31')).toBeNull();
+  });
+
+  describe('when the branch returns to the chain price', () => {
+    const withReturn = [
+      ...prices,
+      { id: 'silom-back', locationCode: 'BR-SILOM', effectiveFrom: '2026-11-01', price: null },
+      { id: 'chain-later', locationCode: null, effectiveFrom: '2026-12-01', price: '329' },
+    ];
+
+    it('keeps its own price until the day the return starts', () => {
+      expect(priceInEffect(withReturn, 'BR-SILOM', '2026-10-31')?.id).toBe('silom');
+    });
+
+    it('charges the chain price in force from that day, then follows later chain changes', () => {
+      expect(priceInEffect(withReturn, 'BR-SILOM', '2026-11-01')?.id).toBe('chain-new');
+      expect(priceInEffect(withReturn, 'BR-SILOM', '2026-12-01')?.id).toBe('chain-later');
+    });
+
+    it('can set its own price again after returning', () => {
+      const again = [
+        ...withReturn,
+        { id: 'silom-again', locationCode: 'BR-SILOM', effectiveFrom: '2027-01-01', price: '339' },
+      ];
+      expect(priceInEffect(again, 'BR-SILOM', '2026-12-31')?.id).toBe('chain-later');
+      expect(priceInEffect(again, 'BR-SILOM', '2027-01-01')?.id).toBe('silom-again');
+    });
   });
 });
 

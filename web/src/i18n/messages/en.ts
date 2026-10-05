@@ -765,7 +765,7 @@ export const en: Messages = {
   'menu.error.invalid': 'Something is missing or not valid. Check the code and names.',
   'menu.prices.title': 'Prices',
   'menu.prices.hint':
-    "A price applies from its start date until the next one starts. A branch's own price replaces the chain-wide price at that branch.",
+    "A price applies from its start date until the next one starts. A branch's own price replaces the chain-wide price at that branch until the branch returns to the chain price.",
   'menu.prices.none': 'No prices yet.',
   'menu.prices.caption': "This menu item's prices",
   'menu.prices.chainWide': 'Chain-wide',
@@ -773,6 +773,7 @@ export const en: Messages = {
   'menu.prices.column.from': 'From',
   'menu.prices.column.price': 'Price',
   'menu.prices.column.status': 'Status',
+  'menu.prices.backToChain': 'Back to the chain price',
   'menu.price.title': 'Set a price',
   'menu.price.scope': 'Applies to',
   'menu.price.from': 'Starts on',
@@ -780,12 +781,17 @@ export const en: Messages = {
     'Today or later. Setting the same day again corrects it, until that day comes.',
   'menu.price.amount': 'Price (baht)',
   'menu.price.amountPerKg': 'Price per kilogram (baht)',
+  'menu.price.backToChain': "End this branch's own price: charge the chain price from this date",
+  'menu.price.backToChainHint':
+    'The branch charges the chain-wide price in force, including later chain changes, until it gets a price of its own again.',
   'menu.price.save': 'Set price',
   'menu.price.saving': 'Saving…',
   'menu.price.error.invalid': 'A price is a number, not negative, with two decimals at most.',
   'menu.price.error.inEffect':
     'That price has already started and cannot change. Set a new price from a later day instead.',
   'menu.price.error.notABranch': 'A price of its own is set only for an active branch.',
+  'menu.price.error.chainRequired':
+    'The chain-wide price always has a price. Only a branch can return to it.',
   'menu.price.error.date': 'That is not a valid date.',
   'menu.price.error.past':
     'A price starts on {date} at the earliest: the POS has already sold at the price of a day that has passed.',

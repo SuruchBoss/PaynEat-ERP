@@ -109,7 +109,7 @@ An item has one base unit and exact purchase units — 1 bag = 25 kilograms — 
 
 Menu items, prices and modifiers live in the ERP and every connected POS mirrors them. A price starts on a date, and a branch can have its own. Recipes are versioned: a new version starts on a date, and one in force never changes. Each recipe is priced at the cost of the lot FEFO would take next, shown as the estimate it is.
 
-- **Prices from a date** — Chain-wide or per branch, scheduled ahead, never rewritten once started.
+- **Prices from a date** — Chain-wide or per branch, scheduled ahead, never rewritten once started. A branch can go back to the chain price.
 - **Versioned recipes** — Per portion or per kilogram sold; “no sauce” takes the cup off.
 - **Costed honestly** — An ingredient with no lot has no cost, not a cost of zero.
 
@@ -230,7 +230,7 @@ The "why" matters more than the "what" in an ERP, so every decision is written d
 | [0020](docs/adr/0020-distribution-and-installation.md) | The console installs from the browser on phones, tablets and PCs (v1, caches no data); after v1 a chain installs the server without a developer (first-run setup, one-command installer, backups and upgrades from the console); PaynEat Cloud hosting after the pilot; self-hosting always supported |
 | [0021](docs/adr/0021-public-demo-in-the-browser.md) | A public demo of the console on GitHub Pages, answered inside the browser by the backend's own rules and demo data, never a copy of them; a screen the demo does not serve says so; a normal build carries none of it |
 | [0022](docs/adr/0022-vulnerability-disclosure-across-the-ecosystem.md) | A vulnerability is reported privately to the project that owns the code, never written anywhere public while unfixed; another project's is referenced only by its fixed version and advisory; code adapted between projects is fixed in both before any advisory; `SECURITY.md` names the channel |
-| [0023](docs/adr/0023-menu-prices-and-versioned-recipes.md) | Menu prices and recipe versions start on a business date; a recipe never changes for a day that has begun, and nothing changes once in force; a branch's own price wins while in force; a modifier recipe is per unit sold; the theoretical cost is an estimate at the next FEFO lot's cost (proposed with #16) |
+| [0023](docs/adr/0023-menu-prices-and-versioned-recipes.md) | Menu prices and recipe versions start on a business date; a recipe never changes for a day that has begun, and nothing changes once in force; a branch's own price wins while in force and can end with a return to the chain price; a modifier recipe is per unit sold; the theoretical cost is an estimate at the next FEFO lot's cost (proposed with #16) |
 
 Domain vocabulary, in English and Thai: [`docs/GLOSSARY.md`](docs/GLOSSARY.md).
 
@@ -453,15 +453,16 @@ undoes them.
    reason the raiser sees; a rejected adjustment is final.
 13. Sign in as **finance** (or the branch manager) and open **Menu and prices**: single pieces, a
    two-piece set, six wings, a bucket and fried chicken sold by weight (priced per kilogram). Open the
-   **Bucket of eight pieces**: 299 baht chain-wide, Silom's own 319, and 309 scheduled chain-wide from
-   next week, which Silom's own price still wins over. Its **recipe** lists the pieces, batter, oil and
+   **Bucket of eight pieces**: 299 baht chain-wide, Silom's own 319, 309 scheduled chain-wide from
+   next week, which Silom's own price still wins over, and Silom's return to the chain price the week
+   after, from which Silom charges 309 too. Its **recipe** lists the pieces, batter, oil and
    a cup of dipping sauce, each line priced at the item's current lot cost (the lot FEFO would take
    next); pieces have no stock yet, so the total says "at least" rather than pricing them at zero. The
    **Two-piece set** has version 2 scheduled for next week, with less batter. **Modifiers**: "Spicy"
    adds seasoning and "No sauce" takes the cup off (−1), per unit sold on the line. Finance reads all of it and changes
    none; purchasing and plant do not see the menu. As **admin** (Docker install; the public demo shows
    the menu read-only): set a price from a date — today or later, the same day again corrects it until
-   it comes, a started price is refused; add a recipe version — once one is in force, a new one starts
+   it comes, a started price is refused — or send a branch back to the chain price the same way; add a recipe version — once one is in force, a new one starts
    tomorrow at the earliest, two never start on one day, and one in force never changes (ADR-0023).
    Every change is a new master data version a POS pulls (contract 1.1).
 14. Connect a POS (Docker install; the public demo has no API for it). With the **admin**'s access

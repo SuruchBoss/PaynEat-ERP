@@ -15,6 +15,7 @@ import addFormats from 'ajv-formats';
 import request from 'supertest';
 import { PrismaService } from 'src/core/prisma/prisma.service';
 import { addDays } from 'src/core/time/domain/business-date';
+import { priceInEffect } from 'src/modules/menu/domain/recipe-rules';
 import { DEMO_MENU_ITEMS, DEMO_MODIFIER_GROUPS } from '../prisma/seed';
 import {
   API,
@@ -149,7 +150,7 @@ describe('menu master data (#16)', () => {
       ]);
     });
 
-    it("shows the bucket's chain price, Silom's own price and next week's change", async () => {
+    it("shows the bucket's chain price, Silom's own price, next week's change and Silom's return", async () => {
       const list = await as(finance).get('/menu-items');
       const bucket = list.body.find((m: Body) => m.code === 'BUCKET-8');
       const detail = await as(finance).get(`/menu-items/${bucket.id}`);
@@ -157,6 +158,7 @@ describe('menu master data (#16)', () => {
       expect(
         detail.body.prices.map((p: Body) => [p.location?.code ?? null, p.price, p.status]),
       ).toEqual([
+        ['BR-SILOM', null, 'scheduled'],
         [null, '309', 'scheduled'],
         [null, '299', 'current'],
         ['BR-SILOM', '319', 'current'],
@@ -401,6 +403,128 @@ describe('menu master data (#16)', () => {
       });
       expect(started.status).toBe(409);
       expect(started.body.code).toBe('PRICE_IN_EFFECT');
+    });
+
+    describe('a branch returning to the chain price (ADR-0023)', () => {
+      const silomId = async () =>
+        (await as(finance).get('/locations')).body.find((l: Body) => l.code === 'BR-SILOM')
+          .id as string;
+
+      it('ends the branch price, then follows a later chain change, applied in that order', async () => {
+        const item = await newMenuItem();
+        const silom = await silomId();
+        const before = await latestVersion();
+        const post = (body: Body) => as(admin).post(`/menu-items/${item.id}/prices`, body);
+        expect((await post({ effectiveFrom: today, price: '50' })).status).toBe(201);
+        expect((await post({ locationId: silom, effectiveFrom: today, price: '55' })).status).toBe(
+          201,
+        );
+        const back = await post({
+          locationId: silom,
+          effectiveFrom: addDays(today, 2),
+          price: null,
+        });
+        expect(back.status).toBe(201);
+        const later = await post({ effectiveFrom: addDays(today, 4), price: '52' });
+        expect(later.status).toBe(201);
+        expect(
+          later.body.prices.map((p: Body) => [p.location?.code ?? null, p.price, p.status]),
+        ).toEqual([
+          [null, '52', 'scheduled'],
+          ['BR-SILOM', null, 'scheduled'],
+          [null, '50', 'current'],
+          ['BR-SILOM', '55', 'current'],
+        ]);
+
+        // What a POS mirrors, in version order, and what Silom then charges day by day.
+        const logged = (await changesSince(before)).filter((c) => c.entityType === 'menu_price');
+        expect(
+          logged.map((c) => [c.data.locationCode, c.data.effectiveFrom, c.data.price]),
+        ).toEqual([
+          [null, today, '50'],
+          ['BR-SILOM', today, '55'],
+          ['BR-SILOM', addDays(today, 2), null],
+          [null, addDays(today, 4), '52'],
+        ]);
+        const rows = logged.map(
+          (c) =>
+            c.data as { locationCode: string | null; effectiveFrom: string; price: string | null },
+        );
+        const silomCharges = (day: string) => priceInEffect(rows, 'BR-SILOM', day)?.price;
+        expect(silomCharges(today)).toBe('55');
+        expect(silomCharges(addDays(today, 1))).toBe('55');
+        expect(silomCharges(addDays(today, 2))).toBe('50');
+        expect(silomCharges(addDays(today, 4))).toBe('52');
+      });
+
+      it('refuses a chain-wide price without a price, in the API and in the database', async () => {
+        const item = await newMenuItem();
+        const res = await as(admin).post(`/menu-items/${item.id}/prices`, {
+          effectiveFrom: today,
+          price: null,
+        });
+        expect(res.status).toBe(422);
+        expect(res.body.code).toBe('CHAIN_PRICE_REQUIRED');
+        await expect(
+          prisma.menuPrice.create({
+            data: {
+              menuItemId: item.id,
+              locationId: null,
+              effectiveFrom: new Date(`${today}T00:00:00.000Z`),
+              price: null,
+              version: BigInt(await latestVersion()),
+            },
+          }),
+        ).rejects.toThrow(/menu_prices_chain_price_set/);
+      });
+
+      it('corrects a return before its day, and never one that has started', async () => {
+        const item = await newMenuItem();
+        const silom = await silomId();
+        const post = (body: Body) => as(admin).post(`/menu-items/${item.id}/prices`, body);
+        await post({ effectiveFrom: today, price: '50' });
+        await post({ locationId: silom, effectiveFrom: today, price: '55' });
+        await post({ locationId: silom, effectiveFrom: addDays(today, 3), price: null });
+
+        // Before its day: the return becomes a branch price again, and back.
+        const before = await latestVersion();
+        const asPrice = await post({
+          locationId: silom,
+          effectiveFrom: addDays(today, 3),
+          price: '58',
+        });
+        expect(asPrice.status).toBe(201);
+        const asReturn = await post({
+          locationId: silom,
+          effectiveFrom: addDays(today, 3),
+          price: null,
+        });
+        expect(asReturn.body.prices).toHaveLength(3);
+        expect((await changesSince(before)).map((c) => [c.action, c.data.price])).toEqual([
+          ['updated', '58'],
+          ['updated', null],
+        ]);
+
+        // From its day on, a return is history like any other price.
+        await post({ locationId: silom, effectiveFrom: addDays(today, 1), price: null });
+        const otherItem = await newMenuItem();
+        await as(admin).post(`/menu-items/${otherItem.id}/prices`, {
+          effectiveFrom: today,
+          price: '50',
+        });
+        await as(admin).post(`/menu-items/${otherItem.id}/prices`, {
+          locationId: silom,
+          effectiveFrom: today,
+          price: null,
+        });
+        const started = await as(admin).post(`/menu-items/${otherItem.id}/prices`, {
+          locationId: silom,
+          effectiveFrom: today,
+          price: '60',
+        });
+        expect(started.status).toBe(409);
+        expect(started.body.code).toBe('PRICE_IN_EFFECT');
+      });
     });
 
     it('refuses the past, a negative or over-precise price, and a plant', async () => {

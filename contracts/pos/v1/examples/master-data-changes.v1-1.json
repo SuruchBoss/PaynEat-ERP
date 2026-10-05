@@ -1,5 +1,5 @@
 {
-  "latestVersion": 52,
+  "latestVersion": 53,
   "changes": [
     {
       "version": 46,
@@ -145,6 +145,22 @@
         "version": 52
       },
       "changedAt": "2026-10-02T03:06:00.000Z"
+    },
+    {
+      "version": 53,
+      "entityType": "menu_price",
+      "entityId": "0819a2b3-c4d5-46e7-f809-1a2b3c4d5e67",
+      "entityCode": "SET-WINGS-6",
+      "action": "created",
+      "data": {
+        "id": "0819a2b3-c4d5-46e7-f809-1a2b3c4d5e67",
+        "menuItemCode": "SET-WINGS-6",
+        "locationCode": "BR-SILOM",
+        "effectiveFrom": "2026-11-01",
+        "price": null,
+        "version": 53
+      },
+      "changedAt": "2026-10-02T03:07:00.000Z"
     }
   ],
   "hasMore": false

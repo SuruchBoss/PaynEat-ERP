@@ -50,6 +50,8 @@ model MenuItemModifierGroup {
 /// A selling price from an effective-from date: chain-wide when `locationId` is null, else
 /// for that branch. One per menu item, branch (or none) and date: the migration enforces it
 /// with NULLS NOT DISTINCT. Changed only before it takes effect; never deleted.
+/// A branch row with no price ends the branch's own price: from that day the branch charges the
+/// chain-wide price in force again. The migration refuses a chain-wide row without a price.
 model MenuPrice {
   id            String    @id @default(uuid()) @db.Uuid
   menuItemId    String    @map("menu_item_id") @db.Uuid
@@ -57,8 +59,9 @@ model MenuPrice {
   locationId    String?   @map("location_id") @db.Uuid
   location      Location? @relation(fields: [locationId], references: [id], onDelete: Restrict)
   effectiveFrom DateTime  @map("effective_from") @db.Date
-  /// Baht as the POS shows it: per portion, or per kilogram for an item sold by weight.
-  price         Decimal   @db.Decimal(12, 2)
+  /// Baht as the POS shows it: per portion, or per kilogram for an item sold by weight. Null
+  /// only on a branch row: the branch returns to the chain-wide price (ADR-0023).
+  price         Decimal?  @db.Decimal(12, 2)
   /// The master data version of this price's latest change.
   version       BigInt
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
