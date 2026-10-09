@@ -52,4 +52,10 @@ export const qk = {
   purchaseOrderList: (status: string) => ['purchase-orders', 'list', status] as const,
   purchaseOrder: (id: string) => ['purchase-orders', id] as const,
   companySettings: ['company-settings'] as const,
+  goodsReceipts: ['goods-receipts'] as const,
+  goodsReceiptList: (status: string, purchaseOrderId = '') =>
+    ['goods-receipts', 'list', status, purchaseOrderId] as const,
+  goodsReceipt: (id: string) => ['goods-receipts', id] as const,
+  goodsReceiptPreview: (input: string) => ['goods-receipts', 'preview', input] as const,
+  supplierReturns: (purchaseOrderId: string) => ['supplier-returns', purchaseOrderId] as const,
 };

@@ -115,7 +115,13 @@ describe('the demo API: signing in', () => {
     expect(me).toMatchObject({
       email: EMAIL.plant,
       roles: ['plant'],
-      permissions: ['opening_balance:manage', 'stock_adjustment:raise'],
+      permissions: [
+        'opening_balance:manage',
+        'stock_adjustment:raise',
+        'purchase_order:read',
+        'goods_receipt:read',
+        'goods_receipt:receive',
+      ],
       mfaEnabled: false,
     });
   });
@@ -253,6 +259,29 @@ describe('the demo API: master data', () => {
     const stale = await change(flour.version);
     expectRefusal(stale, 409, 'ITEM_CHANGED');
     expect(json(stale).details).toEqual({ currentVersion: saved.version });
+  });
+
+  it("keeps the demo chicken's receiving tolerances and lets the admin change them (#11)", async () => {
+    const token = await signIn('admin');
+    const items = json(await call('GET', '/api/v1/items?status=all', { token }));
+    const chicken = items.find((i: { code: string }) => i.code === 'WHOLE-CHICKEN');
+    expect(chicken.receivingTolerances).toEqual({ maxVariancePercent: '2', maxTemperature: '4' });
+    const path = `/api/v1/items/${chicken.id}/receiving-tolerances`;
+    const saved = json(
+      await call('PUT', path, {
+        token,
+        body: { maxVariancePercent: '1.50', maxTemperature: null },
+      }),
+    );
+    expect(saved.receivingTolerances).toEqual({ maxVariancePercent: '1.5', maxTemperature: null });
+    expect(saved.version).toBe(chicken.version);
+    expectRefusal(
+      await call('PUT', path, { token, body: { maxVariancePercent: '101' } }),
+      422,
+      'INVALID_RECEIVING_TOLERANCES',
+    );
+    const plant = await signIn('plant');
+    expect((await call('PUT', path, { token: plant, body: {} })).status).toBe(403);
   });
 
   it('refuses a taken item code, a purchase unit that is the base unit, and a zero factor', async () => {

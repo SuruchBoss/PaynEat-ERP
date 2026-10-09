@@ -12,6 +12,7 @@ import type { Role } from '@backend/src/core/security/permissions';
 import { lotNumber } from '@backend/src/modules/ledger/domain/posting-rules';
 import {
   DEMO_ITEMS,
+  DEMO_RECEIVING_TOLERANCES,
   DEMO_LOCATIONS,
   DEMO_MFA_SECRET,
   DEMO_OPENING_BALANCE,
@@ -58,6 +59,8 @@ export interface ItemRecord {
   shelfLifeDays: number;
   active: boolean;
   purchaseUnits: Array<{ unitCode: string; factor: string }>;
+  /** What the receiving dock checks (#11): configuration, not master data. */
+  receivingTolerances: { maxVariancePercent: string | null; maxTemperature: string | null };
   version: number;
   createdAt: string;
   updatedAt: string;
@@ -289,6 +292,12 @@ export function seedState(now: Date): DemoState {
     id: seedId(KIND.item, index),
     ...demo,
     purchaseUnits: [...demo.purchaseUnits],
+    receivingTolerances: {
+      ...(DEMO_RECEIVING_TOLERANCES[demo.code] ?? {
+        maxVariancePercent: null,
+        maxTemperature: null,
+      }),
+    },
     active: true,
     version: ++state.masterDataVersion,
     createdAt: at,

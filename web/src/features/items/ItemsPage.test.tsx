@@ -30,6 +30,7 @@ const item = (overrides: Partial<ItemView>): ItemView => ({
   baseUnitCode: 'kg',
   variableWeight: false,
   shelfLifeDays: 5,
+  receivingTolerances: { maxVariancePercent: null, maxTemperature: null },
   active: true,
   purchaseUnits: [],
   version: 1,
@@ -54,6 +55,7 @@ const WING = item({
   nameEn: 'Chicken wing',
   baseUnitCode: 'piece',
   shelfLifeDays: 1,
+  receivingTolerances: { maxVariancePercent: null, maxTemperature: null },
   version: 4,
 });
 const OLD = item({
@@ -278,6 +280,34 @@ describe('items and units', () => {
       purchaseUnits: [{ unitCode: 'case', factor: '18' }],
     });
     expect(await screen.findByText('1 ลัง = 18 กิโลกรัม')).toBeVisible();
+  });
+
+  it("lets the admin set an item's receiving tolerances, without a master data version (#11)", async () => {
+    let current = WHOLE;
+    const api = mockApi({
+      ...catalogue(() => [current]),
+      'PUT /items/00000000-0000-4000-8000-00000000000a/receiving-tolerances': (init) => {
+        const body = JSON.parse(String(init.body)) as ItemView['receivingTolerances'];
+        current = { ...current, receivingTolerances: body };
+        return jsonResponse(200, current);
+      },
+    });
+    renderApp('/items', { as: ADMIN });
+    const u = userEvent.setup();
+
+    expect(await screen.findAllByText('ไม่ตรวจ')).not.toHaveLength(0);
+    await u.click(await screen.findByRole('button', { name: 'แก้ไข ไก่ทั้งตัว' }));
+    const form = screen.getByRole('form', { name: 'เกณฑ์ตอนรับของของ WHOLE-CHICKEN' });
+    await u.type(within(form).getByLabelText('จำนวนคลาดเคลื่อนได้ไม่เกิน (%)'), '2');
+    await u.type(within(form).getByLabelText('อุณหภูมิสูงสุดตอนรับ (°C)'), '4');
+    expect(await axeViolations()).toEqual([]);
+    await u.click(within(form).getByRole('button', { name: 'บันทึกเกณฑ์' }));
+
+    expect(await screen.findByText('บันทึกเกณฑ์ตอนรับของของ WHOLE-CHICKEN แล้ว')).toBeVisible();
+    const put = api.mock.calls.findIndex(([, init]) => init?.method === 'PUT');
+    expect(sentBody(api, put)).toEqual({ maxVariancePercent: '2', maxTemperature: '4' });
+    expect(await screen.findByText('คลาดเคลื่อนได้ ±2%')).toBeVisible();
+    expect(screen.getByText('อุณหภูมิไม่เกิน 4 °C')).toBeVisible();
   });
 
   it('says so when someone else changed the item first', async () => {

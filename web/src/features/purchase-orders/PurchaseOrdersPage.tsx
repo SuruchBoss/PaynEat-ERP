@@ -6,6 +6,10 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { qk } from '@/app/query-client';
 import { DateField } from '@/components/DateField';
 import { ErrorCallout } from '@/components/ErrorCallout';
+import {
+  listGoodsReceipts,
+  listSupplierReturns,
+} from '@/features/goods-receipts/goods-receipts.api';
 import { listItems, listUnits, unitName } from '@/features/items/items.api';
 import { listLocations } from '@/features/locations/locations.api';
 import { getCompanySettings } from '@/features/settings/company-settings.api';
@@ -816,6 +820,9 @@ function OrderDocument({
                   {t('po.column.quantity')}
                 </th>
                 <th scope="col" className="numeric">
+                  {t('po.column.received')}
+                </th>
+                <th scope="col" className="numeric">
                   {t('po.column.price')}
                 </th>
                 <th scope="col" className="numeric">
@@ -852,6 +859,19 @@ function OrderDocument({
                         </span>
                       </span>
                     </td>
+                    <td className="numeric nowrap" data-label={t('po.column.received')}>
+                      <span>
+                        {groupDigits(line.receivedQuantity)} {base}
+                        {/[1-9]/.test(line.returnedQuantity) && (
+                          <span className="subtle">
+                            {t('po.returned', {
+                              quantity: groupDigits(line.returnedQuantity),
+                              unit: base,
+                            })}
+                          </span>
+                        )}
+                      </span>
+                    </td>
                     <td className="numeric nowrap" data-label={t('po.column.price')}>
                       <span>{groupDigits(line.unitPrice)}</span>
                     </td>
@@ -882,7 +902,7 @@ function OrderDocument({
             </tbody>
             <tfoot>
               <tr>
-                <th scope="row" colSpan={3}>
+                <th scope="row" colSpan={4}>
                   {t('po.total')}
                 </th>
                 <td className="numeric nowrap">{groupDigits(order.totals.net)}</td>
@@ -896,6 +916,8 @@ function OrderDocument({
           </table>
         </div>
       )}
+
+      {!compact && <Receipts orderId={order.id} />}
 
       {order.status === 'draft' && (
         <p className="subtle">
@@ -996,5 +1018,59 @@ function OrderDocument({
         </div>
       )}
     </section>
+  );
+}
+
+/**
+ * What has arrived against an order (#11): its goods receipts and the returns to supplier their
+ * postings made. Shown to whoever may read receipts; the plant receives them on its own screen.
+ */
+function Receipts({ orderId }: { orderId: string }) {
+  const { t, language } = useI18n();
+  const canRead = useAuthStore((s) =>
+    (s.user?.permissions ?? []).includes(Permission.GOODS_RECEIPT_READ),
+  );
+  const receipts = useQuery({
+    queryKey: qk.goodsReceiptList('all', orderId),
+    queryFn: () => listGoodsReceipts('all', orderId),
+    enabled: canRead,
+  });
+  const returns = useQuery({
+    queryKey: qk.supplierReturns(orderId),
+    queryFn: () => listSupplierReturns(orderId),
+    enabled: canRead,
+  });
+  if (!canRead || !receipts.data || receipts.data.length === 0) return null;
+  return (
+    <div className="related">
+      <h3>{t('po.receipts.title')}</h3>
+      <ul className="plain-list">
+        {receipts.data.map((receipt) => (
+          <li key={receipt.id}>
+            <code>{receipt.number}</code>{' '}
+            {t('po.receipts.line', {
+              date: formatBusinessDate(receipt.businessDate, language),
+              status: t(`gr.status.${receipt.status}`),
+            })}
+          </li>
+        ))}
+      </ul>
+      {returns.data && returns.data.length > 0 && (
+        <>
+          <h3>{t('po.returns.title')}</h3>
+          <ul className="plain-list">
+            {returns.data.map((ret) => (
+              <li key={ret.id}>
+                <code>{ret.number}</code>{' '}
+                {t('po.returns.line', {
+                  receipt: ret.goodsReceipt.number,
+                  reasons: ret.lines.map((l) => l.reason).join('; '),
+                })}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </div>
   );
 }

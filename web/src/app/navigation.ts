@@ -58,6 +58,13 @@ export const NAV: readonly NavSection[] = [
         icon: 'cart',
         permission: Permission.PURCHASE_ORDER_READ,
       },
+      // What each received lot cost: plant, purchasing, approvers and finance (#11).
+      {
+        to: '/goods-receipts',
+        labelKey: 'nav.goodsReceipts',
+        icon: 'inbox',
+        permission: Permission.GOODS_RECEIPT_READ,
+      },
     ],
   },
   {

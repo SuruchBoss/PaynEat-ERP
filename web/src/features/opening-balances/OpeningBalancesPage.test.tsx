@@ -43,6 +43,7 @@ const item = (overrides: Partial<ItemView>): ItemView => ({
   baseUnitCode: 'kg',
   variableWeight: true,
   shelfLifeDays: 5,
+  receivingTolerances: { maxVariancePercent: null, maxTemperature: null },
   active: true,
   purchaseUnits: [],
   version: 1,

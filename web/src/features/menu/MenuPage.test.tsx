@@ -31,6 +31,7 @@ const ingredient = (id: string, code: string, nameTh: string, baseUnitCode: stri
   baseUnitCode,
   variableWeight: false,
   shelfLifeDays: 30,
+  receivingTolerances: { maxVariancePercent: null, maxTemperature: null },
   active: true,
   purchaseUnits: [],
   version: 1,

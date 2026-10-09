@@ -42,36 +42,61 @@ export const ADMIN: SessionUser = {
   mfaEnabled: true,
 };
 
-/** Purchasing: manages suppliers (#6), and drafts, submits, sends and cancels purchase orders (#10). */
+/**
+ * Purchasing: manages suppliers (#6), drafts, submits, sends and cancels purchase orders (#10),
+ * and follows what arrived against them (#11).
+ */
 export const PURCHASING: SessionUser = {
   id: '6c1d0a52-6d8e-4c52-9a55-3d7f0b3a0003',
   email: 'purchasing@demo-chicken.example',
   displayName: 'Demo purchasing',
   locale: 'th',
   roles: ['purchasing'],
-  permissions: ['supplier:manage', 'purchase_order:read', 'purchase_order:raise'],
+  permissions: [
+    'supplier:manage',
+    'purchase_order:read',
+    'purchase_order:raise',
+    'goods_receipt:read',
+  ],
   mfaEnabled: false,
 };
 
-/** A purchasing approver: reads purchase orders and approves or rejects them (#10). */
+/**
+ * A purchasing approver: reads purchase orders and approves or rejects them (#10), and approves
+ * goods receipts with findings (#11).
+ */
 export const PO_APPROVER: SessionUser = {
   id: '6c1d0a52-6d8e-4c52-9a55-3d7f0b3a0005',
   email: 'purchasing-approver@demo-chicken.example',
   displayName: 'Demo purchasing approver',
   locale: 'th',
   roles: ['purchasing_approver'],
-  permissions: ['purchase_order:read', 'purchase_order:approve'],
+  permissions: [
+    'purchase_order:read',
+    'purchase_order:approve',
+    'goods_receipt:read',
+    'goods_receipt:approve',
+  ],
   mfaEnabled: false,
 };
 
-/** Plant: drafts, posts and reverses opening balances (#7), raises stock adjustments (#8). */
+/**
+ * Plant: drafts, posts and reverses opening balances (#7), raises stock adjustments (#8), and
+ * receives goods against the orders it reads (#11).
+ */
 export const PLANT: SessionUser = {
   id: '6c1d0a52-6d8e-4c52-9a55-3d7f0b3a0004',
   email: 'plant@demo-chicken.example',
   displayName: 'Demo plant',
   locale: 'th',
   roles: ['plant'],
-  permissions: ['opening_balance:manage', 'stock_adjustment:raise'],
+  permissions: [
+    'opening_balance:manage',
+    'stock_adjustment:raise',
+    'purchase_order:read',
+    'goods_receipt:read',
+    'goods_receipt:receive',
+  ],
   mfaEnabled: false,
 };
 
