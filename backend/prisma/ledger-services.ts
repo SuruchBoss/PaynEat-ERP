@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * The ledger, opening-balance and stock-adjustment services, wired by hand for scripts that run without the API:
+ * The ledger, opening-balance, stock-adjustment and purchase-order services, wired by hand for scripts that run without the API:
  * the demo seed and `npm run ledger:rebuild-balances`. The same code the API runs, so no script
  * writes stock any other way than the ledger module does (#7, ADR-0010).
  */
@@ -14,17 +14,22 @@ import { MetricsService } from '../src/core/telemetry/metrics.service';
 import { stdoutSink, TelemetryLogger } from '../src/core/telemetry/telemetry-logger';
 import { isTimeZone } from '../src/core/time/domain/business-date';
 import { AuditService } from '../src/modules/audit/audit.service';
+import { CompanyService } from '../src/modules/company/company.service';
 import { ItemsService } from '../src/modules/items/items.service';
 import { LedgerService } from '../src/modules/ledger/ledger.service';
 import { LocationsService } from '../src/modules/locations/locations.service';
 import { MasterDataService } from '../src/modules/master-data/master-data.service';
 import { OpeningBalancesService } from '../src/modules/opening-balances/opening-balances.service';
+import { PurchaseOrdersService } from '../src/modules/purchase-orders/purchase-orders.service';
 import { StockAdjustmentsService } from '../src/modules/stock-adjustments/stock-adjustments.service';
+import { SuppliersService } from '../src/modules/suppliers/suppliers.service';
 
 export interface LedgerServices {
   ledger: LedgerService;
   openingBalances: OpeningBalancesService;
   stockAdjustments: StockAdjustmentsService;
+  company: CompanyService;
+  purchaseOrders: PurchaseOrdersService;
 }
 
 /**
@@ -60,9 +65,22 @@ export function ledgerServices(
     metrics,
     config,
   );
+  const company = new CompanyService(db, audit);
   return {
     ledger,
     openingBalances: new OpeningBalancesService(db, ledger, items, locations),
     stockAdjustments: new StockAdjustmentsService(db, ledger, items, locations, audit, logger),
+    company,
+    purchaseOrders: new PurchaseOrdersService(
+      db,
+      new SequenceService(),
+      items,
+      locations,
+      new SuppliersService(db, audit),
+      company,
+      audit,
+      logger,
+      config,
+    ),
   };
 }

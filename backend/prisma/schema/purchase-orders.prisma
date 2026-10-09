@@ -1,0 +1,97 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
+// Purchase orders — owned by the purchase-orders module (#10; docs/GLOSSARY.md "Purchase order",
+// "Approval threshold"; ADR-0024). An order commits money to a supplier, not stock: it writes
+// nothing to the ledger. Goods receipts (#11) receive against it.
+
+enum PurchaseOrderStatus {
+  draft
+  submitted
+  approved
+  sent
+  partially_received
+  received
+  rejected
+  cancelled
+}
+
+/// One order to one supplier, delivered to one plant or warehouse. Numbered PO-2026-00001 from the
+/// sequence service. Never deleted; after submission it changes only by moving through its steps.
+model PurchaseOrder {
+  id                   String              @id @default(uuid()) @db.Uuid
+  number               String              @unique
+  status               PurchaseOrderStatus @default(draft)
+  supplierId           String              @map("supplier_id") @db.Uuid
+  supplier             Supplier            @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  deliveryLocationId   String              @map("delivery_location_id") @db.Uuid
+  deliveryLocation     Location            @relation(fields: [deliveryLocationId], references: [id], onDelete: Restrict)
+  /// A business date (ADR-0018), not an instant.
+  expectedDeliveryDate DateTime            @map("expected_delivery_date") @db.Date
+  note                 String?
+  /// Bumped by every change: a step taken from an older revision is refused.
+  revision             Int                 @default(1)
+
+  createdById String   @map("created_by_id") @db.Uuid
+  createdBy   User     @relation("PurchaseOrderCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  submittedById         String?   @map("submitted_by_id") @db.Uuid
+  submittedBy           User?     @relation("PurchaseOrderSubmittedBy", fields: [submittedById], references: [id], onDelete: Restrict)
+  submittedAt           DateTime? @map("submitted_at") @db.Timestamptz(3)
+  /// The approval threshold in force when it was submitted, so the decision can be explained later.
+  approvalThreshold     Decimal?  @map("approval_threshold") @db.Decimal(18, 2)
+  /// Approved on submission because its gross total was at or below the threshold: no approver.
+  approvedAutomatically Boolean   @default(false) @map("approved_automatically")
+  /// Who approved it. Never its creator: the service refuses it, and a trigger refuses it again
+  /// (ADR-0008). Null when it was approved automatically.
+  approvedById          String?   @map("approved_by_id") @db.Uuid
+  approvedBy            User?     @relation("PurchaseOrderApprovedBy", fields: [approvedById], references: [id], onDelete: Restrict)
+  approvedAt            DateTime? @map("approved_at") @db.Timestamptz(3)
+  rejectedById          String?   @map("rejected_by_id") @db.Uuid
+  rejectedBy            User?     @relation("PurchaseOrderRejectedBy", fields: [rejectedById], references: [id], onDelete: Restrict)
+  rejectedAt            DateTime? @map("rejected_at") @db.Timestamptz(3)
+  rejectionReason       String?   @map("rejection_reason")
+  sentById              String?   @map("sent_by_id") @db.Uuid
+  sentBy                User?     @relation("PurchaseOrderSentBy", fields: [sentById], references: [id], onDelete: Restrict)
+  sentAt                DateTime? @map("sent_at") @db.Timestamptz(3)
+  cancelledById         String?   @map("cancelled_by_id") @db.Uuid
+  cancelledBy           User?     @relation("PurchaseOrderCancelledBy", fields: [cancelledById], references: [id], onDelete: Restrict)
+  cancelledAt           DateTime? @map("cancelled_at") @db.Timestamptz(3)
+  cancellationReason    String?   @map("cancellation_reason")
+
+  lines PurchaseOrderLine[]
+
+  @@index([supplierId])
+  @@index([deliveryLocationId])
+  @@index([status])
+  @@map("purchase_orders")
+}
+
+/// One item ordered in one of its purchase units. Changes only while its order is a draft (a
+/// trigger refuses otherwise). The conversion factor is copied from the item when the line is
+/// saved, so what was ordered never changes if the item's purchase units are edited later.
+model PurchaseOrderLine {
+  purchaseOrderId String        @map("purchase_order_id") @db.Uuid
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Restrict)
+  lineNo          Int           @map("line_no")
+  itemId          String        @map("item_id") @db.Uuid
+  item            Item          @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  unitCode        String        @map("unit_code")
+  unit            Unit          @relation(fields: [unitCode], references: [code], onDelete: Restrict)
+  /// Base units in one purchase unit, as the item defined it when the line was saved.
+  factor          Decimal       @db.Decimal(18, 6)
+  /// In the purchase unit.
+  quantity        Decimal       @db.Decimal(18, 3)
+  /// Per purchase unit, before VAT.
+  unitPrice       Decimal       @map("unit_price") @db.Decimal(18, 4)
+  /// Percent: 7.00.
+  vatRate         Decimal       @map("vat_rate") @db.Decimal(5, 2)
+  /// Whether the company claims this VAT back; VAT not recovered is part of the cost (ADR-0024).
+  vatRecoverable  Boolean       @map("vat_recoverable")
+
+  @@id([purchaseOrderId, lineNo])
+  @@index([itemId])
+  @@map("purchase_order_lines")
+}

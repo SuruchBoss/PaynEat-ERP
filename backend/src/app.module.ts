@@ -22,6 +22,8 @@ import { LocationsModule } from './modules/locations/locations.module';
 import { MasterDataModule } from './modules/master-data/master-data.module';
 import { OpeningBalancesModule } from './modules/opening-balances/opening-balances.module';
 import { MenuModule } from './modules/menu/menu.module';
+import { CompanyModule } from './modules/company/company.module';
+import { PurchaseOrdersModule } from './modules/purchase-orders/purchase-orders.module';
 import { PosIntegrationModule } from './modules/pos-integration/pos-integration.module';
 import { StockAdjustmentsModule } from './modules/stock-adjustments/stock-adjustments.module';
 import { SuppliersModule } from './modules/suppliers/suppliers.module';
@@ -63,6 +65,8 @@ import { SuppliersModule } from './modules/suppliers/suppliers.module';
     StockAdjustmentsModule,
     PosIntegrationModule,
     MenuModule,
+    CompanyModule,
+    PurchaseOrdersModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: AllExceptionsFilter },

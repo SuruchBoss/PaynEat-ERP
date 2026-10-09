@@ -48,6 +48,19 @@ export const NAV: readonly NavSection[] = [
     ],
   },
   {
+    id: 'purchasing',
+    headingKey: 'nav.section.purchasing',
+    // Prices committed to suppliers are commercial: purchasing, approvers and finance (#10).
+    items: [
+      {
+        to: '/purchase-orders',
+        labelKey: 'nav.purchaseOrders',
+        icon: 'cart',
+        permission: Permission.PURCHASE_ORDER_READ,
+      },
+    ],
+  },
+  {
     id: 'menu',
     headingKey: 'nav.section.menu',
     // Recipes and their costs are commercial: admin, finance and branch managers read them (#16).
@@ -66,6 +79,12 @@ export const NAV: readonly NavSection[] = [
     headingKey: 'nav.section.administration',
     items: [
       { to: '/users', labelKey: 'nav.users', icon: 'users', permission: Permission.USER_READ },
+      {
+        to: '/settings',
+        labelKey: 'nav.settings',
+        icon: 'gear',
+        permission: Permission.COMPANY_SETTINGS_MANAGE,
+      },
     ],
   },
 ];

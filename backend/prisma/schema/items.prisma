@@ -11,8 +11,9 @@ model Unit {
   /// Decimal places a quantity in this unit carries: kg 3 (to the gram), piece 0 (ADR-0019).
   decimals Int
 
-  baseOf     Item[]             @relation("ItemBaseUnit")
+  baseOf     Item[]              @relation("ItemBaseUnit")
   purchaseOf ItemPurchaseUnit[]
+  orderedIn  PurchaseOrderLine[]
 
   @@map("units")
 }
@@ -40,6 +41,7 @@ model Item {
   stockBalances       StockBalance[]
   openingBalanceLines OpeningBalanceLine[]
   adjustmentLines     StockAdjustmentLine[]
+  purchaseOrderLines  PurchaseOrderLine[]
   recipeLines         RecipeLine[]
 
   @@map("items")

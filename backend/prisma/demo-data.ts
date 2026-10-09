@@ -238,6 +238,98 @@ export const DEMO_WRITE_OFF = {
   reason: 'Damaged in the chiller',
 } as const;
 
+/**
+ * The purchase approval threshold the demo company runs with (#10): an order whose gross total is
+ * above 20,000 baht needs a purchasing approver. A new real installation starts at zero.
+ */
+export const DEMO_PURCHASE_APPROVAL_THRESHOLD = '20000.00';
+
+export interface DemoPurchaseOrder {
+  supplierCode: string;
+  locationCode: string;
+  /** Days from the day the seed runs. */
+  deliveryInDays: number;
+  note: string;
+  lines: ReadonlyArray<{
+    itemCode: string;
+    unitCode: string;
+    quantity: string;
+    unitPrice: string;
+    vatRate: string;
+    vatRecoverable: boolean;
+  }>;
+  /** How far the seed takes it: a draft, or submitted and then sent once approved. */
+  until: 'draft' | 'sent';
+}
+
+/**
+ * Three purchase orders (#10), all fictional. Whole chicken twice: 12 cases (gross 16,486.56,
+ * within the threshold, so submitting approves it) and 20 cases (gross 27,477.60, above it, so the
+ * purchasing approver approves it — not the purchasing officer who raised it). Both are sent.
+ * Flour and oil stay a draft, for an evaluator to submit.
+ */
+export const DEMO_PURCHASE_ORDERS: readonly DemoPurchaseOrder[] = [
+  {
+    supplierCode: 'SUP-CHICKEN',
+    locationCode: 'PLANT-01',
+    deliveryInDays: 2,
+    note: 'Demo seed: whole chicken for the week (fictional)',
+    lines: [
+      {
+        itemCode: 'WHOLE-CHICKEN',
+        unitCode: 'case',
+        quantity: '12',
+        unitPrice: '1284.00',
+        vatRate: '7',
+        vatRecoverable: true,
+      },
+    ],
+    until: 'sent',
+  },
+  {
+    supplierCode: 'SUP-CHICKEN',
+    locationCode: 'PLANT-01',
+    deliveryInDays: 3,
+    note: 'Demo seed: whole chicken for the weekend promotion (fictional)',
+    lines: [
+      {
+        itemCode: 'WHOLE-CHICKEN',
+        unitCode: 'case',
+        quantity: '20',
+        unitPrice: '1284.00',
+        vatRate: '7',
+        vatRecoverable: true,
+      },
+    ],
+    until: 'sent',
+  },
+  {
+    supplierCode: 'SUP-DRYGOODS',
+    locationCode: 'PLANT-01',
+    deliveryInDays: 5,
+    note: 'Demo seed: batter flour and frying oil (fictional)',
+    lines: [
+      {
+        itemCode: 'FLOUR',
+        unitCode: 'bag',
+        quantity: '8',
+        unitPrice: '812.35',
+        vatRate: '7',
+        vatRecoverable: true,
+      },
+      {
+        itemCode: 'FRYING-OIL',
+        unitCode: 'tin',
+        quantity: '10',
+        unitPrice: '950.00',
+        vatRate: '7',
+        vatRecoverable: true,
+      },
+    ],
+    until: 'draft',
+  },
+];
+
 /** A recipe line: an item code and its quantity in the item's base unit, a decimal string. */
 export type DemoRecipeLine = readonly [itemCode: string, quantity: string];
 

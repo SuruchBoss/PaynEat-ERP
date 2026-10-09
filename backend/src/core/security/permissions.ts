@@ -50,6 +50,20 @@ export const Permission = {
    * data is configuration every POS mirrors (ADR-0002), so only the admin changes it.
    */
   MENU_MANAGE: 'menu:manage',
+  /**
+   * Read purchase orders (#10): what the company buys, from whom and at what price is commercial
+   * information, so reading needs a permission, like the menu's costs.
+   */
+  PURCHASE_ORDER_READ: 'purchase_order:read',
+  /** Draft, edit, submit, mark sent and cancel purchase orders (#10). */
+  PURCHASE_ORDER_RAISE: 'purchase_order:raise',
+  /**
+   * Approve or reject a submitted purchase order above the approval threshold (#10). Never one
+   * the approver created (ADR-0008).
+   */
+  PURCHASE_ORDER_APPROVE: 'purchase_order:approve',
+  /** Change the company's settings, such as the purchase approval threshold (#10). */
+  COMPANY_SETTINGS_MANAGE: 'company_settings:manage',
 } as const;
 
 export type PermissionKey = (typeof Permission)[keyof typeof Permission];
@@ -75,7 +89,8 @@ export type Role = (typeof ROLE_KEYS)[number];
 export const ROLE_PERMISSIONS: Record<Role, readonly PermissionKey[]> = {
   // ADR-0008: manage users, roles, locations, configuration; reopen closed periods.
   // Master data is configuration: only the admin maintains items (#5). Connecting a POS is
-  // configuration too (#9), and so is the menu every POS mirrors (#16).
+  // configuration too (#9), and so is the menu every POS mirrors (#16) and the purchase approval
+  // threshold (#10).
   admin: [
     Permission.USER_READ,
     Permission.USER_MANAGE,
@@ -86,11 +101,16 @@ export const ROLE_PERMISSIONS: Record<Role, readonly PermissionKey[]> = {
     Permission.POS_INSTANCE_MANAGE,
     Permission.MENU_READ,
     Permission.MENU_MANAGE,
+    Permission.COMPANY_SETTINGS_MANAGE,
   ],
-  // ADR-0008: create and send purchase orders (from #10); manage suppliers (#6).
-  purchasing: [Permission.SUPPLIER_MANAGE],
-  // ADR-0008: approve purchase orders above the approval threshold (from #10).
-  purchasing_approver: [],
+  // ADR-0008: create and send purchase orders (#10); manage suppliers (#6).
+  purchasing: [
+    Permission.SUPPLIER_MANAGE,
+    Permission.PURCHASE_ORDER_READ,
+    Permission.PURCHASE_ORDER_RAISE,
+  ],
+  // ADR-0008: approve purchase orders above the approval threshold (#10).
+  purchasing_approver: [Permission.PURCHASE_ORDER_READ, Permission.PURCHASE_ORDER_APPROVE],
   // ADR-0008: receive goods, run production orders, manage plant stock. Bringing existing
   // stock in with an opening balance is managing it (#7), and so is adjusting it (#8).
   plant: [Permission.OPENING_BALANCE_MANAGE, Permission.STOCK_ADJUSTMENT_RAISE],
@@ -102,8 +122,13 @@ export const ROLE_PERMISSIONS: Record<Role, readonly PermissionKey[]> = {
   branch_manager: [Permission.STOCK_ADJUSTMENT_RAISE, Permission.MENU_READ],
   // ADR-0008: view costs, variances and valuation; export financial data. An adjustment
   // changes the value of stock, so finance approves it (#8): never one it created itself.
-  // Recipes and their theoretical cost are costs: finance reads them (#16).
-  finance: [Permission.STOCK_ADJUSTMENT_APPROVE, Permission.MENU_READ],
+  // Recipes and their theoretical cost are costs: finance reads them (#16), and so are the
+  // prices the company has committed to pay (#10).
+  finance: [
+    Permission.STOCK_ADJUSTMENT_APPROVE,
+    Permission.MENU_READ,
+    Permission.PURCHASE_ORDER_READ,
+  ],
 };
 
 /**

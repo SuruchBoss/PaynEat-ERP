@@ -63,6 +63,18 @@ describe('roles and permissions (ADR-0008)', () => {
     }
   });
 
+  it('lets purchasing raise purchase orders and purchasing approvers approve them (#10)', () => {
+    for (const role of ROLE_KEYS) {
+      const held = permissionsFor([role]);
+      expect(held.includes(Permission.PURCHASE_ORDER_RAISE)).toBe(role === 'purchasing');
+      expect(held.includes(Permission.PURCHASE_ORDER_APPROVE)).toBe(role === 'purchasing_approver');
+      expect(held.includes(Permission.PURCHASE_ORDER_READ)).toBe(
+        role === 'purchasing' || role === 'purchasing_approver' || role === 'finance',
+      );
+      expect(held.includes(Permission.COMPANY_SETTINGS_MANAGE)).toBe(role === 'admin');
+    }
+  });
+
   it('merges several roles without duplicates', () => {
     expect(permissionsFor(['admin', 'finance', 'admin'])).toEqual([
       Permission.USER_READ,
@@ -75,6 +87,8 @@ describe('roles and permissions (ADR-0008)', () => {
       Permission.POS_INSTANCE_MANAGE,
       Permission.MENU_READ,
       Permission.MENU_MANAGE,
+      Permission.PURCHASE_ORDER_READ,
+      Permission.COMPANY_SETTINGS_MANAGE,
     ]);
     expect(permissionsFor([])).toEqual([]);
   });

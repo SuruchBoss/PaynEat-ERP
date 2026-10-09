@@ -19,6 +19,11 @@ export interface RequestContext {
    * "POS↔ERP integration lines").
    */
   posInstance?: string;
+  /**
+   * The ERP document the request acts on, once the handler knows its number: every line the
+   * request writes from then on carries it as `document_number` (docs/TELEMETRY.md, "Documents").
+   */
+  documentNumber?: string;
 }
 
 const storage = new AsyncLocalStorage<RequestContext>();
@@ -48,4 +53,10 @@ export function labelRequestLocation(locationCode: string): void {
 export function labelRequestPosInstance(posInstance: string): void {
   const context = storage.getStore();
   if (context) context.posInstance = posInstance;
+}
+
+/** Labels the rest of this request's lines with the document it acts on. */
+export function labelRequestDocument(documentNumber: string): void {
+  const context = storage.getStore();
+  if (context) context.documentNumber = documentNumber;
 }
