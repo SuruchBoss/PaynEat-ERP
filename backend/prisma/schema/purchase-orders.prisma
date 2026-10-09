@@ -61,7 +61,9 @@ model PurchaseOrder {
   cancelledAt           DateTime? @map("cancelled_at") @db.Timestamptz(3)
   cancellationReason    String?   @map("cancellation_reason")
 
-  lines PurchaseOrderLine[]
+  lines           PurchaseOrderLine[]
+  goodsReceipts   GoodsReceipt[]
+  supplierReturns SupplierReturn[]
 
   @@index([supplierId])
   @@index([deliveryLocationId])
@@ -70,26 +72,32 @@ model PurchaseOrder {
 }
 
 /// One item ordered in one of its purchase units. Changes only while its order is a draft (a
-/// trigger refuses otherwise). The conversion factor is copied from the item when the line is
-/// saved, so what was ordered never changes if the item's purchase units are edited later.
+/// trigger refuses otherwise), except for what has been received and returned against it. The
+/// conversion factor is copied from the item when the line is saved, so what was ordered never
+/// changes if the item's purchase units are edited later.
 model PurchaseOrderLine {
-  purchaseOrderId String        @map("purchase_order_id") @db.Uuid
-  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Restrict)
-  lineNo          Int           @map("line_no")
-  itemId          String        @map("item_id") @db.Uuid
-  item            Item          @relation(fields: [itemId], references: [id], onDelete: Restrict)
-  unitCode        String        @map("unit_code")
-  unit            Unit          @relation(fields: [unitCode], references: [code], onDelete: Restrict)
+  purchaseOrderId  String        @map("purchase_order_id") @db.Uuid
+  purchaseOrder    PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Restrict)
+  lineNo           Int           @map("line_no")
+  itemId           String        @map("item_id") @db.Uuid
+  item             Item          @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  unitCode         String        @map("unit_code")
+  unit             Unit          @relation(fields: [unitCode], references: [code], onDelete: Restrict)
   /// Base units in one purchase unit, as the item defined it when the line was saved.
-  factor          Decimal       @db.Decimal(18, 6)
+  factor           Decimal       @db.Decimal(18, 6)
   /// In the purchase unit.
-  quantity        Decimal       @db.Decimal(18, 3)
+  quantity         Decimal       @db.Decimal(18, 3)
   /// Per purchase unit, before VAT.
-  unitPrice       Decimal       @map("unit_price") @db.Decimal(18, 4)
+  unitPrice        Decimal       @map("unit_price") @db.Decimal(18, 4)
   /// Percent: 7.00.
-  vatRate         Decimal       @map("vat_rate") @db.Decimal(5, 2)
+  vatRate          Decimal       @map("vat_rate") @db.Decimal(5, 2)
   /// Whether the company claims this VAT back; VAT not recovered is part of the cost (ADR-0024).
-  vatRecoverable  Boolean       @map("vat_recoverable")
+  vatRecoverable   Boolean       @map("vat_recoverable")
+  /// Accepted by posted goods receipts so far, in the item's base unit (#11). Written only when a
+  /// receipt posts, inside its transaction, with the order locked.
+  receivedQuantity Decimal       @default(0) @map("received_quantity") @db.Decimal(18, 3)
+  /// Turned away at the dock and returned to the supplier so far, in the base unit (#11).
+  returnedQuantity Decimal       @default(0) @map("returned_quantity") @db.Decimal(18, 3)
 
   @@id([purchaseOrderId, lineNo])
   @@index([itemId])

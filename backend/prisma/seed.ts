@@ -42,8 +42,10 @@ import {
   DEMO_SUPPLIERS,
   DEMO_USERS,
   DEMO_WRITE_OFF,
+  DEMO_GOODS_RECEIPTS,
   DEMO_PURCHASE_APPROVAL_THRESHOLD,
   DEMO_PURCHASE_ORDERS,
+  DEMO_RECEIVING_TOLERANCES,
   type DemoRecipeVersion,
 } from './demo-data';
 
@@ -523,6 +525,80 @@ async function seedPurchaseOrders(prisma: PrismaClient): Promise<string[]> {
 }
 
 /**
+ * The demo items' receiving tolerances (#11), set by the admin through the same service the API
+ * runs, or put back when an evaluator changed them. Returns how many items were written.
+ */
+async function seedReceivingTolerances(prisma: PrismaClient): Promise<number> {
+  const { items } = ledgerServices(prisma, { quiet: true });
+  const admin = await demoActor(prisma, 'admin');
+  let written = 0;
+  for (const [code, wanted] of Object.entries(DEMO_RECEIVING_TOLERANCES)) {
+    const item = await prisma.item.findUniqueOrThrow({ where: { code } });
+    const current = (await items.get(item.id)).receivingTolerances;
+    if (JSON.stringify(current) === JSON.stringify(wanted)) continue;
+    await items.setReceivingTolerances(item.id, wanted, admin, {});
+    written += 1;
+  }
+  return written;
+}
+
+/**
+ * The demo goods receipts (#11), received by the plant user through the same service the API
+ * runs: submitted, which posts the one within tolerance; the other waits for, and is approved by,
+ * the purchasing approver — never the plant user who received it (ADR-0008). Once: if any goods
+ * receipt exists, or the demo orders were changed so they no longer receive, they are left as
+ * they are. Returns their numbers and outcomes.
+ */
+async function seedGoodsReceipts(prisma: PrismaClient): Promise<string[]> {
+  if (await prisma.goodsReceipt.findFirst()) return [];
+  const { goodsReceipts, ledger } = ledgerServices(prisma, { quiet: true });
+  const receiver = await demoActor(prisma, 'plant');
+  const approver = await demoActor(prisma, 'purchasing_approver');
+  const today = ledger.today();
+  const orders = await prisma.purchaseOrder.findMany({
+    where: { note: { in: DEMO_PURCHASE_ORDERS.map((o) => o.note) } },
+  });
+  const written: string[] = [];
+  for (const demo of DEMO_GOODS_RECEIPTS) {
+    const order = orders.find((o) => o.note === DEMO_PURCHASE_ORDERS[demo.purchaseOrderIndex].note);
+    if (!order || !['approved', 'sent', 'partially_received'].includes(order.status)) continue;
+    const draft = await goodsReceipts.create(
+      {
+        purchaseOrderId: order.id,
+        note: demo.note,
+        lines: demo.lines.map(({ supplierExpiresInDays, ...line }) => ({
+          ...line,
+          supplierExpiry:
+            supplierExpiresInDays === null ? null : addDays(today, supplierExpiresInDays),
+        })),
+      },
+      receiver,
+      {},
+    );
+    let receipt = await goodsReceipts.submit(draft.id, { revision: draft.revision }, receiver, {});
+    if (receipt.status === 'submitted') {
+      receipt = await goodsReceipts.approve(
+        receipt.id,
+        { revision: receipt.revision },
+        approver,
+        {},
+      );
+    }
+    if (receipt.postingRefusal || receipt.status !== 'posted') {
+      throw new Error(
+        `The demo goods receipt ${receipt.number} was not posted: ${receipt.postingRefusal?.message ?? receipt.status}`,
+      );
+    }
+    const how = receipt.approved
+      ? `findings approved by ${receipt.approved.by.displayName}`
+      : 'within tolerance';
+    const returned = receipt.supplierReturn ? `, ${receipt.supplierReturn.number} returned` : '';
+    written.push(`${receipt.number} posted against ${order.number}, ${how}${returned}`);
+  }
+  return written;
+}
+
+/**
  * Creates the demo menu (#16): modifier groups with their option recipes, then menu items with
  * their prices and recipe versions. Each one written takes a master data version and a change,
  * as the API does, so a POS pulling from version 0 sees the menu. Prices and first recipes start
@@ -828,6 +904,17 @@ async function main(): Promise<void> {
       orders.length > 0
         ? `Demo purchase orders: ${orders.join('; ')}`
         : 'Demo purchase orders: already there, left as they are',
+    );
+    const tolerances = await seedReceivingTolerances(prisma);
+    console.log(
+      `Demo receiving tolerances: ${Object.keys(DEMO_RECEIVING_TOLERANCES).length} items` +
+        (tolerances === 0 ? ' (already as described)' : ` (${tolerances} written)`),
+    );
+    const receipts = await seedGoodsReceipts(prisma);
+    console.log(
+      receipts.length > 0
+        ? `Demo goods receipts: ${receipts.join('; ')}`
+        : 'Demo goods receipts: already there, left as they are',
     );
     console.log(`\nDemo accounts (password for all: ${DEMO_PASSWORD}):`);
     for (const demo of DEMO_USERS) {

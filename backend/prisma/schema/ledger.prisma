@@ -13,11 +13,12 @@ enum StockDocumentType {
   opening_balance
   reversal
   stock_adjustment
+  goods_receipt
 }
 
 /// draft → posted for opening balances; draft → submitted → approved → posted, or rejected, for
-/// documents that need a second person's approval (stock adjustments, #8, ADR-0008). Posted and
-/// rejected are final.
+/// documents that need a second person's approval (stock adjustments, #8, ADR-0008; goods receipts
+/// with a finding, #11). Posted and rejected are final.
 enum StockDocumentStatus {
   draft
   posted
@@ -61,6 +62,7 @@ model StockDocument {
   entries         LedgerEntry[]
   openingBalance  OpeningBalance?
   stockAdjustment StockAdjustment?
+  goodsReceipt    GoodsReceipt?
 
   @@index([type, status])
   @@map("stock_documents")
@@ -69,22 +71,26 @@ model StockDocument {
 /// A quantity of one item that shares an origin, a cost and an expiry date (ADR-0006). Created
 /// only by posting, never changed afterwards.
 model Lot {
-  id                String        @id @default(uuid()) @db.Uuid
+  id                 String        @id @default(uuid()) @db.Uuid
   /// The origin document's number and line: OB-2026-00001/2.
-  number            String        @unique
-  itemId            String        @map("item_id") @db.Uuid
-  item              Item          @relation(fields: [itemId], references: [id], onDelete: Restrict)
-  originDocumentId  String        @map("origin_document_id") @db.Uuid
-  originDocument    StockDocument @relation(fields: [originDocumentId], references: [id], onDelete: Restrict)
-  originLineNo      Int           @map("origin_line_no")
+  number             String        @unique
+  itemId             String        @map("item_id") @db.Uuid
+  item               Item          @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  originDocumentId   String        @map("origin_document_id") @db.Uuid
+  originDocument     StockDocument @relation(fields: [originDocumentId], references: [id], onDelete: Restrict)
+  originLineNo       Int           @map("origin_line_no")
   /// Per base unit, exact (ADR-0004, ADR-0019).
-  unitCost          Decimal       @map("unit_cost") @db.Decimal(18, 6)
-  expiryDate        DateTime      @map("expiry_date") @db.Date
+  unitCost           Decimal       @map("unit_cost") @db.Decimal(18, 6)
+  expiryDate         DateTime      @map("expiry_date") @db.Date
+  /// Received lots only (ADR-0014): the receipt date plus the item's shelf life, and the date the
+  /// supplier printed, kept so the reason for `expiry_date` stays visible. It is the earlier one.
+  computedExpiryDate DateTime?     @map("computed_expiry_date") @db.Date
+  supplierExpiryDate DateTime?     @map("supplier_expiry_date") @db.Date
   /// What the lot was created with, in the item's base unit.
-  quantity          Decimal       @db.Decimal(18, 3)
+  quantity           Decimal       @db.Decimal(18, 3)
   /// Variable-weight items only: the piece count it was created with (ADR-0005).
-  secondaryQuantity Decimal?      @map("secondary_quantity") @db.Decimal(18, 0)
-  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  secondaryQuantity  Decimal?      @map("secondary_quantity") @db.Decimal(18, 0)
+  createdAt          DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
 
   entries         LedgerEntry[]
   balances        StockBalance[]

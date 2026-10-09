@@ -35,7 +35,14 @@ export type PostingRule =
   | 'already_reversed'
   | 'business_date_before_original'
   | 'not_approved'
-  | 'self_approval';
+  | 'self_approval'
+  // Goods receipts (#11): checked by the receipt inside the posting transaction.
+  | 'order_not_receivable'
+  | 'temperature_required'
+  | 'reason_required'
+  | 'expired_on_arrival'
+  | 'over_receipt'
+  | 'needs_approval';
 
 /** Refusals that describe a race with another person rather than a wrong document: 409. */
 export const CONFLICT_RULES: ReadonlySet<PostingRule> = new Set([
@@ -43,6 +50,9 @@ export const CONFLICT_RULES: ReadonlySet<PostingRule> = new Set([
   'stale_revision',
   'already_reversed',
   'not_approved',
+  // A receipt that was clean when submitted found something outside tolerance by the time it
+  // posted, because another receipt against the same order posted first (#11).
+  'needs_approval',
 ]);
 
 export type LocationType = 'plant' | 'warehouse' | 'branch' | 'in_transit' | 'subcontractor';
@@ -196,7 +206,7 @@ export function businessDateProblem(businessDate: string, today: string): Postin
 }
 
 export interface ReversibleDocument {
-  type: 'opening_balance' | 'reversal' | 'stock_adjustment';
+  type: 'opening_balance' | 'reversal' | 'stock_adjustment' | 'goods_receipt';
   status: 'draft' | 'submitted' | 'approved' | 'posted' | 'rejected';
   businessDate: string;
   reversedBy: string | null;

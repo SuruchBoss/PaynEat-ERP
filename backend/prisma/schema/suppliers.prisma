@@ -23,6 +23,7 @@ model Supplier {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   purchaseOrders PurchaseOrder[]
+  returns        SupplierReturn[]
 
   @@map("suppliers")
 }

@@ -64,6 +64,43 @@ interface StoredLine {
   unitPrice: string;
   vatRate: string;
   vatRecoverable: boolean;
+  receivedQuantity: string;
+  returnedQuantity: string;
+}
+
+/** An order line as a goods receipt needs it (#11): what was ordered, at what cost, and how much has arrived. */
+export interface ReceivableLine {
+  lineNo: number;
+  itemId: string;
+  unitCode: string;
+  /** Base units in one purchase unit, as the line was saved with. */
+  factor: string;
+  /** In the purchase unit. */
+  quantity: string;
+  /** What was ordered, in the item's base unit. */
+  baseQuantity: string;
+  /** Per base unit, net of recoverable VAT: the cost a received lot takes (ADR-0004, ADR-0024). */
+  unitCost: string;
+  /** Accepted and returned so far, in the base unit. */
+  receivedQuantity: string;
+  returnedQuantity: string;
+}
+
+/** A purchase order as a goods receipt needs it (#11). */
+export interface ReceivableOrder {
+  id: string;
+  number: string;
+  status: PurchaseOrderStatus;
+  supplierId: string;
+  deliveryLocationId: string;
+  lines: ReceivableLine[];
+}
+
+/** What one posted receipt adds to one order line, in the base unit. */
+export interface ReceivedOnLine {
+  lineNo: number;
+  accepted: string;
+  returned: string;
 }
 
 interface LockedOrder {
@@ -534,6 +571,106 @@ export class PurchaseOrdersService {
     return this.get(id);
   }
 
+  // --- receiving (#11) ---------------------------------------------------------------
+
+  /**
+   * The order as a goods receipt needs it, or null when there is none. Pass the caller's
+   * transaction to read inside it.
+   */
+  async receivable(id: string, tx: Tx = this.prisma): Promise<ReceivableOrder | null> {
+    const row = await tx.purchaseOrder.findUnique({
+      where: { id },
+      include: { lines: { orderBy: { lineNo: 'asc' } } },
+    });
+    if (!row) return null;
+    const lines = row.lines.map(storedLine);
+    const items = await this.items.describe(
+      lines.map((l) => l.itemId),
+      tx,
+    );
+    return {
+      id: row.id,
+      number: row.number,
+      status: row.status,
+      supplierId: row.supplierId,
+      deliveryLocationId: row.deliveryLocationId,
+      lines: lines.map((line) => {
+        const totals = lineTotals(priced(line, items.get(line.itemId)!));
+        return {
+          lineNo: line.lineNo,
+          itemId: line.itemId,
+          unitCode: line.unitCode,
+          factor: normaliseDecimal(line.factor),
+          quantity: normaliseDecimal(line.quantity),
+          baseQuantity: totals.baseQuantity,
+          unitCost: totals.unitCost,
+          receivedQuantity: line.receivedQuantity,
+          returnedQuantity: line.returnedQuantity,
+        };
+      }),
+    };
+  }
+
+  /**
+   * Locks the order for the rest of the caller's transaction and reads it as a goods receipt
+   * needs it. A receipt posting takes this lock after its own document's, so two receipts posted
+   * at once against the same order queue up here, and the second sees what the first received.
+   */
+  async lockForReceiving(tx: Tx, id: string): Promise<ReceivableOrder> {
+    const rows = await tx.$queryRaw<{ id: string }[]>`
+      SELECT "id" FROM "purchase_orders" WHERE "id" = ${id}::uuid FOR UPDATE`;
+    if (rows.length === 0) throw new NotFoundError('Purchase order', id);
+    return (await this.receivable(id, tx))!;
+  }
+
+  /**
+   * Records what a posted goods receipt accepted and returned against the order's lines, and moves
+   * the order to partially received or received when anything was accepted, inside the receipt's posting transaction with the
+   * order locked by `lockForReceiving`. Audited against the order.
+   */
+  async recordReceipt(
+    tx: Tx,
+    input: {
+      orderId: string;
+      receiptNumber: string;
+      lines: ReceivedOnLine[];
+      /** Null leaves the order's status as it is: nothing was accepted on it yet. */
+      status: 'partially_received' | 'received' | null;
+    },
+    actor: AuthenticatedUser,
+    meta: ClientMeta,
+  ): Promise<void> {
+    const before = await tx.purchaseOrder.findUniqueOrThrow({
+      where: { id: input.orderId },
+      select: { number: true, status: true },
+    });
+    for (const line of input.lines) {
+      await tx.$executeRaw`
+        UPDATE "purchase_order_lines"
+        SET "received_quantity" = "received_quantity" + ${line.accepted}::numeric,
+            "returned_quantity" = "returned_quantity" + ${line.returned}::numeric
+        WHERE "purchase_order_id" = ${input.orderId}::uuid AND "line_no" = ${line.lineNo}
+      `;
+    }
+    await tx.purchaseOrder.update({
+      where: { id: input.orderId },
+      data: { ...(input.status ? { status: input.status } : {}), revision: { increment: 1 } },
+    });
+    await this.audit.recordWithin(tx, {
+      actorUserId: actor.userId,
+      action: AuditAction.UPDATE,
+      entityType: 'PurchaseOrder',
+      entityId: input.orderId,
+      summary: `Received ${input.receiptNumber} against purchase order ${before.number}`,
+      changes: {
+        status: { from: before.status, to: input.status ?? before.status },
+        receipt: input.receiptNumber,
+        lines: input.lines,
+      },
+      ...meta,
+    });
+  }
+
   // --- internals -------------------------------------------------------------------
 
   /** Today in the company's time zone (ADR-0018). */
@@ -660,6 +797,8 @@ export class PurchaseOrdersService {
         unitPrice: normaliseDecimal(dto.unitPrice),
         vatRate: normaliseDecimal(dto.vatRate),
         vatRecoverable: dto.vatRecoverable,
+        receivedQuantity: '0.000',
+        returnedQuantity: '0.000',
       };
     });
   }
@@ -667,7 +806,18 @@ export class PurchaseOrdersService {
   private async writeLines(tx: Tx, purchaseOrderId: string, lines: StoredLine[]): Promise<void> {
     if (lines.length === 0) return;
     await tx.purchaseOrderLine.createMany({
-      data: lines.map((line) => ({ purchaseOrderId, ...line })),
+      // What has been received starts at zero: only goods receipts write it (#11).
+      data: lines.map((line) => ({
+        purchaseOrderId,
+        lineNo: line.lineNo,
+        itemId: line.itemId,
+        unitCode: line.unitCode,
+        factor: line.factor,
+        quantity: line.quantity,
+        unitPrice: line.unitPrice,
+        vatRate: line.vatRate,
+        vatRecoverable: line.vatRecoverable,
+      })),
     });
   }
 
@@ -767,6 +917,8 @@ function storedLine(row: {
   unitPrice: Prisma.Decimal;
   vatRate: Prisma.Decimal;
   vatRecoverable: boolean;
+  receivedQuantity: Prisma.Decimal;
+  returnedQuantity: Prisma.Decimal;
 }): StoredLine {
   return {
     lineNo: row.lineNo,
@@ -777,6 +929,8 @@ function storedLine(row: {
     unitPrice: row.unitPrice.toFixed(),
     vatRate: row.vatRate.toFixed(),
     vatRecoverable: row.vatRecoverable,
+    receivedQuantity: row.receivedQuantity.toFixed(3),
+    returnedQuantity: row.returnedQuantity.toFixed(3),
   };
 }
 
@@ -806,7 +960,14 @@ function lineView(
     vatRate: normaliseDecimal(line.vatRate),
     vatRecoverable: line.vatRecoverable,
     ...lineTotals(priced(line, item)),
+    receivedQuantity: formatQuantityIn(line.receivedQuantity, item.baseUnitDecimals),
+    returnedQuantity: formatQuantityIn(line.returnedQuantity, item.baseUnitDecimals),
   };
+}
+
+/** A base quantity with exactly the base unit's decimals: "238.400" kg, "8" bags. */
+function formatQuantityIn(quantity: string, decimals: number): string {
+  return new Prisma.Decimal(quantity).toFixed(decimals);
 }
 
 function supplierRef(supplier: SupplierFacts): SupplierRef {

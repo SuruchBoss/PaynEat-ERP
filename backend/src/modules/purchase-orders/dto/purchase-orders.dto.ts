@@ -212,8 +212,12 @@ export interface PurchaseOrderLineView {
   gross: string;
   /** In the item's base unit. */
   baseQuantity: string;
-  /** Per base unit, net of recoverable VAT: what a goods receipt will set lot cost from. */
+  /** Per base unit, net of recoverable VAT: what a goods receipt sets lot cost from. */
   unitCost: string;
+  /** Accepted by posted goods receipts so far, in the base unit (#11). */
+  receivedQuantity: string;
+  /** Turned away at the dock and returned to the supplier so far, in the base unit (#11). */
+  returnedQuantity: string;
 }
 
 export interface PurchaseOrderSummary {

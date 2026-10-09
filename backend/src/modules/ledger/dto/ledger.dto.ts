@@ -39,11 +39,13 @@ export interface ReversalRef extends DocumentRef {
   postedBy: PersonRef;
 }
 
-export type StockDocumentType = 'opening_balance' | 'reversal' | 'stock_adjustment';
+export type StockDocumentType =
+  'opening_balance' | 'reversal' | 'stock_adjustment' | 'goods_receipt';
 
 /**
  * draft → posted for an opening balance; draft → submitted → approved → posted, or rejected,
- * for a document a second person approves (stock adjustments, #8, ADR-0008).
+ * for a document a second person approves (stock adjustments, #8, ADR-0008; goods receipts
+ * with a finding, #11).
  */
 export type StockDocumentStatus = 'draft' | 'submitted' | 'approved' | 'posted' | 'rejected';
 
@@ -76,6 +78,9 @@ export interface LotView {
   secondaryQuantity: string | null;
   unitCost: string;
   expiryDate: string;
+  /** Received lots only (ADR-0014): both dates the expiry was chosen from. */
+  computedExpiryDate: string | null;
+  supplierExpiryDate: string | null;
 }
 
 export interface StockOnHandRow {

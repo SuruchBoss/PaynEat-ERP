@@ -1,0 +1,131 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
+// Goods receipts and returns to supplier — owned by the goods-receipts module (#11;
+// docs/GLOSSARY.md "Goods receipt", "Inspection finding", "Return to supplier"; ADR-0007,
+// ADR-0014, ADR-0025). A receipt records what really arrived against a purchase order, line by
+// line, and posts the accepted part as new lots. Anything outside the item's tolerances needs a
+// reason and someone else's approval first. What is turned away never enters stock: it becomes a
+// return to supplier, which writes nothing to the ledger.
+
+/// The state goods arrived in, as the receiver judges it at the dock.
+enum ReceivingCondition {
+  good
+  damaged
+}
+
+/// The receipt part of a stock document: against which order, at which location, and who moved
+/// it through its steps. The document's status and number (GR-2026-00001) live on
+/// `stock_documents`, like every other document's.
+model GoodsReceipt {
+  documentId      String        @id @map("document_id") @db.Uuid
+  document        StockDocument @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  purchaseOrderId String        @map("purchase_order_id") @db.Uuid
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Restrict)
+  /// The order's delivery location, copied when the receipt is raised: goods are received where
+  /// they were ordered to.
+  locationId      String        @map("location_id") @db.Uuid
+  location        Location      @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  submittedById   String?       @map("submitted_by_id") @db.Uuid
+  submittedBy     User?         @relation("GoodsReceiptSubmittedBy", fields: [submittedById], references: [id], onDelete: Restrict)
+  submittedAt     DateTime?     @map("submitted_at") @db.Timestamptz(3)
+  /// Who approved the findings. Never the receipt's creator: the service refuses it, and a trigger
+  /// refuses it again (ADR-0008). Null for a receipt with no findings, which posts on submission.
+  approvedById    String?       @map("approved_by_id") @db.Uuid
+  approvedBy      User?         @relation("GoodsReceiptApprovedBy", fields: [approvedById], references: [id], onDelete: Restrict)
+  approvedAt      DateTime?     @map("approved_at") @db.Timestamptz(3)
+  rejectedById    String?       @map("rejected_by_id") @db.Uuid
+  rejectedBy      User?         @relation("GoodsReceiptRejectedBy", fields: [rejectedById], references: [id], onDelete: Restrict)
+  rejectedAt      DateTime?     @map("rejected_at") @db.Timestamptz(3)
+  rejectionReason String?       @map("rejection_reason")
+
+  lines          GoodsReceiptLine[]
+  supplierReturn SupplierReturn?
+
+  @@index([purchaseOrderId])
+  @@index([locationId])
+  @@map("goods_receipts")
+}
+
+/// One purchase order line as it arrived. Changes only while its receipt is a draft (a trigger
+/// refuses otherwise). The receiver counts in the order line's purchase unit or in the item's
+/// base unit; both quantities are kept as entered, and in the base unit, converted once when the
+/// line is saved (ADR-0005, ADR-0019).
+model GoodsReceiptLine {
+  documentId           String             @map("document_id") @db.Uuid
+  receipt              GoodsReceipt       @relation(fields: [documentId], references: [documentId], onDelete: Cascade)
+  lineNo               Int                @map("line_no")
+  /// The order line this line receives against, on the receipt's own purchase order.
+  purchaseOrderLineNo  Int                @map("purchase_order_line_no")
+  itemId               String             @map("item_id") @db.Uuid
+  item                 Item               @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  unitCode             String             @map("unit_code")
+  unit                 Unit               @relation(fields: [unitCode], references: [code], onDelete: Restrict)
+  /// Base units in one counting unit: the order line's factor, or 1 for the base unit itself.
+  factor               Decimal            @db.Decimal(18, 6)
+  /// As entered, in the counting unit.
+  countedQuantity      Decimal            @map("counted_quantity") @db.Decimal(18, 3)
+  rejectedQuantity     Decimal            @map("rejected_quantity") @db.Decimal(18, 3)
+  /// In the item's base unit.
+  countedBaseQuantity  Decimal            @map("counted_base_quantity") @db.Decimal(18, 3)
+  rejectedBaseQuantity Decimal            @map("rejected_base_quantity") @db.Decimal(18, 3)
+  /// Variable-weight items only: pieces counted and turned away (ADR-0005).
+  countedPieces        Decimal?           @map("counted_pieces") @db.Decimal(18, 0)
+  rejectedPieces       Decimal?           @map("rejected_pieces") @db.Decimal(18, 0)
+  /// °C at the dock, when measured.
+  temperature          Decimal?           @db.Decimal(3, 1)
+  condition            ReceivingCondition
+  /// The expiry the supplier printed, when there is one (ADR-0014).
+  supplierExpiryDate   DateTime?          @map("supplier_expiry_date") @db.Date
+  /// Why a line outside tolerance should still be accepted, or why part of it is turned away.
+  reason               String?
+  /// Fixed when the receipt is submitted, so the approver decides on exactly what was found: what
+  /// the order line still expected then, in the base unit, and the inspection's findings.
+  expectedBaseQuantity Decimal?           @map("expected_base_quantity") @db.Decimal(18, 3)
+  findings             Json?
+
+  @@id([documentId, lineNo])
+  @@unique([documentId, purchaseOrderLineNo])
+  @@map("goods_receipt_lines")
+}
+
+/// What a posted receipt turned away, going back to the supplier with its reasons (ADR-0007
+/// decision 4). Created by the posting, numbered RTS-2026-00001, never changed. It has no ledger
+/// entries: the goods never entered stock.
+model SupplierReturn {
+  id              String        @id @default(uuid()) @db.Uuid
+  number          String        @unique
+  goodsReceiptId  String        @unique @map("goods_receipt_id") @db.Uuid
+  goodsReceipt    GoodsReceipt  @relation(fields: [goodsReceiptId], references: [documentId], onDelete: Restrict)
+  purchaseOrderId String        @map("purchase_order_id") @db.Uuid
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Restrict)
+  supplierId      String        @map("supplier_id") @db.Uuid
+  supplier        Supplier      @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  /// The receipt's business date.
+  businessDate    DateTime      @map("business_date") @db.Date
+  createdById     String        @map("created_by_id") @db.Uuid
+  createdBy       User          @relation("SupplierReturnCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  lines SupplierReturnLine[]
+
+  @@index([purchaseOrderId])
+  @@map("supplier_returns")
+}
+
+/// One receipt line's rejected part, in the item's base unit, with the receiver's reason.
+model SupplierReturnLine {
+  supplierReturnId  String         @map("supplier_return_id") @db.Uuid
+  supplierReturn    SupplierReturn @relation(fields: [supplierReturnId], references: [id], onDelete: Restrict)
+  lineNo            Int            @map("line_no")
+  /// The receipt line it comes from.
+  receiptLineNo     Int            @map("receipt_line_no")
+  itemId            String         @map("item_id") @db.Uuid
+  item              Item           @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  quantity          Decimal        @db.Decimal(18, 3)
+  secondaryQuantity Decimal?       @map("secondary_quantity") @db.Decimal(18, 0)
+  reason            String
+
+  @@id([supplierReturnId, lineNo])
+  @@map("supplier_return_lines")
+}
