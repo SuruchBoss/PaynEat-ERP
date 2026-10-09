@@ -1,6 +1,6 @@
 # ADR-0024: Purchase order totals round once per line, and the approval threshold compares the gross total
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-05
 - **ภาษาไทย:** [0024-purchase-order-totals-and-approval.th.md](0024-purchase-order-totals-and-approval.th.md)
 
