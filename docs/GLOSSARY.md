@@ -66,8 +66,14 @@ using a new domain concept anywhere else.
 | Net, VAT and gross | ยอดก่อน VAT, VAT และยอดรวม VAT | A purchase order line's amounts: net = quantity × price per purchase unit, VAT = net × rate, gross = net + VAT, each rounded once to 2 decimals. The order's totals are the sums of its lines (ADR-0024). |
 | Recoverable VAT | VAT ที่ขอคืนได้ | Input VAT the chain claims back. It is not a cost, so it is left out of the cost per base unit; VAT that is not recoverable is part of the cost. |
 | Cost per base unit | ต้นทุนต่อหน่วยฐาน | What one base unit of a purchase order line costs: price ÷ conversion factor, net of recoverable VAT, rounded once to 6 decimals. Goods receipts set lot cost from it (ADR-0004, ADR-0024). |
-| Goods receipt (GRN) | ใบรับสินค้า | Receiving supplier goods into a location, creating lots. |
-| Return to supplier | ใบส่งคืนสินค้า | Sending rejected or defective goods back to a supplier. |
+| Goods receipt (GRN) | ใบรับสินค้า | What really arrived against an approved or sent purchase order, at its delivery location, line by line, numbered `GR-2026-00001`. Each line is inspected; posting creates one lot per accepted line at the order line's cost per base unit (ADR-0004, ADR-0025). Within tolerance it posts when submitted; with an inspection finding it needs a reason and a purchasing approver who did not create it (ADR-0008). |
+| Counted quantity | จำนวนที่นับได้ | What arrived on a receipt line, weighed or counted, in the order line's purchase unit or the item's base unit, before anything is turned away. A variable-weight item records its piece count with it (ADR-0005). |
+| Accepted quantity | จำนวนที่รับเข้า | Counted minus rejected: what becomes a lot. |
+| Rejected quantity | จำนวนที่ไม่รับ | The part of a receipt line turned away at the dock, with a reason. Never enters stock; it becomes a return to supplier. |
+| Expected quantity | จำนวนที่คาดว่าจะได้ | What a receipt line was expected to bring: what is still outstanding on its order line (ordered less accepted so far). The inspection compares the counted quantity with it. |
+| Received quantity | จำนวนที่รับแล้ว | What posted goods receipts have accepted against a purchase order line so far, in the base unit. An order line is complete when it reaches what was ordered less the item's variance limit; an order is received when every line is complete (ADR-0025). |
+| Over-receipt | รับเกิน | Accepting more against an order line than was ordered plus the item's variance limit (exactly what was ordered without one). Refused, even when two receipts post at the same moment. |
+| Return to supplier | ใบส่งคืนซัพพลายเออร์ | What a posted goods receipt turned away, going back to the supplier with its reasons, numbered `RTS-2026-00001`. Created by the posting, never changed, and writes no ledger entries: the goods never entered stock (ADR-0007). |
 | Production order | ใบสั่งผลิต | Consumes input lots and produces output lots at a plant. |
 | Requisition | ใบขอเบิก | A branch's request for stock from a plant or warehouse. Writes no stock. |
 | Transfer | ใบโอน | Moves stock between locations via in-transit: **dispatch** at the origin, **receipt** at the destination. |
@@ -151,9 +157,12 @@ What branches sell, kept in the ERP and mirrored by the POS (ADR-0002, ADR-0023)
 
 | Term | ไทย | Meaning |
 |---|---|---|
-| Inspection | การตรวจรับ | Recorded at a GRN or transfer receipt: counted quantity, temperature, condition, expiry. |
+| Inspection | การตรวจรับ | Recorded at a GRN or transfer receipt: counted quantity, temperature, condition, expiry. One model for both (ADR-0007), as a pure function: `core/receiving/domain/inspection.ts`. |
+| Inspection finding | ผลตรวจนอกเกณฑ์ | Something about a receipt line outside the item's tolerances: over or under quantity, too warm, damaged, or short dated. A line with a finding needs a reason, and its receipt an approval by someone other than its creator. |
+| Short dated | อายุสั้น | A supplier's expiry earlier than the receipt date plus the item's shelf life. The lot takes the supplier's date and keeps both (ADR-0014). |
+| Condition | สภาพ | How goods arrived, as the receiver judges it: good or damaged. Damaged is a finding. |
 | Cold chain | ห่วงโซ่ความเย็น | Keeping chilled or frozen goods within temperature from supplier to branch; evidenced by receiving temperatures. |
-| Tolerance | ค่าที่ยอมรับได้ | Per-item limits (quantity variance %, maximum receiving temperature). Beyond it, a reason and an approval are required. |
+| Tolerance | ค่าที่ยอมรับได้ | Per-item limits (quantity variance %, maximum receiving temperature). Beyond it, a reason and an approval are required. Configuration the `admin` maintains, never constants; an empty limit means no check. Not master data: a POS never sees it (#11). |
 | Variance | ส่วนต่าง | Difference between expected and actual (quantity received, stock counted, yield achieved). Never silently absorbed. |
 
 ## Integration · การเชื่อมระบบ

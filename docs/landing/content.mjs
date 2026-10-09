@@ -40,7 +40,7 @@ export const en = {
     cta: 'Try the demo',
     cta2: 'View the code',
     status:
-      'Walking skeleton: the stock ledger, master data, access control and purchase orders work today. Goods receipts, production and transfers are next.',
+      'Walking skeleton: the stock ledger, master data, access control, purchase orders and goods receipts with inspection work today. Production and transfers are next.',
     shot: ['stock-dark', 'desktop', 'Stock on hand in dark mode: five lots at the Bang Na plant with unit cost and value'],
   },
   problemsHead: {
@@ -166,7 +166,7 @@ export const en = {
     title: 'What’s cooking next.',
     sub: 'Built in public, one GitHub issue at a time. None of this is in the demo yet.',
     items: [
-      [11, 'Goods receipts with inspection and lots'],
+      [12, 'Production BOMs: expected yield and cost allocation'],
       [13, 'Production orders: measured yield and lot genealogy'],
       [14, 'Transfers through in-transit'],
       [23, 'Traceability and the recall report'],
@@ -179,7 +179,7 @@ export const en = {
     body: 'The Community edition is Apache 2.0 and complete for one chain, with no limit on users, locations or data. A paid Enterprise edition for scale and regulation starts after the first release. Food safety, data integrity, basic security, access to your own data and the upgrade path are never behind a paywall.',
     facts: [
       ['Apache 2.0', 'Community edition'],
-      ['24', 'design decisions, in English and Thai'],
+      ['25', 'design decisions, in English and Thai'],
       ['TH · EN', 'the console and every decision record'],
     ],
     link: ['Read the editions decision', `${REPO}/blob/main/docs/adr/0015-editions-community-and-enterprise.md`],
@@ -232,7 +232,7 @@ export const th = {
     lead: 'ระบบหลังบ้านสำหรับเชนร้านอาหารที่ดูแลซัพพลายเชนเอง สร้างแบบเปิดเผยต่อสาธารณะ เริ่มจากสิ่งที่ทุกอย่างต้องพึ่ง: ตัวเลขสต๊อกที่เชื่อได้',
     cta: 'ลองเดโม',
     cta2: 'ดูโค้ด',
-    status: 'ระยะโครงระบบ: บัญชีเคลื่อนไหวสต๊อก master data สิทธิ์การใช้งาน และใบสั่งซื้อใช้ได้แล้ววันนี้ การรับสินค้า การผลิต และการโอนตามมาถัดไป',
+    status: 'ระยะโครงระบบ: บัญชีเคลื่อนไหวสต๊อก master data สิทธิ์การใช้งาน ใบสั่งซื้อ และใบรับสินค้าพร้อมการตรวจรับใช้ได้แล้ววันนี้ การผลิตและการโอนตามมาถัดไป',
     shot: ['stock-dark', 'desktop', 'สต๊อกคงเหลือในโหมดมืด: lot ห้ารายการที่โรงงานบางนา พร้อมต้นทุนต่อหน่วยและมูลค่า'],
   },
   problemsHead: {
@@ -358,7 +358,7 @@ export const th = {
     title: 'สิ่งที่กำลังจะมา',
     sub: 'สร้างแบบเปิดเผยทีละ GitHub issue ทั้งหมดนี้ยังไม่อยู่ในเดโม',
     items: [
-      [11, 'ใบรับสินค้าพร้อมการตรวจรับและ lot'],
+      [12, 'สูตรการผลิต: yield ที่คาดไว้และการปันต้นทุน'],
       [13, 'ใบสั่งผลิต: yield ที่วัดจริงและผังความสัมพันธ์ lot'],
       [14, 'ใบโอนผ่านระหว่างขนส่ง'],
       [23, 'การย้อนรอยและรายงาน recall'],
@@ -371,7 +371,7 @@ export const th = {
     body: 'รุ่น Community เป็น Apache 2.0 และครบสำหรับหนึ่งเชน ไม่จำกัดผู้ใช้ สถานที่ หรือข้อมูล รุ่น Enterprise แบบเสียเงินสำหรับขนาดใหญ่และข้อกำหนดเฉพาะเริ่มหลังรุ่นแรก ความปลอดภัยของอาหาร ความถูกต้องของข้อมูล ความปลอดภัยพื้นฐาน การเข้าถึงข้อมูลของตัวเอง และทางอัปเกรด ไม่เคยถูกกั้นด้วยค่าใช้จ่าย',
     facts: [
       ['Apache 2.0', 'รุ่น Community'],
-      ['24', 'บันทึกการตัดสินใจ ทั้งไทยและอังกฤษ'],
+      ['25', 'บันทึกการตัดสินใจ ทั้งไทยและอังกฤษ'],
       ['ไทย · EN', 'ทั้ง console และบันทึกการตัดสินใจทุกฉบับ'],
     ],
     link: ['อ่านการตัดสินใจเรื่องรุ่นของระบบ', `${REPO}/blob/main/docs/adr/0015-editions-community-and-enterprise.th.md`],

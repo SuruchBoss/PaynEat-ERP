@@ -176,12 +176,14 @@ Prometheus exposition at `GET /metrics` on each API, not exposed publicly.
 
 `erp_postings_total` label values:
 
-- `document_type`: the ERP's stock document type, as stored: `opening_balance`, `reversal` and
-  `stock_adjustment` so far.
+- `document_type`: the ERP's stock document type, as stored: `opening_balance`, `reversal`,
+  `stock_adjustment` and `goods_receipt` (#11) so far.
   Each ticket that adds a document type adds its value here.
 - `outcome`: `succeeded` or `refused`.
 - `rule`: the rule that refused the posting (for example `negative_stock_plant`, `expired_lot`,
-  `period_closed`); empty when `outcome` is `succeeded`.
+  `period_closed`); empty when `outcome` is `succeeded`. A goods receipt (#11) adds
+  `order_not_receivable`, `temperature_required`, `reason_required`, `expired_on_arrival`,
+  `over_receipt` and `needs_approval`, counted when it is submitted or posted.
 
 Values that describe the system rather than one process are **read from the database at scrape time**,
 never held in process memory. `erp_master_data_last_pull_timestamp_seconds` is the stored time of each
