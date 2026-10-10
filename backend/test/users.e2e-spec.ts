@@ -132,6 +132,8 @@ describe('user administration', () => {
         'menu:read',
         'menu:manage',
         'company_settings:manage',
+        'production_bom:read',
+        'production_bom:manage',
       ],
       requiresSecondFactor: true,
     });
@@ -163,6 +165,7 @@ describe('user administration', () => {
         'purchase_order:read',
         'goods_receipt:read',
         'goods_receipt:receive',
+        'production_bom:read',
       ],
       requiresSecondFactor: false,
     });
@@ -178,6 +181,7 @@ describe('user administration', () => {
         'menu:read',
         'purchase_order:read',
         'goods_receipt:read',
+        'production_bom:read',
       ],
       requiresSecondFactor: false,
     });

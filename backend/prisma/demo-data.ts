@@ -147,6 +147,16 @@ export const DEMO_ITEMS: readonly DemoItem[] = [
     shelfLifeDays: 180,
     purchaseUnits: [{ unitCode: 'case', factor: '200' }],
   },
+  {
+    // Flour and seasoning the plant mixes and sends to the branches (#12).
+    code: 'BATTER-MIX',
+    nameTh: 'แป้งผสมชุบทอด',
+    nameEn: 'Batter mix',
+    baseUnitCode: 'kg',
+    variableWeight: false,
+    shelfLifeDays: 90,
+    purchaseUnits: [],
+  },
 ];
 
 /**
@@ -649,5 +659,65 @@ export const DEMO_MENU_ITEMS: readonly DemoMenuItem[] = [
         ],
       },
     ],
+  },
+];
+
+/** A BOM line: an item code, its quantity per batch in the base unit, and options. */
+export interface DemoBomLine {
+  itemCode: string;
+  quantity: string;
+  /** For items not counted in kg or g. */
+  expectedWeightKg?: string;
+  /** Outputs only, when the BOM overrides the weight-share ratios. */
+  allocationRatio?: string;
+}
+
+export interface DemoProductionBom {
+  code: string;
+  nameTh: string;
+  nameEn: string;
+  /** Days from the day the seed runs: -1 is yesterday, the day the opening balance is dated. */
+  fromDay: number;
+  inputs: readonly DemoBomLine[];
+  outputs: readonly DemoBomLine[];
+}
+
+/**
+ * Production BOMs (#12, ADR-0026). Cutting one case of whole chicken (20 kg) yields 22 of each
+ * piece and 4.4 kg of frames: 18 kg expected, 2 kg waste, 90 % yield. By weight the frames would
+ * carry 24.44 % of the cost; the chain overrides that so the pieces it sells carry it and the
+ * frames, sold off for stock, carry 8 %. The batter mix keeps the default: its one output
+ * carries everything.
+ */
+export const DEMO_PRODUCTION_BOMS: readonly DemoProductionBom[] = [
+  {
+    code: 'CUT-WHOLE-CHICKEN',
+    nameTh: 'ตัดแต่งไก่ทั้งตัว',
+    nameEn: 'Cut whole chicken',
+    fromDay: -1,
+    inputs: [{ itemCode: 'WHOLE-CHICKEN', quantity: '20' }],
+    outputs: [
+      { itemCode: 'CHICKEN-BREAST', quantity: '22', expectedWeightKg: '5', allocationRatio: '35' },
+      { itemCode: 'CHICKEN-THIGH', quantity: '22', expectedWeightKg: '3.6', allocationRatio: '22' },
+      {
+        itemCode: 'CHICKEN-DRUMSTICK',
+        quantity: '22',
+        expectedWeightKg: '2.8',
+        allocationRatio: '18',
+      },
+      { itemCode: 'CHICKEN-WING', quantity: '22', expectedWeightKg: '2.2', allocationRatio: '17' },
+      { itemCode: 'CHICKEN-FRAME', quantity: '4.4', allocationRatio: '8' },
+    ],
+  },
+  {
+    code: 'MIX-BATTER',
+    nameTh: 'ผสมแป้งชุบทอด',
+    nameEn: 'Mix batter',
+    fromDay: -1,
+    inputs: [
+      { itemCode: 'FLOUR', quantity: '25' },
+      { itemCode: 'SEASONING', quantity: '1' },
+    ],
+    outputs: [{ itemCode: 'BATTER-MIX', quantity: '25.8' }],
   },
 ];

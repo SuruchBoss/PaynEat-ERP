@@ -11,7 +11,7 @@
  * enabled without ERP_DEMO=1, and refuses their sign-in (#5, `domain/demo-mode.ts`).
  * Today it creates the company, one user per role (#4), the items (#5), the plant, three
  * branches and two suppliers (#6), the plant's opening balance (#7) and one approved write-off
- * (#8); later tickets extend
+ * (#8), purchase orders (#10), goods receipts (#11) and production BOMs (#12); later tickets extend
  * it along the supplier-to-plate path, so that one command still builds everything.
  *
  * Safe to re-run: every write is an upsert keyed on a natural key, and re-running puts
@@ -27,6 +27,12 @@ import { seedRefusal } from '../src/modules/auth/domain/demo-mode';
 import { inTransitCode } from '../src/modules/locations/domain/location-rules';
 import { normaliseRecoveryCode } from '../src/modules/auth/domain/totp';
 import { addDays } from '../src/core/time/domain/business-date';
+import {
+  allocationRatios,
+  bomFigures,
+  bomIssues,
+  type BomItemFacts,
+} from '../src/modules/production-boms/domain/bom-rules';
 import { ledgerServices } from './ledger-services';
 
 import {
@@ -45,6 +51,7 @@ import {
   DEMO_GOODS_RECEIPTS,
   DEMO_PURCHASE_APPROVAL_THRESHOLD,
   DEMO_PURCHASE_ORDERS,
+  DEMO_PRODUCTION_BOMS,
   DEMO_RECEIVING_TOLERANCES,
   type DemoRecipeVersion,
 } from './demo-data';
@@ -847,6 +854,95 @@ async function seedMenu(prisma: PrismaClient): Promise<number> {
   return written;
 }
 
+/**
+ * Creates the demo production BOMs (#12): one version each, from yesterday, with the ratios the
+ * API would store (the override when given, else the weight shares). A script may write that
+ * history; the API never backdates. A BOM already there is left as an evaluator left it.
+ */
+async function seedProductionBoms(prisma: PrismaClient): Promise<string[]> {
+  const { ledger } = ledgerServices(prisma, { quiet: true });
+  const today = ledger.today();
+  const rows = await prisma.item.findMany({
+    select: { id: true, code: true, active: true, baseUnitCode: true, baseUnit: true },
+  });
+  const byCode = new Map(rows.map((r) => [r.code, r]));
+  const facts = new Map<string, BomItemFacts>(
+    rows.map((r) => [
+      r.id,
+      { active: r.active, baseUnitCode: r.baseUnitCode, baseUnitDecimals: r.baseUnit.decimals },
+    ]),
+  );
+  const written: string[] = [];
+  for (const demo of DEMO_PRODUCTION_BOMS) {
+    if (await prisma.productionBom.findUnique({ where: { code: demo.code } })) continue;
+    const line = (l: (typeof demo.inputs)[number]) => ({
+      itemId: byCode.get(l.itemCode)!.id,
+      quantity: l.quantity,
+      expectedWeightKg: l.expectedWeightKg ?? null,
+      allocationRatio: l.allocationRatio ?? null,
+    });
+    const inputs = demo.inputs.map(line);
+    const outputs = demo.outputs.map(line);
+    const issues = bomIssues(inputs, outputs, facts);
+    if (issues.lines.length > 0 || issues.problems.length > 0) {
+      throw new Error(`Demo BOM ${demo.code} is invalid: ${JSON.stringify(issues)}`);
+    }
+    const ratios = allocationRatios(outputs, bomFigures(inputs, outputs, facts).outputWeights);
+    const effectiveFrom = addDays(today, demo.fromDay);
+    await prisma.$transaction(async (tx) => {
+      const bom = await tx.productionBom.create({
+        data: {
+          code: demo.code,
+          nameTh: demo.nameTh,
+          nameEn: demo.nameEn,
+          locationType: 'plant',
+          versions: {
+            create: {
+              number: 1,
+              effectiveFrom: new Date(`${effectiveFrom}T00:00:00.000Z`),
+              ratiosOverridden: ratios.overridden,
+              lines: {
+                create: [
+                  ...inputs.map((l, i) => ({
+                    side: 'input' as const,
+                    lineNo: i + 1,
+                    itemId: l.itemId,
+                    quantity: l.quantity,
+                    expectedWeightKg: l.expectedWeightKg,
+                  })),
+                  ...outputs.map((l, i) => ({
+                    side: 'output' as const,
+                    lineNo: i + 1,
+                    itemId: l.itemId,
+                    quantity: l.quantity,
+                    expectedWeightKg: l.expectedWeightKg,
+                    allocationRatio: ratios.ratios[i],
+                  })),
+                ],
+              },
+            },
+          },
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          action: AuditAction.CREATE,
+          entityType: 'ProductionBom',
+          entityId: bom.id,
+          summary: `Demo seed created production BOM ${demo.code} (${demo.nameEn}), version 1 from ${effectiveFrom}`,
+          changes: {
+            bomCode: demo.code,
+            ratiosOverridden: ratios.overridden,
+            ratios: ratios.ratios,
+          } as Prisma.InputJsonValue,
+        },
+      });
+    });
+    written.push(`${demo.code} (${ratios.ratios.join(' / ')} %)`);
+  }
+  return written;
+}
+
 async function main(): Promise<void> {
   const refusal = seedRefusal({ erpDemo: process.env.ERP_DEMO, nodeEnv: process.env.NODE_ENV });
   if (refusal) throw new SeedRefused(`${refusal}\nNothing has been written.`);
@@ -915,6 +1011,12 @@ async function main(): Promise<void> {
       receipts.length > 0
         ? `Demo goods receipts: ${receipts.join('; ')}`
         : 'Demo goods receipts: already there, left as they are',
+    );
+    const boms = await seedProductionBoms(prisma);
+    console.log(
+      boms.length > 0
+        ? `Demo production BOMs: ${boms.join('; ')}`
+        : 'Demo production BOMs: already there, left as they are',
     );
     console.log(`\nDemo accounts (password for all: ${DEMO_PASSWORD}):`);
     for (const demo of DEMO_USERS) {
