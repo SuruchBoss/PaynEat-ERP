@@ -105,6 +105,21 @@ describe('roles and permissions (ADR-0008)', () => {
     }
   });
 
+  it('lets branch managers raise requisitions, every role that plans stock read them, and only admin set par levels (#15)', () => {
+    for (const role of ROLE_KEYS) {
+      const held = permissionsFor([role]);
+      expect(held.includes(Permission.REQUISITION_RAISE)).toBe(role === 'branch_manager');
+      expect(held.includes(Permission.PAR_LEVEL_MANAGE)).toBe(role === 'admin');
+      expect(held.includes(Permission.REQUISITION_READ)).toBe(
+        role === 'admin' ||
+          role === 'logistics' ||
+          role === 'branch_manager' ||
+          role === 'plant' ||
+          role === 'finance',
+      );
+    }
+  });
+
   it('merges several roles without duplicates', () => {
     expect(permissionsFor(['admin', 'finance', 'admin'])).toEqual([
       Permission.USER_READ,
@@ -124,6 +139,8 @@ describe('roles and permissions (ADR-0008)', () => {
       Permission.PRODUCTION_BOM_MANAGE,
       Permission.PRODUCTION_ORDER_READ,
       Permission.TRANSFER_READ,
+      Permission.REQUISITION_READ,
+      Permission.PAR_LEVEL_MANAGE,
     ]);
     expect(permissionsFor([])).toEqual([]);
   });

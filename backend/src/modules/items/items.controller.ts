@@ -22,6 +22,7 @@ import {
   CreateItemDto,
   ItemsQueryDto,
   ReceivingTolerancesDto,
+  RequisitionUnitDto,
   UpdateItemDto,
   type ItemView,
   type UnitView,
@@ -83,5 +84,17 @@ export class ItemsController {
     @Req() req: Request,
   ): Promise<ItemView> {
     return this.items.setReceivingTolerances(id, dto, actor, clientMeta(req));
+  }
+
+  /** Sets or clears the item's requisition unit (#15): how the plant packs what branches ask for. */
+  @Put('items/:id/requisition-unit')
+  @RequirePermissions(Permission.ITEM_MANAGE)
+  setRequisitionUnit(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: RequisitionUnitDto,
+    @CurrentUser() actor: AuthenticatedUser,
+    @Req() req: Request,
+  ): Promise<ItemView> {
+    return this.items.setRequisitionUnit(id, dto, actor, clientMeta(req));
   }
 }

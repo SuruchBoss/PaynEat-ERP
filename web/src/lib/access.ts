@@ -72,6 +72,12 @@ export const Permission = {
   TRANSFER_RECEIVE: 'transfer:receive',
   /** Approve (which posts) or reject receipts with findings or write-offs: the plant, never its own (#14). */
   TRANSFER_APPROVE_RECEIPT: 'transfer:approve_receipt',
+  /** Read requisitions, their suggestions and par misses: the admin, plant, logistics, branch managers, finance (#15). */
+  REQUISITION_READ: 'requisition:read',
+  /** Draft, edit, submit and cancel requisitions: branch managers (#15). */
+  REQUISITION_RAISE: 'requisition:raise',
+  /** Set and remove par levels: the admin (#15). */
+  PAR_LEVEL_MANAGE: 'par_level:manage',
 } as const;
 
 export type PermissionKey = (typeof Permission)[keyof typeof Permission];

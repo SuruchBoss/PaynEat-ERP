@@ -155,6 +155,7 @@ export class TransfersService {
         originId: true,
         destinationId: true,
         receiptDocumentId: true,
+        requisitionId: true,
         _count: { select: { lines: true } },
       },
     });
@@ -174,6 +175,7 @@ export class TransfersService {
           status: statusOf(document, receipt !== null),
           origin: locationRef(locations.get(row.originId)!),
           destination: locationRef(locations.get(row.destinationId)!),
+          requisitionId: row.requisitionId,
           lineCount: row._count.lines,
           receivedBy: receipt ? { receipt: { id: receipt.id, number: receipt.number } } : null,
         };
@@ -284,6 +286,7 @@ export class TransfersService {
       status: statusOf(document, row.receiptDocumentId !== null),
       origin: locationRef(origin),
       destination: locationRef(destination),
+      requisitionId: row.requisitionId,
       inTransit: inTransit.get(row.originId) ? locationRef(inTransit.get(row.originId)!) : null,
       dispatched:
         document.status === 'posted' ? { by: document.postedBy!, at: document.postedAt! } : null,
@@ -378,16 +381,23 @@ export class TransfersService {
 
   // --- drafting --------------------------------------------------------------------
 
+  /**
+   * Drafts a transfer. `from` creates it from a branch requisition (#15): `guard` runs first in
+   * the same transaction, so the requisition is locked and checked as the transfer is written, and
+   * the transfer keeps the link for good.
+   */
   async create(
     dto: CreateTransferDto,
     actor: AuthenticatedUser,
     meta: ClientMeta,
+    from?: { requisitionId: string; guard: (tx: Tx) => Promise<void> },
   ): Promise<TransferView> {
     const businessDate = dto.businessDate ?? this.ledger.today();
     const route = await this.route(dto.originId, dto.destinationId);
     labelRequestLocation(route.origin.code);
     const lines = await this.validLines(dto.lines);
     const id = await this.prisma.$transaction(async (tx) => {
+      if (from) await from.guard(tx);
       const document = await this.ledger.createDraft(
         tx,
         'transfer',
@@ -400,6 +410,7 @@ export class TransfersService {
           documentId: document.id,
           originId: route.origin.id,
           destinationId: route.destination.id,
+          requisitionId: from?.requisitionId ?? null,
         },
       });
       await tx.transferLine.createMany({
@@ -411,7 +422,11 @@ export class TransfersService {
         entityType: 'Transfer',
         entityId: document.id,
         summary: `Drafted transfer ${document.number} from ${route.origin.code} to ${route.destination.code}`,
-        changes: { status: { from: null, to: 'draft' }, lineCount: lines.length },
+        changes: {
+          status: { from: null, to: 'draft' },
+          lineCount: lines.length,
+          ...(from ? { requisitionId: from.requisitionId } : {}),
+        },
         ...meta,
       });
       return document.id;
@@ -426,6 +441,15 @@ export class TransfersService {
     meta: ClientMeta,
   ): Promise<TransferView> {
     const existing = await this.existing(id);
+    const reroute =
+      (dto.originId !== undefined && dto.originId !== existing.originId) ||
+      (dto.destinationId !== undefined && dto.destinationId !== existing.destinationId);
+    if (reroute && existing.requisitionId !== null) {
+      throw new BusinessRuleError(
+        'ROUTE_SET_BY_REQUISITION',
+        'This transfer was created from a requisition: it goes from the requisition’s supplying location to its branch',
+      );
+    }
     const route =
       dto.originId !== undefined || dto.destinationId !== undefined
         ? await this.route(
@@ -756,12 +780,101 @@ export class TransfersService {
     await tx.transfer.update({ where: { documentId: transferId }, data: { receiptDocumentId } });
   }
 
+  // --- for branch requisitions (#15) -----------------------------------------------
+
+  /**
+   * What is on the road to `destinationId` now, per item, keyed by item id: what dispatched
+   * transfers to it, neither received nor reversed, took out of their origin. A branch
+   * requisition's suggestion subtracts it, so stock already sent is not asked for twice.
+   */
+  async inTransitTo(
+    destinationId: string,
+    itemIds: readonly string[],
+  ): Promise<Map<string, string>> {
+    const ids = [...new Set(itemIds)];
+    if (ids.length === 0) return new Map();
+    const rows = await this.prisma.$queryRaw<Array<{ itemId: string; quantity: string }>>`
+      SELECT l."item_id" AS "itemId", SUM(p."quantity")::text AS "quantity"
+      FROM "transfers" t
+      JOIN "stock_documents" d ON d."id" = t."document_id" AND d."status" = 'posted'
+      JOIN "transfer_picks" p ON p."document_id" = t."document_id"
+      JOIN "transfer_lines" l ON l."document_id" = p."document_id" AND l."line_no" = p."line_no"
+      WHERE t."destination_id" = ${destinationId}::uuid AND t."receipt_document_id" IS NULL
+        AND NOT EXISTS (SELECT 1 FROM "stock_documents" v WHERE v."reverses_id" = t."document_id")
+        AND l."item_id" = ANY(${ids}::uuid[])
+      GROUP BY l."item_id"
+    `;
+    return new Map(rows.map((row) => [row.itemId, normaliseDecimal(row.quantity)]));
+  }
+
+  /**
+   * The transfers created from these requisitions, with what each planned and dispatched per
+   * item (#15): a requisition is fulfilled by what was dispatched, never by what a draft plans,
+   * and a reversed dispatch moved nothing. Cancelled transfers are left out. Pass the caller's
+   * transaction to read inside it.
+   */
+  async ofRequisitions(
+    requisitionIds: readonly string[],
+    tx: Tx = this.prisma,
+  ): Promise<RequisitionTransfer[]> {
+    const ids = [...new Set(requisitionIds)];
+    if (ids.length === 0) return [];
+    const rows = await tx.transfer.findMany({
+      where: { requisitionId: { in: ids }, document: { status: { not: 'cancelled' } } },
+      include: {
+        lines: true,
+        picks: true,
+        document: {
+          select: {
+            number: true,
+            status: true,
+            businessDate: true,
+            reversedBy: { select: { id: true } },
+          },
+        },
+      },
+    });
+    return rows
+      .map((row) => {
+        const status = transferStatus(
+          row.document.status as 'draft' | 'posted' | 'cancelled',
+          row.receiptDocumentId !== null,
+          row.document.reversedBy !== null,
+        );
+        const itemOf = new Map(row.lines.map((l) => [l.lineNo, l.itemId]));
+        const counts = status === 'dispatched' || status === 'received';
+        const items = new Map<string, { planned: string; dispatched: string }>();
+        for (const line of row.lines) {
+          items.set(line.itemId, {
+            planned: status === 'draft' ? normaliseDecimal(line.quantity.toFixed()) : '0',
+            dispatched: '0',
+          });
+        }
+        if (counts) {
+          for (const pick of row.picks) {
+            const entry = items.get(itemOf.get(pick.lineNo)!)!;
+            entry.dispatched = total([entry.dispatched, pick.quantity.toFixed()]);
+          }
+        }
+        return {
+          id: row.documentId,
+          number: row.document.number,
+          requisitionId: row.requisitionId!,
+          status,
+          businessDate: row.document.businessDate.toISOString().slice(0, 10),
+          items,
+        };
+      })
+      .sort((a, b) => a.number.localeCompare(b.number));
+  }
+
   // --- internals -------------------------------------------------------------------
 
   private async existing(id: string): Promise<{
     number: string;
     originId: string;
     destinationId: string;
+    requisitionId: string | null;
     lines: Array<{ lineNo: number; itemId: string }>;
   }> {
     const row = await this.prisma.transfer.findUnique({
@@ -769,6 +882,7 @@ export class TransfersService {
       select: {
         originId: true,
         destinationId: true,
+        requisitionId: true,
         lines: { select: { lineNo: true, itemId: true } },
         document: { select: { number: true } },
       },
@@ -781,6 +895,7 @@ export class TransfersService {
       number: row.document.number,
       originId: row.originId,
       destinationId: row.destinationId,
+      requisitionId: row.requisitionId,
       lines: row.lines,
     };
   }
@@ -918,6 +1033,17 @@ export class TransfersService {
         : 0,
     }));
   }
+}
+
+/** A transfer created from a branch requisition, as the requisition reads it (#15). */
+export interface RequisitionTransfer {
+  id: string;
+  number: string;
+  requisitionId: string;
+  status: TransferStatus;
+  businessDate: string;
+  /** Per item: what a draft plans (zero once dispatched), and what left and was not reversed. */
+  items: Map<string, { planned: string; dispatched: string }>;
 }
 
 /** What a transfer receipt reads about its transfer. */

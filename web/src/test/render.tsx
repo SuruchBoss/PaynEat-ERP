@@ -40,6 +40,8 @@ export const ADMIN: SessionUser = {
     'company_settings:manage',
     'production_bom:read',
     'production_bom:manage',
+    'requisition:read',
+    'par_level:manage',
   ],
   mfaEnabled: true,
 };
@@ -107,22 +109,29 @@ export const PLANT: SessionUser = {
   mfaEnabled: false,
 };
 
-/** Logistics: drafts and dispatches transfers (#14). */
+/** Logistics: drafts and dispatches transfers (#14), fulfilling branch requisitions (#15). */
 export const LOGISTICS: SessionUser = {
   ...STAFF,
   id: '6c1d0a52-6d8e-4c52-9a55-3d7f0b3a0007',
   displayName: 'Demo logistics',
   roles: ['logistics'],
-  permissions: ['transfer:read', 'transfer:dispatch'],
+  permissions: ['transfer:read', 'transfer:dispatch', 'requisition:read'],
 };
 
-/** A branch manager: receives transfers at the back door (#14). */
+/** A branch manager: receives transfers at the back door (#14) and raises requisitions (#15). */
 export const BRANCH_MANAGER: SessionUser = {
   ...STAFF,
   id: '6c1d0a52-6d8e-4c52-9a55-3d7f0b3a0008',
   displayName: 'Demo branch manager',
   roles: ['branch_manager'],
-  permissions: ['stock_adjustment:raise', 'menu:read', 'transfer:read', 'transfer:receive'],
+  permissions: [
+    'stock_adjustment:raise',
+    'menu:read',
+    'transfer:read',
+    'transfer:receive',
+    'requisition:read',
+    'requisition:raise',
+  ],
 };
 
 /** Finance as an approver of stock adjustments (#8). */

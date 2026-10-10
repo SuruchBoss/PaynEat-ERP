@@ -128,6 +128,7 @@ describe('the demo API: signing in', () => {
         'production_order:run',
         'transfer:read',
         'transfer:approve_receipt',
+        'requisition:read',
       ],
       mfaEnabled: false,
     });
@@ -289,6 +290,24 @@ describe('the demo API: master data', () => {
     );
     const plant = await signIn('plant');
     expect((await call('PUT', path, { token: plant, body: {} })).status).toBe(403);
+  });
+
+  it('sends the demo chicken pieces in trays of ten and lets the admin change that (#15)', async () => {
+    const token = await signIn('admin');
+    const items = json(await call('GET', '/api/v1/items?status=all', { token }));
+    const wing = items.find((i: { code: string }) => i.code === 'CHICKEN-WING');
+    expect(wing.requisitionUnit).toBe('10');
+    const path = `/api/v1/items/${wing.id}/requisition-unit`;
+    const saved = json(await call('PUT', path, { token, body: { requisitionUnit: '12.000' } }));
+    expect(saved.requisitionUnit).toBe('12');
+    expect(saved.version).toBe(wing.version);
+    expectRefusal(
+      await call('PUT', path, { token, body: { requisitionUnit: '1.5' } }),
+      422,
+      'INVALID_REQUISITION_UNIT',
+    );
+    const cleared = json(await call('PUT', path, { token, body: { requisitionUnit: '' } }));
+    expect(cleared.requisitionUnit).toBeNull();
   });
 
   it('refuses a taken item code, a purchase unit that is the base unit, and a zero factor', async () => {

@@ -13,6 +13,8 @@ import { OpeningBalancesPage } from '@/features/opening-balances/OpeningBalances
 import { ProductionBomsPage } from '@/features/production-boms/ProductionBomsPage';
 import { ProductionOrdersPage } from '@/features/production-orders/ProductionOrdersPage';
 import { PurchaseOrdersPage } from '@/features/purchase-orders/PurchaseOrdersPage';
+import { ParLevelsPage } from '@/features/requisitions/ParLevelsPage';
+import { RequisitionsPage } from '@/features/requisitions/RequisitionsPage';
 import { CompanySettingsPage } from '@/features/settings/CompanySettingsPage';
 import { StatusPage } from '@/features/status/StatusPage';
 import { StockAdjustmentsPage } from '@/features/stock-adjustments/StockAdjustmentsPage';
@@ -67,6 +69,13 @@ export const routes: RouteObject[] = [
           {
             element: <RequirePermission permission={Permission.TRANSFER_READ} />,
             children: [{ path: 'transfers', element: <TransfersPage /> }],
+          },
+          {
+            element: <RequirePermission permission={Permission.REQUISITION_READ} />,
+            children: [
+              { path: 'requisitions', element: <RequisitionsPage /> },
+              { path: 'par-levels', element: <ParLevelsPage /> },
+            ],
           },
           {
             element: <RequirePermission permission={Permission.USER_READ} />,

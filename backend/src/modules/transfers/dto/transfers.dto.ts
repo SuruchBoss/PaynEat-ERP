@@ -435,6 +435,8 @@ export interface TransferView extends Omit<StockDocumentView, 'status'> {
   status: TransferStatus;
   origin: LocationRef;
   destination: LocationRef;
+  /** The branch requisition it was created from (#15), or null. */
+  requisitionId: string | null;
   /** The origin's in-transit location, where dispatched stock waits. */
   inTransit: LocationRef | null;
   dispatched: { by: PersonRef; at: Date } | null;
@@ -464,6 +466,8 @@ export interface TransferSummary extends Omit<StockDocumentView, 'status'> {
   status: TransferStatus;
   origin: LocationRef;
   destination: LocationRef;
+  /** The branch requisition it was created from (#15), or null. */
+  requisitionId: string | null;
   lineCount: number;
   receivedBy: { receipt: { id: string; number: string } } | null;
 }

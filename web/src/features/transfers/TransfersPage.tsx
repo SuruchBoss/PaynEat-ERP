@@ -3,6 +3,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { qk } from '@/app/query-client';
 import { DateField } from '@/components/DateField';
 import { ErrorCallout } from '@/components/ErrorCallout';
@@ -625,6 +626,16 @@ function TransferDocument({
             {nameOf(transfer.destination)} <code>{transfer.destination.code}</code>
           </dd>
         </div>
+        {transfer.requisitionId && (
+          <div>
+            <dt>{t('tr.field.requisition')}</dt>
+            <dd>
+              <Link to={`/requisitions?open=${transfer.requisitionId}`}>
+                {t('tr.field.requisitionLink')}
+              </Link>
+            </dd>
+          </div>
+        )}
         <div>
           <dt>{t('tr.column.date')}</dt>
           <dd>{formatBusinessDate(transfer.businessDate, language)}</dd>

@@ -101,6 +101,8 @@ export interface TransferSummary extends Header {
   status: TransferStatus;
   origin: TransferLocationRef;
   destination: TransferLocationRef;
+  /** The branch requisition it was created from (#15), or null. */
+  requisitionId: string | null;
   lineCount: number;
   receivedBy: { receipt: { id: string; number: string } } | null;
 }
@@ -109,6 +111,8 @@ export interface TransferView extends Header {
   status: TransferStatus;
   origin: TransferLocationRef;
   destination: TransferLocationRef;
+  /** The branch requisition it was created from (#15), or null. */
+  requisitionId: string | null;
   inTransit: TransferLocationRef | null;
   dispatched: { by: PersonRef; at: string } | null;
   cancelled: { by: PersonRef; at: string; reason: string } | null;

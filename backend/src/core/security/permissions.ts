@@ -101,16 +101,32 @@ export const Permission = {
    * written off on the way.
    */
   TRANSFER_READ: 'transfer:read',
-  /** Draft, edit, cancel and dispatch transfers, confirming the lots that left (#14). */
+  /**
+   * Draft, edit, cancel and dispatch transfers, confirming the lots that left, and reverse a
+   * dispatch no receipt has taken in (#14). Creating a transfer from a branch requisition is
+   * dispatching too (#15).
+   */
   TRANSFER_DISPATCH: 'transfer:dispatch',
   /** Record what arrived at the destination: draft, edit and submit transfer receipts (#14). */
   TRANSFER_RECEIVE: 'transfer:receive',
   /**
    * Approve or reject a transfer receipt with a finding or a write-off, which posts it, and retry
    * the posting of an approved one the ledger refused (#14). Never a receipt the approver created
-   * (ADR-0008).
+   * or submitted (ADR-0008, ADR-0028).
    */
   TRANSFER_APPROVE_RECEIPT: 'transfer:approve_receipt',
+  /**
+   * Read branch requisitions, the logistics queue of open ones and how often par levels were
+   * missed (#15).
+   */
+  REQUISITION_READ: 'requisition:read',
+  /** Ask the plant for stock: draft, edit, submit and cancel branch requisitions (#15). */
+  REQUISITION_RAISE: 'requisition:raise',
+  /**
+   * Set par levels per item and branch, and each item's requisition unit (#15): configuration
+   * the suggestions follow (ADR-0009), so only the admin keeps it.
+   */
+  PAR_LEVEL_MANAGE: 'par_level:manage',
 } as const;
 
 export type PermissionKey = (typeof Permission)[keyof typeof Permission];
@@ -137,7 +153,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly PermissionKey[]> = {
   // ADR-0008: manage users, roles, locations, configuration; reopen closed periods.
   // Master data is configuration: only the admin maintains items (#5). Connecting a POS is
   // configuration too (#9), and so is the menu every POS mirrors (#16), the purchase approval
-  // threshold (#10) and the production BOMs every production order follows (#12).
+  // threshold (#10) and the production BOMs every production order follows (#12), and the par
+  // levels branch requisitions are suggested from, which the admin reads how often were missed (#15).
   admin: [
     Permission.USER_READ,
     Permission.USER_MANAGE,
@@ -151,6 +168,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly PermissionKey[]> = {
     Permission.COMPANY_SETTINGS_MANAGE,
     Permission.PRODUCTION_BOM_READ,
     Permission.PRODUCTION_BOM_MANAGE,
+    Permission.REQUISITION_READ,
+    Permission.PAR_LEVEL_MANAGE,
   ],
   // ADR-0008: create and send purchase orders (#10); manage suppliers (#6).
   // Purchasing follows what arrived against its orders (#11).
@@ -185,24 +204,28 @@ export const ROLE_PERMISSIONS: Record<Role, readonly PermissionKey[]> = {
     Permission.PRODUCTION_ORDER_RUN,
     Permission.TRANSFER_READ,
     Permission.TRANSFER_APPROVE_RECEIPT,
+    Permission.REQUISITION_READ,
   ],
-  // ADR-0008: dispatch transfers (#14).
-  logistics: [Permission.TRANSFER_READ, Permission.TRANSFER_DISPATCH],
+  // ADR-0008: dispatch transfers (#14), fulfilling the branches' requisitions (#15).
+  logistics: [Permission.TRANSFER_READ, Permission.TRANSFER_DISPATCH, Permission.REQUISITION_READ],
   // ADR-0008: raise requisitions, receive transfers, count branch stock. Adjusting branch
   // stock after a count is raising an adjustment (#8). A branch sells the menu: its manager
-  // reads it, with its recipes (#16). Receiving transfers is #14.
+  // reads it, with its recipes (#16). Receiving transfers is #14; requisitions are #15.
   branch_manager: [
     Permission.STOCK_ADJUSTMENT_RAISE,
     Permission.MENU_READ,
     Permission.TRANSFER_READ,
     Permission.TRANSFER_RECEIVE,
+    Permission.REQUISITION_READ,
+    Permission.REQUISITION_RAISE,
   ],
   // ADR-0008: view costs, variances and valuation; export financial data. An adjustment
   // changes the value of stock, so finance approves it (#8): never one it created itself.
   // Recipes and their theoretical cost are costs: finance reads them (#16), and so are the
   // prices the company has committed to pay (#10), what each received lot cost (#11) and how a
   // batch's cost is split across its outputs (#12), and what each production order's output lots
-  // cost, with its yield (#13), and what was written off on the way to a branch (#14).
+  // cost, with its yield (#13), and what was written off on the way to a branch (#14). Par misses
+  // are stock the chain did not have where it was needed (#15).
   finance: [
     Permission.STOCK_ADJUSTMENT_APPROVE,
     Permission.MENU_READ,
@@ -211,6 +234,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly PermissionKey[]> = {
     Permission.PRODUCTION_BOM_READ,
     Permission.PRODUCTION_ORDER_READ,
     Permission.TRANSFER_READ,
+    Permission.REQUISITION_READ,
   ],
 };
 

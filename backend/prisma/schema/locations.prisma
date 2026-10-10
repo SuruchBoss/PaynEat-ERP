@@ -55,6 +55,9 @@ model Location {
   productionOrders ProductionOrder[]
   transfersOut     Transfer[]          @relation("TransferOrigin")
   transfersIn      Transfer[]          @relation("TransferDestination")
+  parLevels        ParLevel[]
+  requisitions     Requisition[]       @relation("RequisitionBranch")
+  requisitionsIn   Requisition[]       @relation("RequisitionSupplier")
   transferReceipts TransferReceipt[]   @relation("TransferReceiptLocation")
   posInstances     PosInstanceBranch[]
   salesEvents      SalesEvent[]

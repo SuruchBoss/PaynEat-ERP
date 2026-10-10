@@ -150,6 +150,15 @@ export class ReceivingTolerancesDto {
   maxTemperature?: string | null;
 }
 
+export class RequisitionUnitDto {
+  /** Base units in one requisition unit: "12" for a tray of 12 pieces. Empty or null clears it. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  @Transform(trimmed)
+  requisitionUnit?: string | null;
+}
+
 export class ItemsQueryDto {
   /** Matches the code or either name, ignoring case. */
   @IsOptional()
@@ -197,6 +206,11 @@ export interface ItemView {
   purchaseUnits: PurchaseUnitView[];
   /** What the receiving dock checks (#11). Not master data: a POS never sees it. */
   receivingTolerances: ReceivingTolerancesView;
+  /**
+   * Base units the plant packs and sends together (#15), or null. Requisitions are suggested and
+   * asked for in whole ones. Not master data: a POS never sees it.
+   */
+  requisitionUnit: string | null;
   /** The master data version of the item's latest change. */
   version: number;
   createdAt: Date;

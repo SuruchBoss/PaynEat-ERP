@@ -1,0 +1,88 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
+// Branch requisitions and par levels — owned by the requisitions module (#15; docs/GLOSSARY.md
+// "Requisition", "Par level"; ADR-0009, ADR-0029). A requisition asks the plant for stock: it
+// writes nothing to the ledger. Logistics fulfils it with transfers (#14), and how far it is
+// fulfilled is read from what they dispatched, never stored.
+
+/// What a requisition stores about itself. Partially fulfilled and fulfilled follow its transfers.
+enum RequisitionStatus {
+  draft
+  submitted
+  cancelled
+}
+
+/// How much of an item a branch should hold (ADR-0009 decision 2): configuration the admin keeps,
+/// not code. An item with no row at a branch gets no suggestion there, but can still be requested.
+model ParLevel {
+  locationId  String   @map("location_id") @db.Uuid
+  location    Location @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  itemId      String   @map("item_id") @db.Uuid
+  item        Item     @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  /// In the item's base unit; zero is a par level of nothing.
+  quantity    Decimal  @db.Decimal(18, 3)
+  updatedById String   @map("updated_by_id") @db.Uuid
+  updatedBy   User     @relation("ParLevelUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@id([locationId, itemId])
+  @@index([itemId])
+  @@map("par_levels")
+}
+
+/// One branch asking one supplying location (the plant by default) for stock by a date. Numbered
+/// RQ-2026-00001 from the sequence service. Never deleted: a draft or a submitted requisition
+/// nothing has been dispatched against is cancelled.
+model Requisition {
+  id                  String            @id @default(uuid()) @db.Uuid
+  number              String            @unique
+  status              RequisitionStatus @default(draft)
+  branchId            String            @map("branch_id") @db.Uuid
+  branch              Location          @relation("RequisitionBranch", fields: [branchId], references: [id], onDelete: Restrict)
+  supplyingLocationId String            @map("supplying_location_id") @db.Uuid
+  supplyingLocation   Location          @relation("RequisitionSupplier", fields: [supplyingLocationId], references: [id], onDelete: Restrict)
+  /// A business date (ADR-0018): the day the branch needs the stock by.
+  neededBy            DateTime          @map("needed_by") @db.Date
+  note                String?
+  /// Bumped by every change: a step taken from an older revision is refused.
+  revision            Int               @default(1)
+
+  createdById        String    @map("created_by_id") @db.Uuid
+  createdBy          User      @relation("RequisitionCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  submittedById      String?   @map("submitted_by_id") @db.Uuid
+  submittedBy        User?     @relation("RequisitionSubmittedBy", fields: [submittedById], references: [id], onDelete: Restrict)
+  submittedAt        DateTime? @map("submitted_at") @db.Timestamptz(3)
+  cancelledById      String?   @map("cancelled_by_id") @db.Uuid
+  cancelledBy        User?     @relation("RequisitionCancelledBy", fields: [cancelledById], references: [id], onDelete: Restrict)
+  cancelledAt        DateTime? @map("cancelled_at") @db.Timestamptz(3)
+  cancellationReason String?   @map("cancellation_reason")
+
+  lines     RequisitionLine[]
+  transfers Transfer[]
+
+  @@index([branchId])
+  @@index([status])
+  @@map("requisitions")
+}
+
+/// One item asked for, in its base unit, with what the screen suggested when the line was saved,
+/// so a reader later sees both. Changes only while the requisition is a draft (a trigger refuses
+/// otherwise).
+model RequisitionLine {
+  requisitionId String      @map("requisition_id") @db.Uuid
+  requisition   Requisition @relation(fields: [requisitionId], references: [id], onDelete: Restrict)
+  lineNo        Int         @map("line_no")
+  itemId        String      @map("item_id") @db.Uuid
+  item          Item        @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  /// Null when the item had no par level at the branch.
+  suggested     Decimal?    @db.Decimal(18, 3)
+  requested     Decimal     @db.Decimal(18, 3)
+
+  @@id([requisitionId, lineNo])
+  @@unique([requisitionId, itemId])
+  @@index([itemId])
+  @@map("requisition_lines")
+}

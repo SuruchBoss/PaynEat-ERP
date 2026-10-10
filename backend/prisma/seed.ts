@@ -55,6 +55,8 @@ import {
   DEMO_PRODUCTION_ORDER,
   DEMO_ARRIVAL_TEMPERATURE,
   DEMO_TRANSFERS,
+  DEMO_PAR_LEVELS,
+  DEMO_REQUISITION_UNITS,
   DEMO_RECEIVING_TOLERANCES,
   type DemoRecipeVersion,
 } from './demo-data';
@@ -1012,17 +1014,58 @@ async function seedProductionOrder(prisma: PrismaClient): Promise<string | null>
 }
 
 /**
- * Dispatches and receives the demo transfers (#14) through the same services the API uses:
- * logistics confirms the lots FEFO suggests, the branch manager records what arrived, and the plant
- * approves the receipts with a finding or a write-off. Once: an installation with any transfer
- * is left as it is. Returns a line per transfer, or an empty list when there were some already.
+ * The items' requisition units and the branches' par levels (#15): configuration, written as
+ * described each time. Returns how many values it changed.
+ */
+async function seedParLevels(prisma: PrismaClient): Promise<number> {
+  const admin = await demoActor(prisma, 'admin');
+  const items = new Map(
+    (await prisma.item.findMany({ select: { id: true, code: true, requisitionUnit: true } })).map(
+      (i) => [i.code, i],
+    ),
+  );
+  let written = 0;
+  for (const [code, unit] of Object.entries(DEMO_REQUISITION_UNITS)) {
+    const item = items.get(code)!;
+    if (item.requisitionUnit?.toFixed() !== new Prisma.Decimal(unit).toFixed()) {
+      await prisma.item.update({ where: { id: item.id }, data: { requisitionUnit: unit } });
+      written += 1;
+    }
+  }
+  for (const [branchCode, levels] of Object.entries(DEMO_PAR_LEVELS)) {
+    const branch = await prisma.location.findUniqueOrThrow({ where: { code: branchCode } });
+    for (const [code, quantity] of Object.entries(levels)) {
+      const itemId = items.get(code)!.id;
+      const key = { locationId_itemId: { locationId: branch.id, itemId } };
+      const current = await prisma.parLevel.findUnique({ where: key });
+      if (current && current.quantity.equals(new Prisma.Decimal(quantity))) continue;
+      await prisma.parLevel.upsert({
+        where: key,
+        create: { locationId: branch.id, itemId, quantity, updatedById: admin.userId },
+        update: { quantity, updatedById: admin.userId },
+      });
+      written += 1;
+    }
+  }
+  return written;
+}
+
+/**
+ * Raises the branches' requisitions (#15), and dispatches and receives the demo transfers (#14)
+ * created from them, through the same services the API uses: the branch manager raises and
+ * submits a requisition for today, logistics creates the transfer from it and confirms the lots
+ * FEFO suggests, the branch manager records what arrived, and the plant approves the receipts
+ * with a finding or a write-off. Once: an installation with any transfer is left as it is.
+ * Returns a line per transfer, or an empty list when there were some already.
  */
 async function seedTransfers(prisma: PrismaClient): Promise<string[]> {
   if (await prisma.transfer.findFirst()) return [];
   const plant = await prisma.location.findUniqueOrThrow({
     where: { code: DEMO_PRODUCTION_ORDER.locationCode },
   });
-  const { transfers, transferReceipts } = ledgerServices(prisma, { quiet: true });
+  const { ledger, transfers, transferReceipts, requisitions } = ledgerServices(prisma, {
+    quiet: true,
+  });
   const [logistics, manager, plantUser] = await Promise.all([
     demoActor(prisma, 'logistics'),
     demoActor(prisma, 'branch_manager'),
@@ -1036,10 +1079,30 @@ async function seedTransfers(prisma: PrismaClient): Promise<string[]> {
     const destination = await prisma.location.findUniqueOrThrow({
       where: { code: demo.destinationCode },
     });
-    const draft = await transfers.create(
+    const raised = await requisitions.create(
       {
-        originId: plant.id,
-        destinationId: destination.id,
+        branchId: destination.id,
+        supplyingLocationId: plant.id,
+        neededBy: ledger.today(),
+        note: demo.note,
+        lines: demo.lines.map((l) => ({
+          itemId: items.get(l.itemCode)!,
+          requested: l.requested ?? l.quantity,
+        })),
+      },
+      manager,
+      {},
+    );
+    const requisition = await requisitions.submit(
+      raised.id,
+      { revision: raised.revision },
+      manager,
+      {},
+    );
+    const draft = await requisitions.createTransfer(
+      requisition.id,
+      {
+        revision: requisition.revision,
         note: demo.note,
         lines: demo.lines.map((l) => ({ itemId: items.get(l.itemCode)!, quantity: l.quantity })),
       },
@@ -1109,8 +1172,9 @@ async function seedTransfers(prisma: PrismaClient): Promise<string[]> {
         `The demo receipt ${posted.number} did not post: ${JSON.stringify(posted.blockers)}`,
       );
     }
+    const fulfilled = await requisitions.get(requisition.id);
     summaries.push(
-      `${dispatched.number} to ${demo.destinationCode} received by ${posted.number}` +
+      `${requisition.number} ${fulfilled.status}: ${dispatched.number} to ${demo.destinationCode} received by ${posted.number}` +
         (posted.approved ? ', approved by the plant' : ''),
     );
   }
@@ -1198,11 +1262,15 @@ async function main(): Promise<void> {
         ? `Demo production order: ${productionOrder}`
         : 'Demo production order: already there, left as it is',
     );
+    const parLevels = await seedParLevels(prisma);
+    console.log(
+      `Demo par levels and requisition units: ${parLevels === 0 ? 'already as described' : `${parLevels} written`}`,
+    );
     const transfers = await seedTransfers(prisma);
     console.log(
       transfers.length > 0
-        ? `Demo transfers: ${transfers.join('; ')}`
-        : 'Demo transfers: already there, left as they are',
+        ? `Demo requisitions and transfers: ${transfers.join('; ')}`
+        : 'Demo requisitions and transfers: already there, left as they are',
     );
     console.log(`\nDemo accounts (password for all: ${DEMO_PASSWORD}):`);
     for (const demo of DEMO_USERS) {

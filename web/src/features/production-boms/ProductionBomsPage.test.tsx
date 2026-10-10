@@ -30,6 +30,7 @@ const item = (id: string, code: string, nameTh: string, baseUnitCode: string): I
   variableWeight: false,
   shelfLifeDays: 5,
   receivingTolerances: { maxVariancePercent: null, maxTemperature: null },
+  requisitionUnit: null,
   active: true,
   purchaseUnits: [],
   version: 1,

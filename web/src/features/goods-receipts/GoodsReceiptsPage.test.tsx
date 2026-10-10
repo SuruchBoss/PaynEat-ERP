@@ -43,6 +43,7 @@ const CHICKEN: ItemView = {
   variableWeight: true,
   shelfLifeDays: 5,
   receivingTolerances: { maxVariancePercent: '2', maxTemperature: '4' },
+  requisitionUnit: null,
   active: true,
   purchaseUnits: [{ unitCode: 'case', factor: '20' }],
   version: 1,

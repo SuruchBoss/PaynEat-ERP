@@ -245,6 +245,8 @@ describe('signing in', () => {
           'company_settings:manage',
           'production_bom:read',
           'production_bom:manage',
+          'requisition:read',
+          'par_level:manage',
         ],
         mfaEnabled: true,
       });

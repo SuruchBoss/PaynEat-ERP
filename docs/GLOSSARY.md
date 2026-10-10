@@ -76,7 +76,10 @@ using a new domain concept anywhere else.
 | Return to supplier | ใบส่งคืนซัพพลายเออร์ | What a posted goods receipt turned away, going back to the supplier with its reasons, numbered `RTS-2026-00001`. Created by the posting, never changed, and writes no ledger entries: the goods never entered stock (ADR-0007). |
 | Production order | ใบสั่งผลิต | Consumes input lots and produces output lots at a plant, numbered `MO-2026-00001`. Raised from the BOM version in force on its business date with a planned quantity of the BOM's first input; draft → released → posted, or cancelled before posting. Posting creates one lot per output in the ledger's one transaction (ADR-0027). |
 | Release (production order) | ปล่อยใบสั่งผลิต | Sending a draft production order to the plant floor: its BOM version, plant and plan are fixed, and its input lots are picked FEFO. The supervisor may then change the picks, never to an expired lot (ADR-0027). |
-| Requisition | ใบขอเบิก | A branch's request for stock from a plant or warehouse. Writes no stock. |
+| Requisition | ใบขอเบิก | A branch's request for stock from a plant or warehouse (the plant by default), by a needed-by date, numbered `RQ-2026-00001`. Writes no stock. Stores draft → submitted, or cancelled before anything was dispatched against it; **partially fulfilled** (ส่งมาบางส่วน) and **fulfilled** (ได้ครบแล้ว) are read from what the transfers created from it dispatched, never stored (ADR-0029). |
+| Suggested quantity (requisition) | จำนวนแนะนำ | `max(0, par level − branch balance − quantity in transit to the branch)`, rounded up to the item's requisition unit; each requisition line keeps the one it was saved with, next to what was requested (ADR-0029). |
+| Requisition unit | หน่วยขอเบิก | How many base units of an item the plant packs and sends together (a tray of 10 pieces). Item configuration kept by the admin, not master data; requisitions ask for whole ones, transfers are not held to them (ADR-0029). |
+| Outstanding (requisition line) | ยังค้าง | What a requisition line asked for, less what was dispatched and less what draft transfers from it already plan, never below zero: what a new transfer from it is prefilled with. |
 | Transfer | ใบโอน | Moves stock from a plant or warehouse to a branch or warehouse via in-transit: **dispatch** at the origin, **receipt** at the destination. A stock document (TR-2026-00001): draft → dispatched → received, or reversed by logistics while no receipt of it has posted (กลับรายการแล้ว: its stock goes back to the origin), or cancelled before it leaves (ADR-0028). |
 | Dispatch | ส่งของ (dispatch) | The origin side of a transfer: confirms the lots and quantities that left, moving them to in-transit. Never ส่งออก, which means export. |
 | Lot line | บรรทัด lot | One lot a dispatch took, with its quantity (and pieces): what the transfer receipt inspects and accounts for, one by one. Numbered across the transfer. |
@@ -159,6 +162,7 @@ What branches sell, kept in the ERP and mirrored by the POS (ADR-0002, ADR-0023)
 | Term | ไทย | Meaning |
 |---|---|---|
 | Par level | ระดับสต๊อกมาตรฐาน | The stock a branch should hold of an item; the basis for suggested requisition quantities. |
+| Par miss | การขาดของ (par miss) | Over a period, for a branch and an item: a time its balance went from zero or more to below zero, or a requisition line not fully dispatched by its needed-by date. Shows which par levels to change (ADR-0009, ADR-0029). |
 | Reorder point | จุดสั่งซื้อ | The balance at which a plant or warehouse should reorder from a supplier. |
 | MRP-lite | MRP-lite | Consolidates open requisitions into suggested production orders and suggested purchase orders. Suggestions only; a person creates the documents. |
 
