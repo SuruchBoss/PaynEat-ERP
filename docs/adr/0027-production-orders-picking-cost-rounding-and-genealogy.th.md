@@ -1,6 +1,6 @@
 # ADR-0027: ใบสั่งผลิต: วันที่ทางธุรกิจเดียวต่อใบ การเลือก lot แบบ FEFO และการแก้ไข การปันต้นทุนแบบไม่สูญหลัก และผังความสัมพันธ์ lot เมื่อกลับรายการ
 
-- **สถานะ:** เสนอ
+- **สถานะ:** ยอมรับแล้ว
 - **วันที่:** 2026-10-10
 - **English:** [0027-production-orders-picking-cost-rounding-and-genealogy.md](0027-production-orders-picking-cost-rounding-and-genealogy.md)
 

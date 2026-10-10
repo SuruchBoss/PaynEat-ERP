@@ -1,6 +1,6 @@
 # ADR-0027: Production orders: one business date, FEFO picks and overrides, exact cost allocation, and genealogy on reversal
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-10
 - **ภาษาไทย:** [0027-production-orders-picking-cost-rounding-and-genealogy.th.md](0027-production-orders-picking-cost-rounding-and-genealogy.th.md)
 
