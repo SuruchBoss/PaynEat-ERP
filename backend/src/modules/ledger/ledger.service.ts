@@ -809,6 +809,76 @@ export class LedgerService {
   }
 
   /**
+   * Each item's balance at one location now, all lots together, keyed by item id (#15): what a
+   * branch requisition's suggestion subtracts from the par level. A branch's balance may be below
+   * zero (ADR-0003) and is returned as it is. An item never held there is absent.
+   */
+  async itemBalancesAt(
+    locationId: string,
+    itemIds: readonly string[],
+    tx: Tx = this.prisma,
+  ): Promise<Map<string, string>> {
+    const ids = [...new Set(itemIds)];
+    if (ids.length === 0) return new Map();
+    const rows = await tx.$queryRaw<Array<{ itemId: string; quantity: string }>>`
+      SELECT "item_id" AS "itemId", SUM("quantity")::text AS "quantity"
+      FROM "stock_balances"
+      WHERE "location_id" = ${locationId}::uuid AND "item_id" = ANY(${ids}::uuid[])
+      GROUP BY "item_id"
+    `;
+    return new Map(rows.map((row) => [row.itemId, normaliseDecimal(row.quantity)]));
+  }
+
+  /**
+   * How many times each item's balance at each branch went below zero during a period of
+   * business dates (#15, ADR-0009: par misses), keyed `locationId:itemId`. The item's balance at
+   * the branch, all lots together, is replayed document by document in business time (and, on
+   * one business date, in the order the documents were posted); each time it goes from zero or
+   * more to below zero during the period counts once. This is the item-level reading of the
+   * negative branch balance flag (#8), which itself is not stored. Pairs that never went below
+   * zero are absent.
+   */
+  async negativeEpisodes(input: {
+    from: string;
+    to: string;
+    locationIds?: readonly string[];
+  }): Promise<Map<string, number>> {
+    const locationFilter = input.locationIds
+      ? Prisma.sql`AND e."location_id" = ANY(${[...input.locationIds]}::uuid[])`
+      : Prisma.empty;
+    const rows = await this.prisma.$queryRaw<
+      Array<{ locationId: string; itemId: string; episodes: bigint }>
+    >`
+      WITH moves AS (
+        SELECT e."location_id", e."item_id", e."business_time", d."posted_at", d."number",
+               SUM(e."quantity") AS "quantity"
+        FROM "ledger_entries" e
+        JOIN "locations" l ON l."id" = e."location_id"
+        JOIN "stock_documents" d ON d."id" = e."document_id"
+        WHERE l."type" = 'branch' AND e."business_time" < ${this.startOf(input.to, 1)}
+          ${locationFilter}
+        GROUP BY e."location_id", e."item_id", e."business_time", d."posted_at", d."number"
+      ), running AS (
+        SELECT m.*, SUM(m."quantity") OVER (
+                 PARTITION BY m."location_id", m."item_id"
+                 ORDER BY m."business_time", m."posted_at", m."number"
+                 ROWS UNBOUNDED PRECEDING) AS "balance"
+        FROM moves m
+      ), stepped AS (
+        SELECT r.*, LAG(r."balance", 1, 0) OVER (
+                 PARTITION BY r."location_id", r."item_id"
+                 ORDER BY r."business_time", r."posted_at", r."number") AS "before"
+        FROM running r
+      )
+      SELECT "location_id" AS "locationId", "item_id" AS "itemId", COUNT(*) AS "episodes"
+      FROM stepped
+      WHERE "balance" < 0 AND "before" >= 0 AND "business_time" >= ${this.startOf(input.from, 0)}
+      GROUP BY "location_id", "item_id"
+    `;
+    return new Map(rows.map((row) => [`${row.locationId}:${row.itemId}`, Number(row.episodes)]));
+  }
+
+  /**
    * Each item's current lot cost (#16, docs/GLOSSARY.md): the unit cost of the lot FEFO would
    * take next, which is the unexpired lot with stock left anywhere that expires first, the
    * oldest of those first. It prices a recipe as an estimate; consumption still takes the

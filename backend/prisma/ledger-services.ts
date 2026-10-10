@@ -26,6 +26,7 @@ import { OpeningBalancesService } from '../src/modules/opening-balances/opening-
 import { ProductionBomsService } from '../src/modules/production-boms/production-boms.service';
 import { ProductionOrdersService } from '../src/modules/production-orders/production-orders.service';
 import { PurchaseOrdersService } from '../src/modules/purchase-orders/purchase-orders.service';
+import { RequisitionsService } from '../src/modules/requisitions/requisitions.service';
 import { StockAdjustmentsService } from '../src/modules/stock-adjustments/stock-adjustments.service';
 import { SuppliersService } from '../src/modules/suppliers/suppliers.service';
 import { TransferReceiptsService } from '../src/modules/transfers/transfer-receipts.service';
@@ -41,6 +42,7 @@ export interface LedgerServices {
   productionOrders: ProductionOrdersService;
   transfers: TransfersService;
   transferReceipts: TransferReceiptsService;
+  requisitions: RequisitionsService;
   items: ItemsService;
 }
 
@@ -120,6 +122,16 @@ export function ledgerServices(
     ),
     transfers,
     transferReceipts: new TransferReceiptsService(db, ledger, transfers, items, audit, logger),
+    requisitions: new RequisitionsService(
+      db,
+      new SequenceService(),
+      ledger,
+      items,
+      locations,
+      transfers,
+      audit,
+      logger,
+    ),
     items,
   };
 }

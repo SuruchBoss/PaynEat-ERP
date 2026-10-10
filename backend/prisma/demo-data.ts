@@ -763,8 +763,11 @@ export const DEMO_PRODUCTION_ORDER: DemoProductionOrder = {
 export interface DemoTransfer {
   destinationCode: string;
   note: string;
-  /** What logistics asks for, per item, in its base unit. */
-  lines: ReadonlyArray<{ itemCode: string; quantity: string }>;
+  /**
+   * What logistics sends, per item, in its base unit (#14). The branch's requisition (#15) asks
+   * for the same unless `requested` says more: the rest stays outstanding.
+   */
+  lines: ReadonlyArray<{ itemCode: string; quantity: string; requested?: string }>;
   /**
    * How lines arrived when they did not arrive as dispatched, by item. Everything else arrives
    * whole, at the default temperature, in good condition.
@@ -778,11 +781,41 @@ export interface DemoTransfer {
 export const DEMO_ARRIVAL_TEMPERATURE = '3.2';
 
 /**
+ * The chicken pieces leave the plant in trays of ten (#15): a branch asks for them, and is
+ * suggested them, in whole trays.
+ */
+export const DEMO_REQUISITION_UNITS: Readonly<Record<string, string>> = {
+  'CHICKEN-BREAST': '10',
+  'CHICKEN-THIGH': '10',
+  'CHICKEN-DRUMSTICK': '10',
+  'CHICKEN-WING': '10',
+};
+
+/**
+ * How much of each item each branch should hold (#15, ADR-0009 decision 2), in base units.
+ * Silom is the busiest; Bang Na sells no thighs or wings, so has no par level for them and gets
+ * no suggestion for them. Invented figures.
+ */
+export const DEMO_PAR_LEVELS: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  'BR-SILOM': {
+    'CHICKEN-BREAST': '60',
+    'CHICKEN-THIGH': '60',
+    'CHICKEN-DRUMSTICK': '50',
+    'CHICKEN-WING': '60',
+  },
+  'BR-ARI': { 'CHICKEN-BREAST': '40', 'CHICKEN-THIGH': '40', 'CHICKEN-WING': '40' },
+  'BR-BANGNA': { 'CHICKEN-BREAST': '40', 'CHICKEN-DRUMSTICK': '40' },
+};
+
+/**
  * Three transfers (#14), dispatched today by logistics from the plant to each branch with pieces
  * from the morning cut (DEMO_PRODUCTION_ORDER), FEFO, and received by the branch manager. Silom
  * receives everything as sent. Ari is two wings short: they are written off with a reason, which
  * the plant approves. Bang Na's breasts arrive at 5.1 °C against a 4 °C limit: accepted with a
- * reason, approved by the plant. Counts and temperatures are invented.
+ * reason, approved by the plant. Each transfer is created by logistics from its branch's
+ * requisition (#15), raised and submitted by the branch manager for today: Silom's and Ari's are
+ * fulfilled; Bang Na asked for 40 drumsticks and got 30, so its requisition stays partially
+ * fulfilled in logistics' queue. Counts and temperatures are invented.
  */
 export const DEMO_TRANSFERS: readonly DemoTransfer[] = [
   {
@@ -817,7 +850,7 @@ export const DEMO_TRANSFERS: readonly DemoTransfer[] = [
     note: 'Demo seed: Bang Na morning delivery (fictional)',
     lines: [
       { itemCode: 'CHICKEN-BREAST', quantity: '30' },
-      { itemCode: 'CHICKEN-DRUMSTICK', quantity: '30' },
+      { itemCode: 'CHICKEN-DRUMSTICK', quantity: '30', requested: '40' },
     ],
     arrivals: {
       'CHICKEN-BREAST': {

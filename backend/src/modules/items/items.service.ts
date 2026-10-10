@@ -14,7 +14,11 @@ import {
   toleranceProblem,
   type ReceivingTolerances,
 } from '../../core/receiving/domain/inspection';
-import { normalisePurchaseUnits, purchaseUnitIssues } from './domain/item-rules';
+import {
+  normalisePurchaseUnits,
+  purchaseUnitIssues,
+  requisitionUnitProblem,
+} from './domain/item-rules';
 import { normaliseFactor, toBaseQuantity, type ConversionInput } from './domain/unit-conversion';
 import type {
   CreateItemDto,
@@ -22,6 +26,7 @@ import type {
   ItemView,
   PurchaseUnitDto,
   ReceivingTolerancesDto,
+  RequisitionUnitDto,
   UnitView,
   UpdateItemDto,
 } from './dto/items.dto';
@@ -36,6 +41,7 @@ const ITEM_SELECT = {
   shelfLifeDays: true,
   receivingMaxVariancePercent: true,
   receivingMaxTemperature: true,
+  requisitionUnit: true,
   active: true,
   version: true,
   createdAt: true,
@@ -63,6 +69,8 @@ export interface ItemFacts {
   shelfLifeDays: number;
   /** What the receiving dock checks (#11, ADR-0007). */
   receivingTolerances: ReceivingTolerances;
+  /** Base units the plant packs and sends together (#15), shortest exact form, or null. */
+  requisitionUnit: string | null;
 }
 
 /** A unit an item is bought in (#10): how many base units one holds, and its own decimals. */
@@ -140,21 +148,31 @@ export class ItemsService {
         shelfLifeDays: true,
         receivingMaxVariancePercent: true,
         receivingMaxTemperature: true,
+        requisitionUnit: true,
         baseUnit: { select: { decimals: true } },
       },
     });
     return new Map(
-      rows.map(({ baseUnit, receivingMaxVariancePercent, receivingMaxTemperature, ...row }) => [
-        row.id,
-        {
-          ...row,
-          baseUnitDecimals: baseUnit.decimals,
-          receivingTolerances: tolerancesOf({
-            receivingMaxVariancePercent,
-            receivingMaxTemperature,
-          }),
-        },
-      ]),
+      rows.map(
+        ({
+          baseUnit,
+          receivingMaxVariancePercent,
+          receivingMaxTemperature,
+          requisitionUnit,
+          ...row
+        }) => [
+          row.id,
+          {
+            ...row,
+            baseUnitDecimals: baseUnit.decimals,
+            requisitionUnit: requisitionUnitOf(requisitionUnit),
+            receivingTolerances: tolerancesOf({
+              receivingMaxVariancePercent,
+              receivingMaxTemperature,
+            }),
+          },
+        ],
+      ),
     );
   }
 
@@ -208,6 +226,60 @@ export class ItemsService {
         entityId: item.id,
         summary: `Updated receiving tolerances of item ${item.code} (${item.nameEn})`,
         changes: { receivingTolerances: { from: before, to: next } },
+        ...meta,
+      });
+      return item;
+    });
+    return toView(row);
+  }
+
+  /**
+   * Sets or clears an item's requisition unit (#15): how many base units the plant packs and sends
+   * together, so a branch's requisition is suggested and asked for in whole ones. Configuration
+   * the admin keeps, like receiving tolerances: audited, not master data a POS mirrors. A request
+   * that changes nothing records nothing.
+   */
+  async setRequisitionUnit(
+    id: string,
+    dto: RequisitionUnitDto,
+    actor: AuthenticatedUser,
+    meta: ClientMeta,
+  ): Promise<ItemView> {
+    const wanted = dto.requisitionUnit || null;
+    const row = await this.prisma.$transaction(async (tx) => {
+      const current = await this.lockItem(tx, id);
+      let next: string | null = null;
+      if (wanted !== null) {
+        const decimals = (
+          await tx.unit.findUniqueOrThrow({
+            where: { code: current.baseUnitCode },
+            select: { decimals: true },
+          })
+        ).decimals;
+        const problem = requisitionUnitProblem(wanted, decimals);
+        if (problem) {
+          throw new BusinessRuleError(
+            'INVALID_REQUISITION_UNIT',
+            `The requisition unit ${REQUISITION_UNIT_ERRORS[problem]} (${current.baseUnitCode}, ${decimals} decimals)`,
+            { problem },
+          );
+        }
+        next = normaliseFactor(wanted);
+      }
+      const before = requisitionUnitOf(current.requisitionUnit);
+      if (before === next) return current;
+      const item = await tx.item.update({
+        where: { id },
+        data: { requisitionUnit: next },
+        select: ITEM_SELECT,
+      });
+      await this.audit.recordWithin(tx, {
+        actorUserId: actor.userId,
+        action: AuditAction.UPDATE,
+        entityType: 'Item',
+        entityId: item.id,
+        summary: `Updated the requisition unit of item ${item.code} (${item.nameEn})`,
+        changes: { requisitionUnit: { from: before, to: next } },
         ...meta,
       });
       return item;
@@ -425,6 +497,7 @@ function toView(item: ItemRow): ItemView {
     active: item.active,
     purchaseUnits: purchaseUnitsOf(item),
     receivingTolerances: tolerancesOf(item),
+    requisitionUnit: requisitionUnitOf(item.requisitionUnit),
     version: Number(item.version),
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
@@ -439,6 +512,17 @@ const TOLERANCE_ERRORS = {
   TEMPERATURE_OUT_OF_RANGE: 'The temperature limit is between -60 and 60 °C',
   TEMPERATURE_TOO_PRECISE: 'The temperature limit has at most one decimal',
 } as const;
+
+const REQUISITION_UNIT_ERRORS = {
+  NOT_A_NUMBER: 'must be a number',
+  NOT_POSITIVE: 'must be more than zero',
+  TOO_PRECISE: 'has more decimals than the base unit allows',
+  TOO_LARGE: 'is too large',
+} as const;
+
+function requisitionUnitOf(value: Prisma.Decimal | null): string | null {
+  return value === null ? null : normaliseFactor(value.toFixed());
+}
 
 /** The stored tolerances, shortest exact form, or null where the item has no check. */
 function tolerancesOf(row: {

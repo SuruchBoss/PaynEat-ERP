@@ -1,7 +1,7 @@
 // Copyright 2026 Suruch Chakrapeesirisuk
 // SPDX-License-Identifier: Apache-2.0
 
-import { normalisePurchaseUnits, purchaseUnitIssues } from './item-rules';
+import { normalisePurchaseUnits, purchaseUnitIssues, requisitionUnitProblem } from './item-rules';
 
 const UNITS = new Set(['kg', 'case', 'bag', 'sack', 'piece']);
 
@@ -53,5 +53,17 @@ describe('purchase unit rules', () => {
       { unitCode: 'case', factor: '10' },
       { unitCode: 'sack', factor: '22.5' },
     ]);
+  });
+});
+
+describe('requisition unit (#15)', () => {
+  it('is a quantity above zero in the base unit', () => {
+    expect(requisitionUnitProblem('12', 0)).toBeNull();
+    expect(requisitionUnitProblem('2.5', 3)).toBeNull();
+    expect(requisitionUnitProblem('abc', 0)).toBe('NOT_A_NUMBER');
+    expect(requisitionUnitProblem('0', 0)).toBe('NOT_POSITIVE');
+    expect(requisitionUnitProblem('-12', 0)).toBe('NOT_POSITIVE');
+    expect(requisitionUnitProblem('1.5', 0)).toBe('TOO_PRECISE');
+    expect(requisitionUnitProblem('1234567890123456', 0)).toBe('TOO_LARGE');
   });
 });

@@ -6,6 +6,12 @@
  * than the base unit, at most once, with a valid conversion factor. Pure, so the rules
  * are tested without a database and every problem is reported at once.
  */
+import {
+  decimalPlaces,
+  integerDigits,
+  parseDecimal,
+  sign,
+} from '../../../core/quantity/domain/exact-decimal';
 import { factorProblem, normaliseFactor, type FactorProblem } from './unit-conversion';
 
 export interface PurchaseUnitInput {
@@ -51,4 +57,23 @@ export function normalisePurchaseUnits(
   return purchaseUnits
     .map(({ unitCode, factor }) => ({ unitCode, factor: normaliseFactor(factor) }))
     .sort((a, b) => a.unitCode.localeCompare(b.unitCode));
+}
+
+export type RequisitionUnitProblem = 'NOT_A_NUMBER' | 'NOT_POSITIVE' | 'TOO_PRECISE' | 'TOO_LARGE';
+
+/**
+ * Why `text` is not a requisition unit for an item whose base unit keeps `decimals` places, or
+ * null (#15): how many base units the plant packs and sends together, such as a tray of 12 pieces
+ * or a 2.5 kg bag. Above zero, in the base unit's decimals, within NUMERIC(18,3).
+ */
+export function requisitionUnitProblem(
+  text: string,
+  decimals: number,
+): RequisitionUnitProblem | null {
+  const value = parseDecimal(text);
+  if (!value) return 'NOT_A_NUMBER';
+  if (sign(value) <= 0) return 'NOT_POSITIVE';
+  if (decimalPlaces(value) > decimals) return 'TOO_PRECISE';
+  if (integerDigits(value) > 15) return 'TOO_LARGE';
+  return null;
 }

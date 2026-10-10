@@ -27,6 +27,7 @@ import { CompanyModule } from './modules/company/company.module';
 import { PurchaseOrdersModule } from './modules/purchase-orders/purchase-orders.module';
 import { ProductionBomsModule } from './modules/production-boms/production-boms.module';
 import { ProductionOrdersModule } from './modules/production-orders/production-orders.module';
+import { RequisitionsModule } from './modules/requisitions/requisitions.module';
 import { TransfersModule } from './modules/transfers/transfers.module';
 import { PosIntegrationModule } from './modules/pos-integration/pos-integration.module';
 import { StockAdjustmentsModule } from './modules/stock-adjustments/stock-adjustments.module';
@@ -75,6 +76,7 @@ import { SuppliersModule } from './modules/suppliers/suppliers.module';
     ProductionBomsModule,
     ProductionOrdersModule,
     TransfersModule,
+    RequisitionsModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: AllExceptionsFilter },

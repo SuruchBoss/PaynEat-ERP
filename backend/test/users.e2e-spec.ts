@@ -134,6 +134,8 @@ describe('user administration', () => {
         'company_settings:manage',
         'production_bom:read',
         'production_bom:manage',
+        'requisition:read',
+        'par_level:manage',
       ],
       requiresSecondFactor: true,
     });
@@ -170,17 +172,25 @@ describe('user administration', () => {
         'production_order:run',
         'transfer:read',
         'transfer:approve_receipt',
+        'requisition:read',
       ],
       requiresSecondFactor: false,
     });
     expect(res.body[4]).toEqual({
       key: 'logistics',
-      permissions: ['transfer:read', 'transfer:dispatch'],
+      permissions: ['transfer:read', 'transfer:dispatch', 'requisition:read'],
       requiresSecondFactor: false,
     });
     expect(res.body[5]).toEqual({
       key: 'branch_manager',
-      permissions: ['stock_adjustment:raise', 'menu:read', 'transfer:read', 'transfer:receive'],
+      permissions: [
+        'stock_adjustment:raise',
+        'menu:read',
+        'transfer:read',
+        'transfer:receive',
+        'requisition:read',
+        'requisition:raise',
+      ],
       requiresSecondFactor: false,
     });
     expect(res.body[6]).toEqual({
@@ -193,6 +203,7 @@ describe('user administration', () => {
         'production_bom:read',
         'production_order:read',
         'transfer:read',
+        'requisition:read',
       ],
       requiresSecondFactor: false,
     });
