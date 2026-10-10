@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { Module } from '@nestjs/common';
+import { JobLockService } from '../../core/jobs/job-lock.service';
 import { AuthModule } from '../auth/auth.module';
 import { CompanyModule } from '../company/company.module';
 import { ItemsModule } from '../items/items.module';
@@ -28,7 +29,7 @@ import { BranchConsumptionService } from './branch-consumption.service';
     PosIntegrationModule,
   ],
   controllers: [BranchConsumptionController],
-  providers: [BranchConsumptionService],
+  providers: [BranchConsumptionService, JobLockService],
   exports: [BranchConsumptionService],
 })
 export class BranchConsumptionModule {}

@@ -46,8 +46,14 @@ export interface TelemetryConfig {
   metricsPort: number;
 }
 
+export interface JobsConfig {
+  /** How long one run of scheduled work may hold its job lock. */
+  lockTimeoutMs: number;
+}
+
 export interface RootConfig {
   app: AppConfig;
+  jobs: JobsConfig;
   auth: AuthConfig;
   security: SecurityConfig;
   telemetry: TelemetryConfig;
@@ -68,6 +74,7 @@ export function buildConfig(env: EnvironmentVariables): RootConfig {
       timeZone: env.COMPANY_TIME_ZONE,
       salesConsumptionIntervalSeconds: env.SALES_CONSUMPTION_INTERVAL_SECONDS,
     },
+    jobs: { lockTimeoutMs: env.JOB_LOCK_TIMEOUT_MS },
     auth: {
       accessSecret: env.JWT_ACCESS_SECRET,
       refreshSecret: env.JWT_REFRESH_SECRET,

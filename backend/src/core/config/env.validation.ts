@@ -185,6 +185,16 @@ export class EnvironmentVariables {
   @Min(0)
   @Max(3600)
   SALES_CONSUMPTION_INTERVAL_SECONDS: number = 30;
+
+  /**
+   * How long one run of scheduled work may hold its job lock (and a database connection) before
+   * the lock is given up. A run that needs longer should do less per run. (Cwork.)
+   */
+  @toInt()
+  @IsInt()
+  @Min(10_000)
+  @Max(3_600_000)
+  JOB_LOCK_TIMEOUT_MS: number = 300_000;
 }
 
 export function validateEnv(raw: Record<string, unknown>): EnvironmentVariables {

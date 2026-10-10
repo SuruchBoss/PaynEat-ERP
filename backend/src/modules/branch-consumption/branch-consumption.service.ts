@@ -4,6 +4,7 @@
 import { Inject, Injectable, OnApplicationBootstrap, OnApplicationShutdown } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { APP_CONFIG } from '../../core/config/config.token';
+import { JobLockService } from '../../core/jobs/job-lock.service';
 import type { RootConfig } from '../../core/config/configuration';
 import { ConflictError, NotFoundError } from '../../core/errors/domain.errors';
 import { PrismaService } from '../../core/prisma/prisma.service';
@@ -79,6 +80,7 @@ export class BranchConsumptionService implements OnApplicationBootstrap, OnAppli
     private readonly auth: AuthService,
     private readonly logger: TelemetryLogger,
     private readonly metrics: MetricsService,
+    private readonly jobLock: JobLockService,
   ) {
     metrics.countPosting('branch_consumption', 'succeeded', '', 0);
   }
@@ -86,15 +88,11 @@ export class BranchConsumptionService implements OnApplicationBootstrap, OnAppli
   onApplicationBootstrap(): void {
     const seconds = this.config.app.salesConsumptionIntervalSeconds;
     if (seconds <= 0) return;
+    // Every replica runs this timer; the job lock keeps each run to one of them. A run started by
+    // a person (`POST /branch-consumption/run`) does not take it: claiming events with SKIP LOCKED
+    // already keeps two runs from consuming one sale twice.
     this.timer = setInterval(() => {
-      void this.run().catch((error: unknown) =>
-        this.logger.write({
-          severity: 'ERROR',
-          event: 'app.log',
-          message: 'A branch-consumption run failed; the next run tries again',
-          error,
-        }),
-      );
+      void this.jobLock.runExclusively('branch-consumption', () => this.run());
     }, seconds * 1000);
     this.timer.unref();
   }

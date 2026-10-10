@@ -654,7 +654,10 @@ export class LedgerService {
     }));
   }
 
-  /** What a posted branch-consumption document took, lot by lot, in line order (#17). */
+  /**
+   * What a posted branch-consumption document took, lot by lot: by line, then in the order FEFO
+   * takes them, a placeholder last (#17).
+   */
   async consumedLots(documentId: string): Promise<ConsumedLot[]> {
     const tz = this.config.app.timeZone;
     const rows = await this.prisma.$queryRaw<
@@ -675,8 +678,8 @@ export class LedgerService {
       FROM "ledger_entries" e
       JOIN "lots" l ON l."id" = e."lot_id"
       WHERE e."document_id" = ${documentId}::uuid
-      GROUP BY e."line_no", l."id", l."number", e."unit_cost", l."placeholder_cost"
-      ORDER BY e."line_no", l."number"
+      GROUP BY e."line_no", l."id", l."number", l."expiry_date", e."unit_cost", l."placeholder_cost"
+      ORDER BY e."line_no", l."expiry_date" NULLS LAST, l."number"
     `;
     return rows.map((row) => ({
       lineNo: row.lineNo,
