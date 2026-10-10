@@ -1,6 +1,6 @@
 # ADR-0026: Production BOMs: weights, default allocation ratios, waste, and versions
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-10
 - **ภาษาไทย:** [0026-production-bom-weights-ratios-and-versions.th.md](0026-production-bom-weights-ratios-and-versions.th.md)
 

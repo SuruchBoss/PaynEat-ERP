@@ -1,6 +1,6 @@
 # ADR-0026: สูตรการผลิต (BOM): น้ำหนัก สัดส่วนปันต้นทุนตั้งต้น ของเสีย และเวอร์ชัน
 
-- **สถานะ:** เสนอ
+- **สถานะ:** ยอมรับแล้ว
 - **วันที่:** 2026-10-10
 - **English:** [0026-production-bom-weights-ratios-and-versions.md](0026-production-bom-weights-ratios-and-versions.md)
 
