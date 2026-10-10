@@ -121,6 +121,7 @@ describe('the demo API: signing in', () => {
         'purchase_order:read',
         'goods_receipt:read',
         'goods_receipt:receive',
+        'production_bom:read',
       ],
       mfaEnabled: false,
     });
@@ -248,7 +249,7 @@ describe('the demo API: master data', () => {
     const token = await signIn('admin');
     const items = json(await call('GET', '/api/v1/items?status=all', { token }));
     expect(items).toHaveLength(DEMO_ITEMS.length);
-    expect(items[0].code).toBe('CHICKEN-BREAST');
+    expect(items[0].code).toBe('BATTER-MIX');
 
     const flour = items.find((i: { code: string }) => i.code === 'FLOUR');
     const change = (version: number) =>
@@ -631,5 +632,63 @@ describe('the demo API: the menu (#16)', () => {
     const admin = await signIn('admin');
     const create = await call('POST', '/api/v1/menu-items', { token: admin, body: {} });
     expectRefusal(create, 404, 'NOT_IN_DEMO');
+  });
+});
+
+describe('the demo API: production BOMs (#12)', () => {
+  it('shows the cutting BOM with the same weights, yield and ratios the backend stores', async () => {
+    const token = await signIn('plant');
+    const list = json(await call('GET', '/api/v1/production-boms', { token }));
+    expect(list.map((b: { code: string }) => b.code)).toEqual(['CUT-WHOLE-CHICKEN', 'MIX-BATTER']);
+    expect(list[0].current).toEqual({
+      number: 1,
+      effectiveFrom: '2026-09-25',
+      yieldPercent: '90.00',
+    });
+
+    const cut = json(await call('GET', `/api/v1/production-boms/${list[0].id}`, { token }));
+    const [version] = cut.versions;
+    expect(version).toMatchObject({
+      status: 'current',
+      ratiosOverridden: true,
+      wasteKg: '2.000',
+      yieldPercent: '90.00',
+    });
+    expect(version.outputs.map((o: { allocationRatio: string }) => o.allocationRatio)).toEqual([
+      '35.00',
+      '22.00',
+      '18.00',
+      '17.00',
+      '8.00',
+    ]);
+  });
+
+  it('previews a version for the admin, and refuses to save one', async () => {
+    const token = await signIn('admin');
+    const items = json(await call('GET', '/api/v1/items', { token }));
+    const id = (code: string) => items.find((i: { code: string }) => i.code === code).id;
+    const preview = json(
+      await call('POST', '/api/v1/production-boms/preview', {
+        token,
+        body: {
+          inputs: [{ itemId: id('FLOUR'), quantity: '25' }],
+          outputs: [{ itemId: id('BATTER-MIX'), quantity: '24.5' }],
+        },
+      }),
+    );
+    expect(preview.figures).toMatchObject({ wasteKg: '0.500', yieldPercent: '98.00' });
+    expect(preview.figures.outputs[0].defaultRatio).toBe('100.00');
+
+    expectRefusal(
+      await call('POST', '/api/v1/production-boms', { token, body: {} }),
+      404,
+      'NOT_IN_DEMO',
+    );
+    const plant = await signIn('plant');
+    expectRefusal(
+      await call('POST', '/api/v1/production-boms/preview', { token: plant, body: {} }),
+      403,
+      'ACCESS_DENIED',
+    );
   });
 });

@@ -10,6 +10,7 @@ import { MenuPage } from '@/features/menu/MenuPage';
 import { ModifierGroupsPage } from '@/features/menu/ModifierGroupsPage';
 import { NotFoundPage } from '@/features/not-found/NotFoundPage';
 import { OpeningBalancesPage } from '@/features/opening-balances/OpeningBalancesPage';
+import { ProductionBomsPage } from '@/features/production-boms/ProductionBomsPage';
 import { PurchaseOrdersPage } from '@/features/purchase-orders/PurchaseOrdersPage';
 import { CompanySettingsPage } from '@/features/settings/CompanySettingsPage';
 import { StatusPage } from '@/features/status/StatusPage';
@@ -52,6 +53,10 @@ export const routes: RouteObject[] = [
           {
             element: <RequirePermission permission={Permission.GOODS_RECEIPT_READ} />,
             children: [{ path: 'goods-receipts', element: <GoodsReceiptsPage /> }],
+          },
+          {
+            element: <RequirePermission permission={Permission.PRODUCTION_BOM_READ} />,
+            children: [{ path: 'production-boms', element: <ProductionBomsPage /> }],
           },
           {
             element: <RequirePermission permission={Permission.USER_READ} />,

@@ -1628,3 +1628,24 @@ h1:focus {
 .option-rows .document-line {
   align-items: end;
 }
+
+/* Production BOMs (#12): a version's two tables, and the live figures of one being entered. */
+.recipe-version h3,
+.recipe-form h3 {
+  margin: 0 0 8px;
+}
+
+.bom-line__figures {
+  grid-column: 1 / -1;
+  margin: 0 0 8px;
+}
+
+.bom-preview {
+  margin: 12px 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--border);
+}
+
+.bom-preview p {
+  margin: 4px 0;
+}

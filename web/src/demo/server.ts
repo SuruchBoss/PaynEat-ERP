@@ -15,6 +15,7 @@ import * as auth from './auth';
 import { DemoError, type Context } from './http';
 import * as masterData from './master-data';
 import * as menu from './menu';
+import * as boms from './production-boms';
 import { seedState, type DemoState } from './state';
 import * as stock from './stock';
 
@@ -145,6 +146,18 @@ const ROUTES: readonly Route[] = [
   }),
   route('GET', `${V1}/modifier-options/:id/recipe`, menu.modifierRecipe, {
     permission: Permission.MENU_READ,
+  }),
+
+  // Production BOMs (#12) are read only here: the demo BOMs and the preview of a version being
+  // entered. Saving one answers NOT_IN_DEMO.
+  route('GET', `${V1}/production-boms`, boms.listProductionBoms, {
+    permission: Permission.PRODUCTION_BOM_READ,
+  }),
+  route('GET', `${V1}/production-boms/:id`, boms.getProductionBom, {
+    permission: Permission.PRODUCTION_BOM_READ,
+  }),
+  route('POST', `${V1}/production-boms/preview`, boms.previewProductionBom, {
+    permission: Permission.PRODUCTION_BOM_MANAGE,
   }),
 ];
 
