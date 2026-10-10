@@ -1,6 +1,6 @@
 # ADR-0025: Goods receipts: what a delivery is expected to bring, how much an order line may receive, and when an order is received
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-09
 - **ภาษาไทย:** [0025-goods-receipts-expected-quantity-and-completion.th.md](0025-goods-receipts-expected-quantity-and-completion.th.md)
 

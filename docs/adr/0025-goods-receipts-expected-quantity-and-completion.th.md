@@ -1,6 +1,6 @@
 # ADR-0025: ใบรับสินค้า: ของที่คาดว่าจะมาในแต่ละครั้ง รับต่อบรรทัดใบสั่งซื้อได้มากสุดเท่าไร และเมื่อไรจึงถือว่ารับครบ
 
-- **สถานะ:** เสนอ
+- **สถานะ:** ยอมรับแล้ว
 - **วันที่:** 2026-10-09
 - **English:** [0025-goods-receipts-expected-quantity-and-completion.md](0025-goods-receipts-expected-quantity-and-completion.md)
 
