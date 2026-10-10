@@ -51,6 +51,7 @@ model Location {
   openingBalances OpeningBalance[]
   adjustments     StockAdjustment[]
   purchaseOrders  PurchaseOrder[]
+  goodsReceipts   GoodsReceipt[]
   posInstances    PosInstanceBranch[]
   salesEvents     SalesEvent[]
   menuPrices      MenuPrice[]

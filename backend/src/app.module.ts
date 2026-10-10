@@ -15,6 +15,7 @@ import { TelemetryModule } from './core/telemetry/telemetry.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { JwtAuthGuard } from './modules/auth/jwt-auth.guard';
+import { GoodsReceiptsModule } from './modules/goods-receipts/goods-receipts.module';
 import { HealthModule } from './modules/health/health.module';
 import { ItemsModule } from './modules/items/items.module';
 import { LedgerModule } from './modules/ledger/ledger.module';
@@ -66,6 +67,7 @@ import { SuppliersModule } from './modules/suppliers/suppliers.module';
     PosIntegrationModule,
     MenuModule,
     CompanyModule,
+    GoodsReceiptsModule,
     PurchaseOrdersModule,
   ],
   providers: [

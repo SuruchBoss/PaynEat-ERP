@@ -62,6 +62,7 @@ const CHICKEN: ItemView = {
   baseUnitCode: 'kg',
   variableWeight: true,
   shelfLifeDays: 5,
+  receivingTolerances: { maxVariancePercent: null, maxTemperature: null },
   active: true,
   purchaseUnits: [{ unitCode: 'case', factor: '20' }],
   version: 1,
@@ -112,6 +113,8 @@ const order = (overrides: Partial<PurchaseOrderView>): PurchaseOrderView => ({
       gross: '27477.60',
       baseQuantity: '400.000',
       unitCost: '64.200000',
+      receivedQuantity: '0.000',
+      returnedQuantity: '0.000',
     },
   ],
   ...overrides,
@@ -358,7 +361,8 @@ describe('purchase orders', () => {
 
   it('is not in the navigation of someone who cannot read purchase orders', async () => {
     mockApi({});
-    renderApp('/', { as: PLANT });
+    // A branch manager reads neither orders nor receipts; the plant reads both (#11).
+    renderApp('/', { as: { ...PLANT, roles: ['branch_manager'], permissions: ['menu:read'] } });
     expect(await screen.findByRole('navigation', { name: 'เมนูหลัก' })).toBeVisible();
     expect(screen.queryByRole('link', { name: 'ใบสั่งซื้อ' })).toBeNull();
   });

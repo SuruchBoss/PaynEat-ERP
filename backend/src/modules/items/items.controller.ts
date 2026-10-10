@@ -9,6 +9,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   Query,
   Req,
 } from '@nestjs/common';
@@ -20,6 +21,7 @@ import { Permission } from '../../core/security/permissions';
 import {
   CreateItemDto,
   ItemsQueryDto,
+  ReceivingTolerancesDto,
   UpdateItemDto,
   type ItemView,
   type UnitView,
@@ -69,5 +71,17 @@ export class ItemsController {
     @Req() req: Request,
   ): Promise<ItemView> {
     return this.items.update(id, dto, actor, clientMeta(req));
+  }
+
+  /** Replaces the item's receiving tolerances (#11): the admin's configuration of the dock. */
+  @Put('items/:id/receiving-tolerances')
+  @RequirePermissions(Permission.ITEM_MANAGE)
+  setReceivingTolerances(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ReceivingTolerancesDto,
+    @CurrentUser() actor: AuthenticatedUser,
+    @Req() req: Request,
+  ): Promise<ItemView> {
+    return this.items.setReceivingTolerances(id, dto, actor, clientMeta(req));
   }
 }

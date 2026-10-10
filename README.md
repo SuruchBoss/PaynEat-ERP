@@ -37,11 +37,15 @@ screens from the demo.
 > other than their creator approves them, and stock on hand as of any date, with its value — and
 > **purchase orders**: drafted in purchase units, totalled net, VAT and gross with each line's cost per
 > base unit, approved automatically within the company's approval threshold or by a purchasing approver
-> who never approves their own, then sent to the supplier — and the
+> who never approves their own, then sent to the supplier — and **goods receipts**: what really arrived
+> against a sent order, line by line, inspected against each item's tolerances, posted at once when
+> within them or approved by a purchasing approver who never approves their own, each accepted line
+> a lot at the order line's cost with the earlier of two expiries, and what is turned away a return
+> to supplier — and the
 > **POS integration contract** ([`contracts/`](contracts/README.md)): POS instances registered with a
 > machine credential pull master data by version and deliver sales events the ERP stores exactly once. The console works on a desktop, a tablet (the menu narrows to icons) and a phone (each table
 > row becomes a card), in light and dark mode, and anyone can try it in the browser on the
-[public demo](https://suruchboss.github.io/PaynEat-ERP/). No goods receipt, production or transfer document exists
+[public demo](https://suruchboss.github.io/PaynEat-ERP/). No production or transfer document exists
 > yet; they are being built in public, one GitHub issue at a time. This README says only what is true
 > today and will grow as things work.
 
@@ -235,6 +239,7 @@ The "why" matters more than the "what" in an ERP, so every decision is written d
 | [0022](docs/adr/0022-vulnerability-disclosure-across-the-ecosystem.md) | A vulnerability is reported privately to the project that owns the code, never written anywhere public while unfixed; another project's is referenced only by its fixed version and advisory; code adapted between projects is fixed in both before any advisory; `SECURITY.md` names the channel |
 | [0023](docs/adr/0023-menu-prices-and-versioned-recipes.md) | Menu prices and recipe versions start on a business date; a recipe never changes for a day that has begun, and nothing changes once in force; a branch's own price wins while in force and can end with a return to the chain price; a modifier recipe is per unit sold; the theoretical cost is an estimate at the next FEFO lot's cost (proposed with #16) |
 | [0024](docs/adr/0024-purchase-order-totals-and-approval.md) | Purchase order money rounds once per line to 2 decimals and the order is the sum of its lines; a line's cost per base unit is its price over the conversion factor, net of recoverable VAT, to 6 decimals; the approval threshold is an admin setting compared with the gross total, at or below it approved automatically, 0 until set; a rejected order is final; a line keeps its conversion factor; goods go to a plant or a warehouse (proposed with #10) |
+| [0025](docs/adr/0025-goods-receipts-expected-quantity-and-completion.md) | A goods receipt counts in the ordered unit or the base unit; each delivery is inspected against what is still outstanding on its order line; findings are fixed when submitted and the approver decides on those; an order line accepts at most what was ordered plus the item's variance limit, checked under the order's lock; a line is complete within that limit below what was ordered; rejected goods become one return to supplier with no ledger entries; receiving tolerances are configuration, not master data (proposed with #11) |
 
 Domain vocabulary, in English and Thai: [`docs/GLOSSARY.md`](docs/GLOSSARY.md).
 
@@ -307,8 +312,8 @@ Open **https://suruchboss.github.io/PaynEat-ERP/**. It is this console, built wi
 ([ADR-0021](docs/adr/0021-public-demo-in-the-browser.md)). It holds the fictional chain and the demo
 accounts below, and it refuses what the API refuses, because it runs the backend's own rules. What you
 change lives in your browser for that visit, and a reload starts again. The sign-in screen lists the
-accounts and the admin's codes. Every screen in the tour below is there except purchase orders and
-company settings (step 13), which say they are not in the demo yet, as any screen added later does. For the API itself, its logs and metrics, or your own data, install it:
+accounts and the admin's codes. Every screen in the tour below is there except purchase orders,
+company settings and goods receipts (steps 13 and 14), which say they are not in the demo yet, as any screen added later does. For the API itself, its logs and metrics, or your own data, install it:
 
 ### On your machine, with Docker
 
@@ -323,7 +328,7 @@ echo 'ERP_DEMO=1' >> .env
 
 docker compose up -d --build                        # PostgreSQL 16, the API and the web console
 docker compose run --rm --build migrate             # apply database migrations
-docker compose run --rm migrate npm run db:seed     # the fictional chain: users, items, sites, suppliers, opening stock, purchase orders
+docker compose run --rm migrate npm run db:seed     # the fictional chain: users, items, sites, suppliers, opening stock, purchase orders, goods receipts
 curl http://localhost:3100/health                   # {"status":"ok","api":"up","database":"up"}
 docker compose logs api                             # one JSON object per line
 ```
@@ -358,17 +363,17 @@ The password of every demo account is **`demo-chicken-2026`**.
 | Role | Email | What the role is for (ADR-0008) | What it can do in the console today |
 |---|---|---|---|
 | `admin` | `admin@demo-chicken.example` | Manage users, roles, locations, configuration; reopen closed periods | Sign in with a second factor; **Users and roles**: list, create, give and take away roles; **Items and units**: create, edit, deactivate; **Locations**: create, correct a code, deactivate, supersede; **Suppliers**; **Company settings**: the purchase approval threshold; read stock on hand and opening balances; register POS instances and manage their credentials (API); read the audit trail (API) |
-| `purchasing` | `purchasing@demo-chicken.example` | Create and send purchase orders; manage suppliers | Sign in; **Suppliers**: create, edit, deactivate; read items, locations and stock on hand; **Purchase orders**: draft, edit, submit, mark as sent, cancel |
-| `purchasing_approver` | `approver@demo-chicken.example` | Approve purchase orders above the approval threshold | Sign in; **Purchase orders**: approve or reject, never one it raised; read items, locations, suppliers and stock on hand |
-| `plant` | `plant@demo-chicken.example` | Receive goods, run production orders, manage plant stock | Sign in; **Opening balances**: draft, post, reverse; **Stock adjustments**: draft and submit; **Stock on hand**; read items, locations and suppliers; its receipt and production screens arrive with #11 and #13 |
+| `purchasing` | `purchasing@demo-chicken.example` | Create and send purchase orders; manage suppliers | Sign in; **Suppliers**: create, edit, deactivate; read items, locations and stock on hand; **Purchase orders**: draft, edit, submit, mark as sent, cancel; read **Goods receipts** and returns to supplier |
+| `purchasing_approver` | `approver@demo-chicken.example` | Approve purchase orders above the approval threshold, and out-of-tolerance receipts | Sign in; **Purchase orders**: approve or reject, never one it raised; **Goods receipts**: approve (which posts) or reject one with findings, never one it recorded; read items, locations, suppliers and stock on hand |
+| `plant` | `plant@demo-chicken.example` | Receive goods, run production orders, manage plant stock | Sign in; **Goods receipts**: receive against a sent order, draft and submit; read purchase orders; **Opening balances**: draft, post, reverse; **Stock adjustments**: draft and submit; **Stock on hand**; read items, locations and suppliers; its production screens arrive with #13 |
 | `logistics` | `logistics@demo-chicken.example` | Dispatch transfers | Sign in; read items, locations, suppliers and stock on hand; its screen arrives with #14 |
 | `branch_manager` | `branch.manager@demo-chicken.example` | Raise requisitions, receive transfers, count branch stock | Sign in; **Stock adjustments**: draft and submit; read items, locations, suppliers and stock on hand; its requisition and transfer screens arrive with #14 and #15 |
-| `finance` | `finance@demo-chicken.example` | View costs, variances and valuation; export financial data | Sign in; **Stock adjustments**: approve (which posts) or reject, never one it raised; **Stock on hand** with cost and value; read items, locations, suppliers and purchase orders; its screens arrive with the costing and period-close work of weeks 4–5 |
+| `finance` | `finance@demo-chicken.example` | View costs, variances and valuation; export financial data | Sign in; **Stock adjustments**: approve (which posts) or reject, never one it raised; **Stock on hand** with cost and value; read items, locations, suppliers, purchase orders and goods receipts; its screens arrive with the costing and period-close work of weeks 4–5 |
 
 A user may hold several roles; the API refuses anything none of them allows (403), and anything
 without a session (401). Nobody approves a document they created, whatever roles they hold: the API
 refuses it on every stock adjustment (#8), and the database refuses it again for anything that goes
-around the API; purchase orders follow the same rule (#10).
+around the API; purchase orders (#10) and goods receipts (#11) follow the same rule.
 
 **The admin account needs a second factor.** Add the published demo secret to any authenticator app
 (Google Authenticator, Microsoft Authenticator, 1Password, …) and type the 6-digit code it shows:
@@ -404,7 +409,7 @@ undoes them.
    base unit cannot change (ADR-0019). **Deactivate** it: it leaves the default list, nothing is
    deleted, and **Show: All** brings it back to reactivate.
 7. Every item change is a new **master data version**, the number a POS pulls by (with its machine
-   credential, step 15). Read the log with any user's access token:
+   credential, step 16). Read the log with any user's access token:
    `GET /api/v1/master-data/changes?since=0` returns each change in version order, the whole item as
    it stood after it, and `latestVersion`; ask again with `since` set to the last version you saw and
    only newer changes come back. Two admins saving at the same moment still
@@ -424,7 +429,8 @@ undoes them.
 10. Open **Stock on hand** (any account): the plant's opening stock — batter flour, frying oil, and
    three lots of whole chicken, each weighed with its bird count and expiring on a different day — with
    the unit cost and value of every lot, 22,586.2 baht in all: the first chicken lot is 19.800 kg and
-   11 birds, because the demo's approved write-off (step 12) took a damaged bird off it. Every figure
+   11 birds, because the demo's approved write-off (step 12) took a damaged bird off it. On a Docker
+   install the plant also holds the two lots the demo goods receipts brought in (step 14). Every figure
    is the ledger's exact decimal, never rounded. Set **As of** to two days ago: nothing, because the
    opening balance is dated yesterday. Stock as of a date is counted by when a movement happened (its
    business date), not when it was posted (ADR-0018). Every date field takes the day first, in the
@@ -468,11 +474,30 @@ undoes them.
    Give one user both **purchasing** and **purchasing_approver** (step 4): it approves other people's
    orders but never its own, which the API refuses with `self_approval`. An inactive supplier or
    item, a branch as the delivery location or a delivery date in the past is refused. Purchase orders
-   write no stock; goods receipts will receive against sent orders (#11). As **admin**, **Company
+   write no stock; goods receipts receive against sent orders (step 14). As **admin**, **Company
    settings** sets the threshold, compared with the total including VAT; until it is first saved it is
    0, so every order waits for an approver. Every step is audited and logged with its
    `document_number`, and approvals and rejections emit `document.approved` and `document.rejected`.
-14. Sign in as **finance** (or the branch manager) and open **Menu and prices**: single pieces, a
+14. Open **Goods receipts** as **plant** (Docker install; on the public demo the screen says it is
+   not in the demo yet). The seed's two: `GR-2026-00001` received `PO-2026-00001` within tolerance —
+   238.4 kg as 132 birds at 2.8 °C against 240 kg — so submitting posted it at once: one lot of
+   238.400 kg at 64.200000 baht a kilogram, expiring five days after receipt, and the order is
+   **received**, being within the item's 2% variance. `GR-2026-00002` received `PO-2026-00002` from a
+   warm truck (5.6 °C against the 4 °C limit), with ten birds in torn packaging turned away and a
+   supplier date one day short of the shelf life: it waited for **purchasing_approver**, who approved
+   it. Its lot of 384.000 kg shows both dates and takes the supplier's, the ten birds went back as
+   return to supplier `RTS-2026-00001`, and the order is **partially received**. **Receive goods**
+   against a sent order and the findings appear as you type: over or under what is still expected
+   beyond the item's variance limit, too warm, damaged, short dated. A line with a finding needs a
+   reason, and its receipt an approver who did not record it (the API refuses `self_approval`); within
+   tolerance, **Submit and post to stock** posts it. Receiving more than was ordered plus the limit is
+   refused (`over_receipt`), even when two receipts post at the same moment; goods the supplier says
+   have already expired are turned away (`expired_on_arrival`); an item with a temperature limit is
+   measured (`temperature_required`). **Purchase orders** shows what each line received and returned.
+   As **admin**, **Edit** an item in **Items and units** to set its receiving tolerances: configuration
+   the dock checks, not master data, so no new version. Every posting and refusal is logged with the
+   receipt's `document_number` and counted in `erp_postings_total` under `goods_receipt`.
+15. Sign in as **finance** (or the branch manager) and open **Menu and prices**: single pieces, a
    two-piece set, six wings, a bucket and fried chicken sold by weight (priced per kilogram). Open the
    **Bucket of eight pieces**: 299 baht chain-wide, Silom's own 319, 309 scheduled chain-wide from
    next week, which Silom's own price still wins over, and Silom's return to the chain price the week
@@ -486,7 +511,7 @@ undoes them.
    it comes, a started price is refused — or send a branch back to the chain price the same way; add a recipe version — once one is in force, a new one starts
    tomorrow at the earliest, two never start on one day, and one in force never changes (ADR-0023).
    Every change is a new master data version a POS pulls (contract 1.1).
-15. Connect a POS (Docker install; the public demo has no API for it). With the **admin**'s access
+16. Connect a POS (Docker install; the public demo has no API for it). With the **admin**'s access
    token, `POST /api/v1/pos-instances` with a `code` (`POS-SILOM-1`), a `name` and the `branchCodes` it
    sells for (`["BR-SILOM"]`): the answer carries the machine credential, `pnepos_…`, **once** — the ERP
    keeps only its hash. With that credential as the bearer token, `GET /api/v1/pos/instance` answers who
@@ -501,7 +526,7 @@ undoes them.
    Every one of these is a `sales_event.*` or `master_data.*` log line carrying `pos_instance`, the
    branch's `location_code`, and the event's idempotency key as its `correlation_id`, counted in
    `erp_sales_events_total` — and the credential itself never appears in a log.
-16. Every one of those changes, and every refused sign-in, is in the audit trail with who, when and
+17. Every one of those changes, and every refused sign-in, is in the audit trail with who, when and
    the request's correlation id. Read it through the API with the admin's access token:
    `GET /api/v1/audit-logs` (filters: `action`, `entityId`, `actorUserId`, `correlationId`, `from`,
    `to`). A refused sign-in is also a `WARNING` line with `"event":"auth.sign_in.failed"` in

@@ -14,9 +14,11 @@ import {
   createItem,
   listItems,
   listUnits,
+  setReceivingTolerances,
   unitName,
   updateItem,
   type ItemView,
+  type ReceivingTolerances,
   type PurchaseUnit,
   type PurchaseUnitIssue,
   type UnitView,
@@ -48,6 +50,31 @@ const PROBLEMS: Record<string, MessageKey> = {
   SAME_AS_BASE_UNIT: 'items.problem.SAME_AS_BASE_UNIT',
   DUPLICATE: 'items.problem.DUPLICATE',
 };
+
+const TOLERANCE_ERRORS: Record<string, MessageKey> = {
+  INVALID_RECEIVING_TOLERANCES: 'items.tolerances.error',
+  VALIDATION_FAILED: 'items.tolerances.error',
+};
+
+/** An item's receiving checks in a few words: "±2% · up to 4 °C", or null when it has none. */
+function toleranceParts(
+  tolerances: ReceivingTolerances,
+): Array<{ key: MessageKey; params: MessageParams }> {
+  const parts: Array<{ key: MessageKey; params: MessageParams }> = [];
+  if (tolerances.maxVariancePercent !== null) {
+    parts.push({
+      key: 'items.tolerances.variance',
+      params: { percent: tolerances.maxVariancePercent },
+    });
+  }
+  if (tolerances.maxTemperature !== null) {
+    parts.push({
+      key: 'items.tolerances.temperature',
+      params: { degrees: tolerances.maxTemperature },
+    });
+  }
+  return parts;
+}
 
 const FILTERS: Record<StatusFilter, MessageKey> = {
   active: 'items.filter.active',
@@ -142,16 +169,25 @@ export function ItemsPage() {
         />
       )}
       {canManage && editing && units.data && (
-        <ItemForm
-          key={editing.id}
-          item={editing}
-          units={units.data}
-          onClose={() => setEditingId(null)}
-          onSaved={(item, notice) => {
-            setEditingId(null);
-            setNotice(notice ?? { key: 'items.edit.done', params: { code: item.code } });
-          }}
-        />
+        <>
+          <ItemForm
+            key={editing.id}
+            item={editing}
+            units={units.data}
+            onClose={() => setEditingId(null)}
+            onSaved={(item, notice) => {
+              setEditingId(null);
+              setNotice(notice ?? { key: 'items.edit.done', params: { code: item.code } });
+            }}
+          />
+          <ToleranceForm
+            key={`tolerances-${editing.id}`}
+            item={editing}
+            onSaved={(item) =>
+              setNotice({ key: 'items.tolerances.done', params: { code: item.code } })
+            }
+          />
+        </>
       )}
 
       <div className="filters">
@@ -205,6 +241,7 @@ export function ItemsPage() {
                     <th scope="col">{t('items.column.baseUnit')}</th>
                     <th scope="col">{t('items.column.purchaseUnits')}</th>
                     <th scope="col">{t('items.column.shelfLife')}</th>
+                    <th scope="col">{t('items.column.receiving')}</th>
                     <th scope="col">{t('items.column.status')}</th>
                     {canManage && (
                       <th scope="col">
@@ -254,6 +291,17 @@ export function ItemsPage() {
                           {item.shelfLifeDays === 1
                             ? t('items.shelfLife.oneDay')
                             : t('items.shelfLife.days', { days: item.shelfLifeDays })}
+                        </td>
+                        <td data-label={t('items.column.receiving')}>
+                          {toleranceParts(item.receivingTolerances).length === 0 ? (
+                            <span className="subtle">{t('items.tolerances.none')}</span>
+                          ) : (
+                            <ul className="plain-list">
+                              {toleranceParts(item.receivingTolerances).map((part) => (
+                                <li key={part.key}>{t(part.key, part.params)}</li>
+                              ))}
+                            </ul>
+                          )}
                         </td>
                         <td data-label={t('items.column.status')}>
                           <span className={`badge badge--${item.active ? 'up' : 'neutral'}`}>
@@ -595,6 +643,70 @@ function ItemForm({
           )}
         </div>
       )}
+    </form>
+  );
+}
+
+/**
+ * An item's receiving tolerances (#11, ADR-0007): what the dock checks a delivery against. Saved
+ * on their own: they are configuration, not master data a POS mirrors, so they take no version.
+ */
+function ToleranceForm({ item, onSaved }: { item: ItemView; onSaved: (item: ItemView) => void }) {
+  const { t } = useI18n();
+  const queryClient = useQueryClient();
+  const [variance, setVariance] = useState(item.receivingTolerances.maxVariancePercent ?? '');
+  const [temperature, setTemperature] = useState(item.receivingTolerances.maxTemperature ?? '');
+  const save = useMutation({
+    mutationFn: () =>
+      setReceivingTolerances(item.id, {
+        maxVariancePercent: variance.trim() || null,
+        maxTemperature: temperature.trim() || null,
+      }),
+    onSuccess: async (saved) => {
+      await queryClient.invalidateQueries({ queryKey: qk.items });
+      onSaved(saved);
+    },
+  });
+  const onSubmit = (event: FormEvent) => {
+    event.preventDefault();
+    save.mutate();
+  };
+  return (
+    <form className="panel" onSubmit={onSubmit} aria-labelledby={`tolerances-${item.id}`}>
+      <h2 id={`tolerances-${item.id}`}>{t('items.tolerances.title', { code: item.code })}</h2>
+      <p className="subtle">{t('items.tolerances.hint')}</p>
+      <div className="field-grid">
+        <div className="field">
+          <label htmlFor={`tolerance-variance-${item.id}`}>
+            {t('items.tolerances.varianceLabel')}
+          </label>
+          <input
+            id={`tolerance-variance-${item.id}`}
+            inputMode="decimal"
+            autoComplete="off"
+            value={variance}
+            onChange={(e) => setVariance(e.target.value)}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor={`tolerance-temperature-${item.id}`}>
+            {t('items.tolerances.temperatureLabel')}
+          </label>
+          <input
+            id={`tolerance-temperature-${item.id}`}
+            inputMode="decimal"
+            autoComplete="off"
+            value={temperature}
+            onChange={(e) => setTemperature(e.target.value)}
+          />
+        </div>
+      </div>
+      {save.isError && <ErrorCallout error={save.error} messages={TOLERANCE_ERRORS} />}
+      <div className="actions">
+        <button type="submit" className="button" disabled={save.isPending}>
+          {save.isPending ? t('items.tolerances.saving') : t('items.tolerances.save')}
+        </button>
+      </div>
     </form>
   );
 }

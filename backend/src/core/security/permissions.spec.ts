@@ -68,10 +68,28 @@ describe('roles and permissions (ADR-0008)', () => {
       const held = permissionsFor([role]);
       expect(held.includes(Permission.PURCHASE_ORDER_RAISE)).toBe(role === 'purchasing');
       expect(held.includes(Permission.PURCHASE_ORDER_APPROVE)).toBe(role === 'purchasing_approver');
+      // The plant reads the orders it receives against (#11).
       expect(held.includes(Permission.PURCHASE_ORDER_READ)).toBe(
-        role === 'purchasing' || role === 'purchasing_approver' || role === 'finance',
+        role === 'purchasing' ||
+          role === 'purchasing_approver' ||
+          role === 'finance' ||
+          role === 'plant',
       );
       expect(held.includes(Permission.COMPANY_SETTINGS_MANAGE)).toBe(role === 'admin');
+    }
+  });
+
+  it('lets the plant receive goods and purchasing approvers approve findings (#11)', () => {
+    for (const role of ROLE_KEYS) {
+      const held = permissionsFor([role]);
+      expect(held.includes(Permission.GOODS_RECEIPT_RECEIVE)).toBe(role === 'plant');
+      expect(held.includes(Permission.GOODS_RECEIPT_APPROVE)).toBe(role === 'purchasing_approver');
+      expect(held.includes(Permission.GOODS_RECEIPT_READ)).toBe(
+        role === 'plant' ||
+          role === 'purchasing' ||
+          role === 'purchasing_approver' ||
+          role === 'finance',
+      );
     }
   });
 
@@ -89,6 +107,7 @@ describe('roles and permissions (ADR-0008)', () => {
       Permission.MENU_MANAGE,
       Permission.PURCHASE_ORDER_READ,
       Permission.COMPANY_SETTINGS_MANAGE,
+      Permission.GOODS_RECEIPT_READ,
     ]);
     expect(permissionsFor([])).toEqual([]);
   });

@@ -81,6 +81,9 @@ const ROUTES: readonly Route[] = [
     status: 201,
   }),
   route('PATCH', `${V1}/items/:id`, masterData.updateItem, { permission: Permission.ITEM_MANAGE }),
+  route('PUT', `${V1}/items/:id/receiving-tolerances`, masterData.setReceivingTolerances, {
+    permission: Permission.ITEM_MANAGE,
+  }),
 
   route('GET', `${V1}/locations`, masterData.listLocations),
   route('GET', `${V1}/locations/:id`, masterData.getLocation),

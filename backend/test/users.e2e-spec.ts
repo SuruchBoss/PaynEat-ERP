@@ -137,17 +137,33 @@ describe('user administration', () => {
     });
     expect(res.body[1]).toEqual({
       key: 'purchasing',
-      permissions: ['supplier:manage', 'purchase_order:read', 'purchase_order:raise'],
+      permissions: [
+        'supplier:manage',
+        'purchase_order:read',
+        'purchase_order:raise',
+        'goods_receipt:read',
+      ],
       requiresSecondFactor: false,
     });
     expect(res.body[2]).toEqual({
       key: 'purchasing_approver',
-      permissions: ['purchase_order:read', 'purchase_order:approve'],
+      permissions: [
+        'purchase_order:read',
+        'purchase_order:approve',
+        'goods_receipt:read',
+        'goods_receipt:approve',
+      ],
       requiresSecondFactor: false,
     });
     expect(res.body[3]).toEqual({
       key: 'plant',
-      permissions: ['opening_balance:manage', 'stock_adjustment:raise'],
+      permissions: [
+        'opening_balance:manage',
+        'stock_adjustment:raise',
+        'purchase_order:read',
+        'goods_receipt:read',
+        'goods_receipt:receive',
+      ],
       requiresSecondFactor: false,
     });
     expect(res.body[5]).toEqual({
@@ -157,7 +173,12 @@ describe('user administration', () => {
     });
     expect(res.body[6]).toEqual({
       key: 'finance',
-      permissions: ['stock_adjustment:approve', 'menu:read', 'purchase_order:read'],
+      permissions: [
+        'stock_adjustment:approve',
+        'menu:read',
+        'purchase_order:read',
+        'goods_receipt:read',
+      ],
       requiresSecondFactor: false,
     });
     for (const role of res.body.filter(

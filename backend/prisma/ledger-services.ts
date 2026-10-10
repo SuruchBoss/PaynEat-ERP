@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * The ledger, opening-balance, stock-adjustment and purchase-order services, wired by hand for scripts that run without the API:
+ * The ledger, opening-balance, stock-adjustment, purchase-order and goods-receipt services, wired
+ * by hand for scripts that run without the API:
  * the demo seed and `npm run ledger:rebuild-balances`. The same code the API runs, so no script
  * writes stock any other way than the ledger module does (#7, ADR-0010).
  */
@@ -15,6 +16,7 @@ import { stdoutSink, TelemetryLogger } from '../src/core/telemetry/telemetry-log
 import { isTimeZone } from '../src/core/time/domain/business-date';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { CompanyService } from '../src/modules/company/company.service';
+import { GoodsReceiptsService } from '../src/modules/goods-receipts/goods-receipts.service';
 import { ItemsService } from '../src/modules/items/items.service';
 import { LedgerService } from '../src/modules/ledger/ledger.service';
 import { LocationsService } from '../src/modules/locations/locations.service';
@@ -30,6 +32,8 @@ export interface LedgerServices {
   stockAdjustments: StockAdjustmentsService;
   company: CompanyService;
   purchaseOrders: PurchaseOrdersService;
+  goodsReceipts: GoodsReceiptsService;
+  items: ItemsService;
 }
 
 /**
@@ -66,21 +70,35 @@ export function ledgerServices(
     config,
   );
   const company = new CompanyService(db, audit);
+  const suppliers = new SuppliersService(db, audit);
+  const purchaseOrders = new PurchaseOrdersService(
+    db,
+    new SequenceService(),
+    items,
+    locations,
+    suppliers,
+    company,
+    audit,
+    logger,
+    config,
+  );
   return {
     ledger,
     openingBalances: new OpeningBalancesService(db, ledger, items, locations),
     stockAdjustments: new StockAdjustmentsService(db, ledger, items, locations, audit, logger),
     company,
-    purchaseOrders: new PurchaseOrdersService(
+    purchaseOrders,
+    goodsReceipts: new GoodsReceiptsService(
       db,
+      ledger,
       new SequenceService(),
+      purchaseOrders,
       items,
       locations,
-      new SuppliersService(db, audit),
-      company,
+      suppliers,
       audit,
       logger,
-      config,
     ),
+    items,
   };
 }

@@ -14,26 +14,33 @@ model Unit {
   baseOf     Item[]              @relation("ItemBaseUnit")
   purchaseOf ItemPurchaseUnit[]
   orderedIn  PurchaseOrderLine[]
+  receivedIn GoodsReceiptLine[]
 
   @@map("units")
 }
 
 /// Anything the company stocks (docs/GLOSSARY.md). Deactivated, never deleted.
 model Item {
-  id             String   @id @default(uuid()) @db.Uuid
+  id                          String   @id @default(uuid()) @db.Uuid
   /// Unique and stable: set once, never changed.
-  code           String   @unique
-  nameTh         String   @map("name_th")
-  nameEn         String   @map("name_en")
-  baseUnitCode   String   @map("base_unit_code")
-  baseUnit       Unit     @relation("ItemBaseUnit", fields: [baseUnitCode], references: [code])
-  variableWeight Boolean  @default(false) @map("variable_weight")
-  shelfLifeDays  Int      @map("shelf_life_days")
-  active         Boolean  @default(true)
+  code                        String   @unique
+  nameTh                      String   @map("name_th")
+  nameEn                      String   @map("name_en")
+  baseUnitCode                String   @map("base_unit_code")
+  baseUnit                    Unit     @relation("ItemBaseUnit", fields: [baseUnitCode], references: [code])
+  variableWeight              Boolean  @default(false) @map("variable_weight")
+  shelfLifeDays               Int      @map("shelf_life_days")
+  /// Receiving tolerances (#11, ADR-0007): the largest difference between counted and expected
+  /// quantity, in percent, and the warmest the goods may arrive, in °C. Null means no check.
+  /// Configuration the receiving dock needs, not master data a POS mirrors: changing them does
+  /// not take a master data version.
+  receivingMaxVariancePercent Decimal? @map("receiving_max_variance_percent") @db.Decimal(5, 2)
+  receivingMaxTemperature     Decimal? @map("receiving_max_temperature") @db.Decimal(3, 1)
+  active                      Boolean  @default(true)
   /// The master data version of this item's latest change.
-  version        BigInt
-  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  version                     BigInt
+  createdAt                   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   purchaseUnits       ItemPurchaseUnit[]
   lots                Lot[]
@@ -43,6 +50,8 @@ model Item {
   adjustmentLines     StockAdjustmentLine[]
   purchaseOrderLines  PurchaseOrderLine[]
   recipeLines         RecipeLine[]
+  goodsReceiptLines   GoodsReceiptLine[]
+  supplierReturnLines SupplierReturnLine[]
 
   @@map("items")
 }

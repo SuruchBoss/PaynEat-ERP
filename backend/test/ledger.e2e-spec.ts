@@ -192,7 +192,11 @@ describe('stock ledger and opening balances', () => {
       });
       expect(list[0].number).toMatch(DOCUMENT_NUMBER);
 
-      const rows = (await stock({ locationId: plantId })).rows as Body[];
+      // The plant also holds what the demo goods receipts (#11) brought in: only the opening
+      // balance's lots here.
+      const rows = ((await stock({ locationId: plantId })).rows as Body[]).filter((r) =>
+        r.lot.number.startsWith(`${list[0].number}/`),
+      );
       expect(rows.map((r) => r.item.code).sort()).toEqual([
         'FLOUR',
         'FRYING-OIL',

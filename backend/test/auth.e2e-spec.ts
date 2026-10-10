@@ -85,7 +85,12 @@ describe('signing in', () => {
         user: {
           email: PURCHASING,
           roles: ['purchasing'],
-          permissions: ['supplier:manage', 'purchase_order:read', 'purchase_order:raise'],
+          permissions: [
+            'supplier:manage',
+            'purchase_order:read',
+            'purchase_order:raise',
+            'goods_receipt:read',
+          ],
           mfaEnabled: false,
         },
       });

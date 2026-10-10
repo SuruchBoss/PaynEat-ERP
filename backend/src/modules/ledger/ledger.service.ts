@@ -71,6 +71,7 @@ const SCOPES: Record<StockDocumentType, SequenceScope> = {
   opening_balance: 'OPENING_BALANCE',
   reversal: 'REVERSAL',
   stock_adjustment: 'STOCK_ADJUSTMENT',
+  goods_receipt: 'GOODS_RECEIPT',
 };
 
 /** Long enough for a posting to wait its turn behind another on the same lots. */
@@ -96,6 +97,16 @@ const REFUSAL_MESSAGES: Record<PostingRule, string> = {
   business_date_before_original: 'A reversal cannot be dated before the document it reverses',
   not_approved: 'Only an approved document can be posted',
   self_approval: 'Nobody approves a document they created; someone else has to approve it',
+  order_not_receivable:
+    'Goods are received only against an approved or sent purchase order that is not yet fully received',
+  temperature_required:
+    'This item has a receiving temperature limit: record the temperature at the dock',
+  reason_required: 'A line outside tolerance, or with goods turned away, needs a reason',
+  expired_on_arrival:
+    'The supplier says these goods have already expired: reject them, they cannot enter stock',
+  over_receipt: "This would receive more than was ordered plus the item's variance limit",
+  needs_approval:
+    'Something on this receipt is now outside tolerance: reload it and submit it again for approval',
 };
 
 /**
@@ -125,6 +136,12 @@ export interface NewLot {
   secondaryQuantity: string | null;
   unitCost: string;
   expiryDate: string;
+  /**
+   * Received lots only (ADR-0014): the receipt date plus shelf life, and the supplier's date. The
+   * lot keeps both; `expiryDate` is the earlier.
+   */
+  computedExpiryDate?: string;
+  supplierExpiryDate?: string | null;
 }
 
 /**
@@ -363,6 +380,8 @@ export class LedgerService {
       secondaryQuantity: row.secondaryQuantity?.toFixed() ?? null,
       unitCost: normaliseDecimal(row.unitCost.toFixed()),
       expiryDate: dateText(row.expiryDate),
+      computedExpiryDate: row.computedExpiryDate ? dateText(row.computedExpiryDate) : null,
+      supplierExpiryDate: row.supplierExpiryDate ? dateText(row.supplierExpiryDate) : null,
     }));
   }
 
@@ -745,12 +764,14 @@ export class LedgerService {
     const created = await tx.$queryRaw<{ id: string; lineNo: number }[]>`
       INSERT INTO "lots"
         ("id", "number", "item_id", "origin_document_id", "origin_line_no", "unit_cost",
-         "expiry_date", "quantity", "secondary_quantity", "created_at")
+         "expiry_date", "computed_expiry_date", "supplier_expiry_date", "quantity",
+         "secondary_quantity", "created_at")
       VALUES ${Prisma.join(
         newLots.map(
           (lot) => Prisma.sql`(
             gen_random_uuid(), ${lotNumber(doc.number, lot.lineNo)}, ${lot.itemId}::uuid,
             ${doc.id}::uuid, ${lot.lineNo}, ${lot.unitCost}::numeric, ${lot.expiryDate}::date,
+            ${lot.computedExpiryDate ?? null}::date, ${lot.supplierExpiryDate ?? null}::date,
             ${lot.quantity}::numeric, ${lot.secondaryQuantity}::numeric, now()
           )`,
         ),

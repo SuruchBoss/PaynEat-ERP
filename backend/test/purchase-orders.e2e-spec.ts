@@ -179,17 +179,20 @@ describe('purchase orders', () => {
       const demo = details.filter((o) => /^Demo seed:/.test(o.note ?? ''));
       expect(demo).toHaveLength(3);
 
+      // Both chicken orders are sent, then received by the demo goods receipts (#11): the first
+      // in full, the second in part.
       const small = demo.find((o) => o.totals.gross === '16486.56')!;
       expect(small).toMatchObject({
-        status: 'sent',
+        status: 'received',
         supplier: { code: 'SUP-CHICKEN' },
         deliveryLocation: { code: 'PLANT-01' },
         approved: { by: null, automatically: true },
         submitted: { by: { displayName: 'Demo purchasing' }, approvalThreshold: '20000.00' },
       });
+      expect(small.sent).toMatchObject({ by: { displayName: 'Demo purchasing' } });
       const large = demo.find((o) => o.totals.gross === '27477.60')!;
       expect(large).toMatchObject({
-        status: 'sent',
+        status: 'partially_received',
         approved: { by: { displayName: 'Demo purchasing approver' }, automatically: false },
         createdBy: { displayName: 'Demo purchasing' },
       });
@@ -593,8 +596,10 @@ describe('purchase orders', () => {
   });
 
   describe('permissions', () => {
-    it('lets purchasing, approvers and finance read; only purchasing raise; nobody else in', async () => {
-      expect((await as(plant).get('/purchase-orders')).status).toBe(403);
+    it('lets purchasing, approvers, finance and the plant read; only purchasing raise', async () => {
+      // The plant reads the orders it receives against (#11), and raises none.
+      expect((await as(plant).get('/purchase-orders')).status).toBe(200);
+      expect((await as(plant).post('/purchase-orders', order())).status).toBe(403);
       expect((await as(finance).get('/purchase-orders')).status).toBe(200);
       expect((await as(approver).get('/purchase-orders')).status).toBe(200);
       expect((await as(finance).post('/purchase-orders', order())).status).toBe(403);

@@ -29,10 +29,19 @@ export interface ItemView {
   shelfLifeDays: number;
   active: boolean;
   purchaseUnits: PurchaseUnit[];
+  /** What the receiving dock checks (#11): configuration, not master data. Null = no check. */
+  receivingTolerances: ReceivingTolerances;
   /** The master data version of the item's latest change; sent back with an edit. */
   version: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ReceivingTolerances {
+  /** The largest difference between counted and expected quantity, in percent: "2". */
+  maxVariancePercent: string | null;
+  /** The warmest the goods may arrive, in °C: "4". */
+  maxTemperature: string | null;
 }
 
 export interface ItemFields {
@@ -74,3 +83,7 @@ export const createItem = (item: NewItem) => api.post<ItemView>('/items', item);
 
 export const updateItem = (id: string, change: ItemChange) =>
   api.patch<ItemView>(`/items/${encodeURIComponent(id)}`, change);
+
+/** Replaces the item's receiving tolerances (#11): the admin's configuration of the dock. */
+export const setReceivingTolerances = (id: string, tolerances: ReceivingTolerances) =>
+  api.put<ItemView>(`/items/${encodeURIComponent(id)}/receiving-tolerances`, tolerances);

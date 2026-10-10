@@ -76,6 +76,17 @@ const REFUSAL_MESSAGES: Record<PostingRule, string> = {
   business_date_before_original: 'A reversal cannot be dated before the document it reverses',
   not_approved: 'Only an approved document can be posted',
   self_approval: 'Nobody approves a document they created; someone else has to approve it',
+  // Goods receipts (#11) are not in the demo yet; their rules are listed so the map stays whole.
+  order_not_receivable:
+    'Goods are received only against an approved or sent purchase order that is not yet fully received',
+  temperature_required:
+    'This item has a receiving temperature limit: record the temperature at the dock',
+  reason_required: 'A line outside tolerance, or with goods turned away, needs a reason',
+  expired_on_arrival:
+    'The supplier says these goods have already expired: reject them, they cannot enter stock',
+  over_receipt: "This would receive more than was ordered plus the item's variance limit",
+  needs_approval:
+    'Something on this receipt is now outside tolerance: reload it and submit it again for approval',
 };
 
 /** 422, or 409 when it lost a race with someone else (backend `PostingRefusedError`). */

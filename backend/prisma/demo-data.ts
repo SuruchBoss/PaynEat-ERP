@@ -150,6 +150,21 @@ export const DEMO_ITEMS: readonly DemoItem[] = [
 ];
 
 /**
+ * Receiving tolerances (#11, ADR-0007): chilled whole chicken may arrive 2% off the weight still
+ * expected and no warmer than 4 °C; the chilled pieces no warmer than 4 °C either. Everything else
+ * has no check. Configuration the admin maintains, not master data.
+ */
+export const DEMO_RECEIVING_TOLERANCES: Readonly<
+  Record<string, { maxVariancePercent: string | null; maxTemperature: string | null }>
+> = {
+  'WHOLE-CHICKEN': { maxVariancePercent: '2', maxTemperature: '4' },
+  'CHICKEN-BREAST': { maxVariancePercent: null, maxTemperature: '4' },
+  'CHICKEN-THIGH': { maxVariancePercent: null, maxTemperature: '4' },
+  'CHICKEN-DRUMSTICK': { maxVariancePercent: null, maxTemperature: '4' },
+  'CHICKEN-WING': { maxVariancePercent: null, maxTemperature: '4' },
+};
+
+/**
  * The chain's sites (#6): one plant that cuts and marinates, three branches. Codes follow
  * the ExcelToGo draft template. The plant's in-transit location is created with it.
  */
@@ -327,6 +342,74 @@ export const DEMO_PURCHASE_ORDERS: readonly DemoPurchaseOrder[] = [
       },
     ],
     until: 'draft',
+  },
+];
+
+export interface DemoGoodsReceipt {
+  /** Which of DEMO_PURCHASE_ORDERS it receives against. */
+  purchaseOrderIndex: number;
+  note: string;
+  lines: ReadonlyArray<{
+    purchaseOrderLineNo: number;
+    unitCode: string;
+    countedQuantity: string;
+    rejectedQuantity: string;
+    countedPieces: string | null;
+    rejectedPieces: string | null;
+    temperature: string | null;
+    condition: 'good' | 'damaged';
+    /** Days from the day the seed runs, or null when the supplier printed none. */
+    supplierExpiresInDays: number | null;
+    reason: string | null;
+  }>;
+}
+
+/**
+ * Two goods receipts (#11), both fictional, of the two whole-chicken orders, received today by
+ * the plant. The first is within tolerance — 238.4 kg as 132 birds against 240 kg, 2.8 °C, the
+ * supplier's date later than five days' shelf life — so submitting it posts one lot at 64.2 a kg
+ * and completes the order. The second arrived warm (5.6 °C), with ten birds in torn packaging and
+ * a supplier date a day short: those ten birds go back to the supplier, and the purchasing
+ * approver, not the plant, approves the rest, which posts a lot that takes the supplier's date
+ * and leaves the order partially received.
+ */
+export const DEMO_GOODS_RECEIPTS: readonly DemoGoodsReceipt[] = [
+  {
+    purchaseOrderIndex: 0,
+    note: 'Demo seed: Monday delivery, within tolerance (fictional)',
+    lines: [
+      {
+        purchaseOrderLineNo: 1,
+        unitCode: 'kg',
+        countedQuantity: '238.4',
+        rejectedQuantity: '0',
+        countedPieces: '132',
+        rejectedPieces: '0',
+        temperature: '2.8',
+        condition: 'good',
+        supplierExpiresInDays: 6,
+        reason: null,
+      },
+    ],
+  },
+  {
+    purchaseOrderIndex: 1,
+    note: 'Demo seed: weekend delivery, warm truck (fictional)',
+    lines: [
+      {
+        purchaseOrderLineNo: 1,
+        unitCode: 'kg',
+        countedQuantity: '402',
+        rejectedQuantity: '18',
+        countedPieces: '223',
+        rejectedPieces: '10',
+        temperature: '5.6',
+        condition: 'damaged',
+        supplierExpiresInDays: 4,
+        reason:
+          'Truck chiller fault: 5.6 °C at the door, 3.9 °C core on re-test. Ten birds in torn packaging returned. Supplier date one day short: use first.',
+      },
+    ],
   },
 ];
 

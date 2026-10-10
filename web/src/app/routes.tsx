@@ -3,6 +3,7 @@
 
 import type { RouteObject } from 'react-router-dom';
 import { SignInPage } from '@/features/auth/SignInPage';
+import { GoodsReceiptsPage } from '@/features/goods-receipts/GoodsReceiptsPage';
 import { ItemsPage } from '@/features/items/ItemsPage';
 import { LocationsPage } from '@/features/locations/LocationsPage';
 import { MenuPage } from '@/features/menu/MenuPage';
@@ -47,6 +48,10 @@ export const routes: RouteObject[] = [
           {
             element: <RequirePermission permission={Permission.PURCHASE_ORDER_READ} />,
             children: [{ path: 'purchase-orders', element: <PurchaseOrdersPage /> }],
+          },
+          {
+            element: <RequirePermission permission={Permission.GOODS_RECEIPT_READ} />,
+            children: [{ path: 'goods-receipts', element: <GoodsReceiptsPage /> }],
           },
           {
             element: <RequirePermission permission={Permission.USER_READ} />,

@@ -9,13 +9,19 @@ import { PrismaService } from '../../core/prisma/prisma.service';
 import type { AuthenticatedUser } from '../../core/security/current-user';
 import { AuditService } from '../audit/audit.service';
 import { MasterDataService } from '../master-data/master-data.service';
+import {
+  normaliseTolerances,
+  toleranceProblem,
+  type ReceivingTolerances,
+} from '../../core/receiving/domain/inspection';
 import { normalisePurchaseUnits, purchaseUnitIssues } from './domain/item-rules';
-import { normaliseFactor } from './domain/unit-conversion';
+import { normaliseFactor, toBaseQuantity, type ConversionInput } from './domain/unit-conversion';
 import type {
   CreateItemDto,
   ItemsQueryDto,
   ItemView,
   PurchaseUnitDto,
+  ReceivingTolerancesDto,
   UnitView,
   UpdateItemDto,
 } from './dto/items.dto';
@@ -28,6 +34,8 @@ const ITEM_SELECT = {
   baseUnitCode: true,
   variableWeight: true,
   shelfLifeDays: true,
+  receivingMaxVariancePercent: true,
+  receivingMaxTemperature: true,
   active: true,
   version: true,
   createdAt: true,
@@ -51,6 +59,10 @@ export interface ItemFacts {
   baseUnitCode: string;
   /** Decimals a quantity in the base unit keeps (ADR-0019). */
   baseUnitDecimals: number;
+  /** Days from receipt or production to expiry (ADR-0006). */
+  shelfLifeDays: number;
+  /** What the receiving dock checks (#11, ADR-0007). */
+  receivingTolerances: ReceivingTolerances;
 }
 
 /** A unit an item is bought in (#10): how many base units one holds, and its own decimals. */
@@ -125,12 +137,82 @@ export class ItemsService {
         active: true,
         variableWeight: true,
         baseUnitCode: true,
+        shelfLifeDays: true,
+        receivingMaxVariancePercent: true,
+        receivingMaxTemperature: true,
         baseUnit: { select: { decimals: true } },
       },
     });
     return new Map(
-      rows.map(({ baseUnit, ...row }) => [row.id, { ...row, baseUnitDecimals: baseUnit.decimals }]),
+      rows.map(({ baseUnit, receivingMaxVariancePercent, receivingMaxTemperature, ...row }) => [
+        row.id,
+        {
+          ...row,
+          baseUnitDecimals: baseUnit.decimals,
+          receivingTolerances: tolerancesOf({
+            receivingMaxVariancePercent,
+            receivingMaxTemperature,
+          }),
+        },
+      ]),
     );
+  }
+
+  /**
+   * A quantity in a counting unit converted to the item's base unit, with #5's one definition of
+   * the conversion and its rounding (ADR-0005, ADR-0019). Throws a `ConversionError` naming the
+   * problem when the quantity is not valid for the unit.
+   */
+  toBaseQuantity(input: ConversionInput): string {
+    return toBaseQuantity(input);
+  }
+
+  /**
+   * Replaces an item's receiving tolerances (#11, ADR-0007 decision 2): configuration the
+   * receiving dock checks, maintained by the admin. Not master data a POS mirrors, so it takes no
+   * master data version; it is audited. A request that changes nothing records nothing.
+   */
+  async setReceivingTolerances(
+    id: string,
+    dto: ReceivingTolerancesDto,
+    actor: AuthenticatedUser,
+    meta: ClientMeta,
+  ): Promise<ItemView> {
+    const wanted: ReceivingTolerances = {
+      maxVariancePercent: dto.maxVariancePercent || null,
+      maxTemperature: dto.maxTemperature || null,
+    };
+    const problem = toleranceProblem(wanted);
+    if (problem) {
+      throw new BusinessRuleError('INVALID_RECEIVING_TOLERANCES', TOLERANCE_ERRORS[problem], {
+        problem,
+      });
+    }
+    const next = normaliseTolerances(wanted);
+    const row = await this.prisma.$transaction(async (tx) => {
+      const current = await this.lockItem(tx, id);
+      const before = tolerancesOf(current);
+      if (JSON.stringify(before) === JSON.stringify(next)) return current;
+      const item = await tx.item.update({
+        where: { id },
+        data: {
+          receivingMaxVariancePercent: next.maxVariancePercent,
+          receivingMaxTemperature: next.maxTemperature,
+        },
+        select: ITEM_SELECT,
+      });
+      await this.audit.recordWithin(tx, {
+        actorUserId: actor.userId,
+        action: AuditAction.UPDATE,
+        entityType: 'Item',
+        entityId: item.id,
+        summary: `Updated receiving tolerances of item ${item.code} (${item.nameEn})`,
+        changes: { receivingTolerances: { from: before, to: next } },
+        ...meta,
+      });
+      return item;
+    });
+    return toView(row);
   }
 
   /**
@@ -342,10 +424,31 @@ function toView(item: ItemRow): ItemView {
     shelfLifeDays: item.shelfLifeDays,
     active: item.active,
     purchaseUnits: purchaseUnitsOf(item),
+    receivingTolerances: tolerancesOf(item),
     version: Number(item.version),
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
   };
+}
+
+const TOLERANCE_ERRORS = {
+  VARIANCE_NOT_A_NUMBER: 'The quantity variance limit must be a number',
+  VARIANCE_OUT_OF_RANGE: 'The quantity variance limit is between 0 and 100 percent',
+  VARIANCE_TOO_PRECISE: 'The quantity variance limit has at most two decimals',
+  TEMPERATURE_NOT_A_NUMBER: 'The temperature limit must be a number',
+  TEMPERATURE_OUT_OF_RANGE: 'The temperature limit is between -60 and 60 °C',
+  TEMPERATURE_TOO_PRECISE: 'The temperature limit has at most one decimal',
+} as const;
+
+/** The stored tolerances, shortest exact form, or null where the item has no check. */
+function tolerancesOf(row: {
+  receivingMaxVariancePercent: Prisma.Decimal | null;
+  receivingMaxTemperature: Prisma.Decimal | null;
+}): ReceivingTolerances {
+  return normaliseTolerances({
+    maxVariancePercent: row.receivingMaxVariancePercent?.toFixed() ?? null,
+    maxTemperature: row.receivingMaxTemperature?.toFixed() ?? null,
+  });
 }
 
 /**

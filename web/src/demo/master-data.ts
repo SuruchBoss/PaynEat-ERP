@@ -27,6 +27,10 @@ import {
   normaliseTaxId,
   thaiTaxIdProblem,
 } from '@backend/src/modules/suppliers/domain/thai-tax-id';
+import {
+  normaliseTolerances,
+  toleranceProblem,
+} from '@backend/src/core/receiving/domain/inspection';
 import { conflict, Input, notFound, queryValue, refused, uuidParam, type Context } from './http';
 import { UNITS } from './seed';
 import {
@@ -65,7 +69,11 @@ export function unitDecimals(code: string): number {
 const KNOWN_UNITS: ReadonlySet<string> = new Set(UNITS.map((u) => u.code));
 
 function itemView(item: ItemRecord) {
-  return { ...item, purchaseUnits: item.purchaseUnits.map((p) => ({ ...p })) };
+  return {
+    ...item,
+    purchaseUnits: item.purchaseUnits.map((p) => ({ ...p })),
+    receivingTolerances: { ...item.receivingTolerances },
+  };
 }
 
 export function listItems(state: DemoState, ctx: Context) {
@@ -158,6 +166,7 @@ export function createItem(state: DemoState, ctx: Context) {
     shelfLifeDays,
     active: true,
     purchaseUnits: units,
+    receivingTolerances: { maxVariancePercent: null, maxTemperature: null },
     version: ++state.masterDataVersion,
     createdAt: at,
     updatedAt: at,
@@ -211,6 +220,34 @@ export function updateItem(state: DemoState, ctx: Context) {
   if (units) item.purchaseUnits = units;
   item.version = ++state.masterDataVersion;
   item.updatedAt = new Date(ctx.now).toISOString();
+  return itemView(item);
+}
+
+const TOLERANCE_ERRORS = {
+  VARIANCE_NOT_A_NUMBER: 'The quantity variance limit must be a number',
+  VARIANCE_OUT_OF_RANGE: 'The quantity variance limit is between 0 and 100 percent',
+  VARIANCE_TOO_PRECISE: 'The quantity variance limit has at most two decimals',
+  TEMPERATURE_NOT_A_NUMBER: 'The temperature limit must be a number',
+  TEMPERATURE_OUT_OF_RANGE: 'The temperature limit is between -60 and 60 °C',
+  TEMPERATURE_TOO_PRECISE: 'The temperature limit has at most one decimal',
+} as const;
+
+/**
+ * Replaces an item's receiving tolerances (#11): configuration, so it takes no master data version
+ * (backend `ItemsService.setReceivingTolerances`).
+ */
+export function setReceivingTolerances(state: DemoState, ctx: Context) {
+  const input = new Input(ctx.body, ['maxVariancePercent', 'maxTemperature']);
+  const maxVariancePercent = input.optionalText('maxVariancePercent', { trim: true }) || null;
+  const maxTemperature = input.optionalText('maxTemperature', { trim: true }) || null;
+  input.done();
+  const wanted = { maxVariancePercent, maxTemperature };
+  const problem = toleranceProblem(wanted);
+  if (problem) {
+    throw refused('INVALID_RECEIVING_TOLERANCES', TOLERANCE_ERRORS[problem], { problem });
+  }
+  const item = findItem(state, ctx.params[0]);
+  item.receivingTolerances = normaliseTolerances(wanted);
   return itemView(item);
 }
 

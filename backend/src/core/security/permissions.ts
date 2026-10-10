@@ -64,6 +64,18 @@ export const Permission = {
   PURCHASE_ORDER_APPROVE: 'purchase_order:approve',
   /** Change the company's settings, such as the purchase approval threshold (#10). */
   COMPANY_SETTINGS_MANAGE: 'company_settings:manage',
+  /**
+   * Read goods receipts and returns to supplier (#11): they carry what the company paid for each
+   * lot, so reading needs a permission, like purchase orders.
+   */
+  GOODS_RECEIPT_READ: 'goods_receipt:read',
+  /** Record what arrived at the dock: draft, edit and submit goods receipts (#11). */
+  GOODS_RECEIPT_RECEIVE: 'goods_receipt:receive',
+  /**
+   * Approve or reject a goods receipt with a finding, which posts it, and retry the posting of an
+   * approved one the ledger refused (#11). Never a receipt the approver created (ADR-0008).
+   */
+  GOODS_RECEIPT_APPROVE: 'goods_receipt:approve',
 } as const;
 
 export type PermissionKey = (typeof Permission)[keyof typeof Permission];
@@ -104,16 +116,31 @@ export const ROLE_PERMISSIONS: Record<Role, readonly PermissionKey[]> = {
     Permission.COMPANY_SETTINGS_MANAGE,
   ],
   // ADR-0008: create and send purchase orders (#10); manage suppliers (#6).
+  // Purchasing follows what arrived against its orders (#11).
   purchasing: [
     Permission.SUPPLIER_MANAGE,
     Permission.PURCHASE_ORDER_READ,
     Permission.PURCHASE_ORDER_RAISE,
+    Permission.GOODS_RECEIPT_READ,
   ],
-  // ADR-0008: approve purchase orders above the approval threshold (#10).
-  purchasing_approver: [Permission.PURCHASE_ORDER_READ, Permission.PURCHASE_ORDER_APPROVE],
+  // ADR-0008: approve purchase orders above the approval threshold (#10), and out-of-tolerance
+  // receipts (#11).
+  purchasing_approver: [
+    Permission.PURCHASE_ORDER_READ,
+    Permission.PURCHASE_ORDER_APPROVE,
+    Permission.GOODS_RECEIPT_READ,
+    Permission.GOODS_RECEIPT_APPROVE,
+  ],
   // ADR-0008: receive goods, run production orders, manage plant stock. Bringing existing
-  // stock in with an opening balance is managing it (#7), and so is adjusting it (#8).
-  plant: [Permission.OPENING_BALANCE_MANAGE, Permission.STOCK_ADJUSTMENT_RAISE],
+  // stock in with an opening balance is managing it (#7), and so is adjusting it (#8). Receiving
+  // means reading the order being received against (#11).
+  plant: [
+    Permission.OPENING_BALANCE_MANAGE,
+    Permission.STOCK_ADJUSTMENT_RAISE,
+    Permission.PURCHASE_ORDER_READ,
+    Permission.GOODS_RECEIPT_READ,
+    Permission.GOODS_RECEIPT_RECEIVE,
+  ],
   // ADR-0008: dispatch transfers.
   logistics: [],
   // ADR-0008: raise requisitions, receive transfers, count branch stock. Adjusting branch
@@ -123,11 +150,12 @@ export const ROLE_PERMISSIONS: Record<Role, readonly PermissionKey[]> = {
   // ADR-0008: view costs, variances and valuation; export financial data. An adjustment
   // changes the value of stock, so finance approves it (#8): never one it created itself.
   // Recipes and their theoretical cost are costs: finance reads them (#16), and so are the
-  // prices the company has committed to pay (#10).
+  // prices the company has committed to pay (#10) and what each received lot cost (#11).
   finance: [
     Permission.STOCK_ADJUSTMENT_APPROVE,
     Permission.MENU_READ,
     Permission.PURCHASE_ORDER_READ,
+    Permission.GOODS_RECEIPT_READ,
   ],
 };
 

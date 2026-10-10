@@ -132,6 +132,24 @@ export class UpdateItemDto {
   purchaseUnits?: PurchaseUnitDto[];
 }
 
+/**
+ * An item's receiving tolerances (#11, ADR-0007 decision 2), replaced as a pair. Decimal strings,
+ * never JSON numbers (ADR-0019); null, or left out, means no check. Checked by the service.
+ */
+export class ReceivingTolerancesDto {
+  /** The largest difference between counted and expected quantity, in percent: "2". */
+  @IsOptional()
+  @IsString()
+  @Transform(trimmed)
+  maxVariancePercent?: string | null;
+
+  /** The warmest the goods may arrive, in °C: "4", "-18". */
+  @IsOptional()
+  @IsString()
+  @Transform(trimmed)
+  maxTemperature?: string | null;
+}
+
 export class ItemsQueryDto {
   /** Matches the code or either name, ignoring case. */
   @IsOptional()
@@ -160,6 +178,13 @@ export interface PurchaseUnitView {
   factor: string;
 }
 
+export interface ReceivingTolerancesView {
+  /** Percent, shortest exact form ("2"), or null for no check. */
+  maxVariancePercent: string | null;
+  /** °C, shortest exact form ("4"), or null for no check. */
+  maxTemperature: string | null;
+}
+
 export interface ItemView {
   id: string;
   code: string;
@@ -170,6 +195,8 @@ export interface ItemView {
   shelfLifeDays: number;
   active: boolean;
   purchaseUnits: PurchaseUnitView[];
+  /** What the receiving dock checks (#11). Not master data: a POS never sees it. */
+  receivingTolerances: ReceivingTolerancesView;
   /** The master data version of the item's latest change. */
   version: number;
   createdAt: Date;
