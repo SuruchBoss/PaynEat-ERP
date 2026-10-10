@@ -63,4 +63,7 @@ export const qk = {
     ['production-boms', 'list', includeInactive] as const,
   productionBom: (id: string) => ['production-boms', id] as const,
   productionBomPreview: (input: string) => ['production-boms', 'preview', input] as const,
+  productionOrders: ['production-orders'] as const,
+  productionOrderList: (status: string) => ['production-orders', 'list', status] as const,
+  productionOrder: (id: string) => ['production-orders', id] as const,
 };

@@ -1,0 +1,103 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
+// Production orders — owned by the production-orders module (#13; docs/GLOSSARY.md "Production
+// order", "FEFO", "Yield"; ADR-0004, ADR-0006, ADR-0014, ADR-0027). An order runs one BOM
+// version at one plant: it plans from the BOM, picks input lots FEFO when it is released, records
+// what really came out, and posts input lots into output lots. The lot genealogy it leaves is the
+// ledger's (`lot_genealogy`).
+
+/// The production part of a stock document: which BOM version, where, and how much of the BOM's
+/// first input was planned. Draft → released → posted, or cancelled before posting; the status
+/// and number (MO-2026-00001) live on `stock_documents`, like every other document's.
+model ProductionOrder {
+  documentId           String               @id @map("document_id") @db.Uuid
+  document             StockDocument        @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  /// The version in force on the order's business date, fixed when the order is raised.
+  bomVersionId         String               @map("bom_version_id") @db.Uuid
+  bomVersion           ProductionBomVersion @relation(fields: [bomVersionId], references: [id], onDelete: Restrict)
+  locationId           String               @map("location_id") @db.Uuid
+  location             Location             @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  /// How much of the BOM's first input the order plans to use, in that item's base unit.
+  plannedQuantity      Decimal              @map("planned_quantity") @db.Decimal(18, 3)
+  releasedById         String?              @map("released_by_id") @db.Uuid
+  releasedBy           User?                @relation("ProductionOrderReleasedBy", fields: [releasedById], references: [id], onDelete: Restrict)
+  releasedAt           DateTime?            @map("released_at") @db.Timestamptz(3)
+  cancelledById        String?              @map("cancelled_by_id") @db.Uuid
+  cancelledBy          User?                @relation("ProductionOrderCancelledBy", fields: [cancelledById], references: [id], onDelete: Restrict)
+  cancelledAt          DateTime?            @map("cancelled_at") @db.Timestamptz(3)
+  cancellationReason   String?              @map("cancellation_reason")
+  /// Fixed at posting: output weight over input weight in percent, measured and expected.
+  actualYieldPercent   Decimal?             @map("actual_yield_percent") @db.Decimal(7, 2)
+  expectedYieldPercent Decimal?             @map("expected_yield_percent") @db.Decimal(7, 2)
+
+  inputs  ProductionOrderInput[]
+  outputs ProductionOrderOutput[]
+
+  @@index([bomVersionId])
+  @@index([locationId])
+  @@map("production_orders")
+}
+
+/// One BOM input on an order: what was planned, and the lots it is taken from.
+model ProductionOrderInput {
+  documentId      String          @map("document_id") @db.Uuid
+  order           ProductionOrder @relation(fields: [documentId], references: [documentId], onDelete: Cascade)
+  /// The BOM version's input line number.
+  lineNo          Int             @map("line_no")
+  itemId          String          @map("item_id") @db.Uuid
+  item            Item            @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  plannedQuantity Decimal         @map("planned_quantity") @db.Decimal(18, 3)
+  /// The measured weight in kg of what was consumed, for items not counted in kg or g.
+  actualWeightKg  Decimal?        @map("actual_weight_kg") @db.Decimal(15, 3)
+  /// True once the supervisor changed the lots FEFO suggested.
+  picksOverridden Boolean         @default(false) @map("picks_overridden")
+
+  picks ProductionOrderPick[]
+
+  @@id([documentId, lineNo])
+  @@map("production_order_inputs")
+}
+
+/// A lot an input is taken from, and how much. Suggested FEFO when the order is released; the
+/// supervisor may change it, never to a lot expired on the order's business date.
+model ProductionOrderPick {
+  documentId        String               @map("document_id") @db.Uuid
+  inputLineNo       Int                  @map("input_line_no")
+  input             ProductionOrderInput @relation(fields: [documentId, inputLineNo], references: [documentId, lineNo], onDelete: Cascade)
+  lotId             String               @map("lot_id") @db.Uuid
+  lot               Lot                  @relation(fields: [lotId], references: [id], onDelete: Restrict)
+  quantity          Decimal              @db.Decimal(18, 3)
+  /// Variable-weight items only: the pieces taken, when counted (ADR-0005).
+  secondaryQuantity Decimal?             @map("secondary_quantity") @db.Decimal(18, 0)
+
+  @@id([documentId, inputLineNo, lotId])
+  @@map("production_order_picks")
+}
+
+/// One BOM output on an order: planned from the BOM's expected yield, then what really came out
+/// and, once posted, what it cost (ADR-0027).
+model ProductionOrderOutput {
+  documentId         String          @map("document_id") @db.Uuid
+  order              ProductionOrder @relation(fields: [documentId], references: [documentId], onDelete: Cascade)
+  /// The BOM version's output line number.
+  lineNo             Int             @map("line_no")
+  itemId             String          @map("item_id") @db.Uuid
+  item               Item            @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  plannedQuantity    Decimal         @map("planned_quantity") @db.Decimal(18, 3)
+  /// The BOM version's ratio, copied so the order reads on its own.
+  allocationRatio    Decimal         @map("allocation_ratio") @db.Decimal(5, 2)
+  /// What really came out, in the item's base unit; null until recorded.
+  actualQuantity     Decimal?        @map("actual_quantity") @db.Decimal(18, 3)
+  /// Variable-weight items: the piece count that came out (ADR-0005).
+  actualPieces       Decimal?        @map("actual_pieces") @db.Decimal(18, 0)
+  /// Items not counted in kg or g: the measured weight in kg.
+  actualWeightKg     Decimal?        @map("actual_weight_kg") @db.Decimal(15, 3)
+  /// Fixed at posting: the input value × ratio ÷ 100, every digit kept (unbounded NUMERIC).
+  allocatedValue     Decimal?        @map("allocated_value") @db.Decimal
+  /// Fixed at posting: the allocated value less the output lot's value (ADR-0027), exact.
+  roundingDifference Decimal?        @map("rounding_difference") @db.Decimal
+
+  @@id([documentId, lineNo])
+  @@map("production_order_outputs")
+}

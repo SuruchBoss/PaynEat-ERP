@@ -122,6 +122,8 @@ describe('the demo API: signing in', () => {
         'goods_receipt:read',
         'goods_receipt:receive',
         'production_bom:read',
+        'production_order:read',
+        'production_order:run',
       ],
       mfaEnabled: false,
     });

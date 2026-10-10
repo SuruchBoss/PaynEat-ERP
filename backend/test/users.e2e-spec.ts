@@ -166,6 +166,8 @@ describe('user administration', () => {
         'goods_receipt:read',
         'goods_receipt:receive',
         'production_bom:read',
+        'production_order:read',
+        'production_order:run',
       ],
       requiresSecondFactor: false,
     });
@@ -182,6 +184,7 @@ describe('user administration', () => {
         'purchase_order:read',
         'goods_receipt:read',
         'production_bom:read',
+        'production_order:read',
       ],
       requiresSecondFactor: false,
     });

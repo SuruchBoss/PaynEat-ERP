@@ -74,7 +74,8 @@ using a new domain concept anywhere else.
 | Received quantity | จำนวนที่รับแล้ว | What posted goods receipts have accepted against a purchase order line so far, in the base unit. An order line is complete when it reaches what was ordered less the item's variance limit; an order is received when every line is complete (ADR-0025). |
 | Over-receipt | รับเกิน | Accepting more against an order line than was ordered plus the item's variance limit (exactly what was ordered without one). Refused, even when two receipts post at the same moment. |
 | Return to supplier | ใบส่งคืนซัพพลายเออร์ | What a posted goods receipt turned away, going back to the supplier with its reasons, numbered `RTS-2026-00001`. Created by the posting, never changed, and writes no ledger entries: the goods never entered stock (ADR-0007). |
-| Production order | ใบสั่งผลิต | Consumes input lots and produces output lots at a plant. |
+| Production order | ใบสั่งผลิต | Consumes input lots and produces output lots at a plant, numbered `MO-2026-00001`. Raised from the BOM version in force on its business date with a planned quantity of the BOM's first input; draft → released → posted, or cancelled before posting. Posting creates one lot per output in the ledger's one transaction (ADR-0027). |
+| Release (production order) | ปล่อยใบสั่งผลิต | Sending a draft production order to the plant floor: its BOM version, plant and plan are fixed, and its input lots are picked FEFO. The supervisor may then change the picks, never to an expired lot (ADR-0027). |
 | Requisition | ใบขอเบิก | A branch's request for stock from a plant or warehouse. Writes no stock. |
 | Transfer | ใบโอน | Moves stock between locations via in-transit: **dispatch** at the origin, **receipt** at the destination. |
 | Dispatch | ส่งของ (dispatch) | The origin side of a transfer: confirms the lots and quantities that left, moving them to in-transit. Never ส่งออก, which means export. |
@@ -141,6 +142,8 @@ What branches sell, kept in the ERP and mirrored by the POS (ADR-0002, ADR-0023)
 | BOM version | เวอร์ชันสูตรการผลิต | One version of a production BOM, numbered 1, 2, 3…, in force from its effective-from date until the next version starts. Never edited once in force; a production order records the version it used (ADR-0026). |
 | Batch | รอบการผลิต | One run of a production BOM: the quantities on a BOM are per batch. |
 | Expected weight | น้ำหนักที่คาดไว้ | The weight in kg a BOM line is expected to have per batch. Stated for lines not counted in kg or g; a kg or g line weighs its quantity (ADR-0026). |
+| Allocated value | มูลค่าที่ปันให้ | An output's share of a production order's consumed input value: the input value × its allocation ratio ÷ 100, kept to every digit. Divided by the output's actual quantity, rounded half up to six decimals, it gives the output lot's unit cost (ADR-0027). |
+| Rounding difference | ส่วนต่างจากการปัดเศษ | An output's allocated value less its lot's value (quantity × unit cost), kept exactly on the production order. Lot values and rounding differences together equal the consumed input value exactly (ADR-0027). |
 | Lot cost | ต้นทุนราย lot | The actual unit cost carried by a lot. Consumption takes the cost of the lot FEFO picks. |
 | Standard cost | ต้นทุนมาตรฐาน | A predetermined cost per item with variances reported against it. **Not used in v1** (ADR-0004). |
 | Three-way match | การจับคู่สามทาง (3-way match) | Checking a supplier invoice against its purchase order and goods receipt. Stretch goal for v1. |

@@ -110,6 +110,7 @@ describe('roles and permissions (ADR-0008)', () => {
       Permission.GOODS_RECEIPT_READ,
       Permission.PRODUCTION_BOM_READ,
       Permission.PRODUCTION_BOM_MANAGE,
+      Permission.PRODUCTION_ORDER_READ,
     ]);
     expect(permissionsFor([])).toEqual([]);
   });

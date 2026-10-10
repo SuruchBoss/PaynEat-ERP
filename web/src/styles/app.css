@@ -1649,3 +1649,43 @@ h1:focus {
 .bom-preview p {
   margin: 4px 0;
 }
+
+/* Production orders (#13): quantities typed straight into the picks and outputs tables. */
+.input--narrow {
+  width: 7.5rem;
+  min-height: 36px;
+  padding: 0 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: right;
+}
+
+.input--narrow:focus-visible {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 25%, transparent);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.inline-input {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.disclosure {
+  margin: 12px 0;
+}
+
+.disclosure summary {
+  cursor: pointer;
+  font-weight: 600;
+}

@@ -52,6 +52,7 @@ import {
   DEMO_PURCHASE_APPROVAL_THRESHOLD,
   DEMO_PURCHASE_ORDERS,
   DEMO_PRODUCTION_BOMS,
+  DEMO_PRODUCTION_ORDER,
   DEMO_RECEIVING_TOLERANCES,
   type DemoRecipeVersion,
 } from './demo-data';
@@ -943,6 +944,64 @@ async function seedProductionBoms(prisma: PrismaClient): Promise<string[]> {
   return written;
 }
 
+/**
+ * The demo cutting order (#13): drafted, released (lots picked FEFO), recorded and posted by the
+ * plant user through the same service the API runs. Once: if any production order exists, they
+ * are left as they are. Returns its number and yield, or null.
+ */
+async function seedProductionOrder(prisma: PrismaClient): Promise<string | null> {
+  if (await prisma.productionOrder.findFirst()) return null;
+  const demo = DEMO_PRODUCTION_ORDER;
+  const bom = await prisma.productionBom.findUnique({ where: { code: demo.bomCode } });
+  const plant = await prisma.location.findUniqueOrThrow({ where: { code: demo.locationCode } });
+  if (!bom) return null;
+  const { productionOrders } = ledgerServices(prisma, { quiet: true });
+  const plantUser = await demoActor(prisma, 'plant');
+  const draft = await productionOrders.create(
+    { bomId: bom.id, locationId: plant.id, plannedQuantity: demo.plannedQuantity, note: demo.note },
+    plantUser,
+    {},
+  );
+  const released = await productionOrders.release(
+    draft.id,
+    { revision: draft.revision },
+    plantUser,
+    {},
+  );
+  const picks = released.inputs[0].picks;
+  if (picks.length !== demo.piecesPerPick.length || released.inputs[0].shortBy !== '0') {
+    throw new Error(
+      `The demo cutting order picked ${picks.length} lots short by ${released.inputs[0].shortBy}; the demo expects ${demo.piecesPerPick.length} covering it`,
+    );
+  }
+  const recorded = await productionOrders.recordActuals(
+    draft.id,
+    {
+      revision: released.revision,
+      inputs: [
+        {
+          lineNo: 1,
+          picks: picks.map((p, i) => ({
+            lotId: p.lotId,
+            quantity: p.quantity,
+            pieces: demo.piecesPerPick[i],
+          })),
+        },
+      ],
+      outputs: demo.outputs.map((o, i) => ({ lineNo: i + 1, ...o })),
+    },
+    plantUser,
+    {},
+  );
+  const posted = await productionOrders.post(
+    draft.id,
+    { revision: recorded.revision },
+    plantUser,
+    {},
+  );
+  return `${posted.number} posted: ${posted.inputs[0].quantity} kg in, yield ${posted.yield.actual} % against ${posted.yield.expected} %`;
+}
+
 async function main(): Promise<void> {
   const refusal = seedRefusal({ erpDemo: process.env.ERP_DEMO, nodeEnv: process.env.NODE_ENV });
   if (refusal) throw new SeedRefused(`${refusal}\nNothing has been written.`);
@@ -1017,6 +1076,12 @@ async function main(): Promise<void> {
       boms.length > 0
         ? `Demo production BOMs: ${boms.join('; ')}`
         : 'Demo production BOMs: already there, left as they are',
+    );
+    const productionOrder = await seedProductionOrder(prisma);
+    console.log(
+      productionOrder
+        ? `Demo production order: ${productionOrder}`
+        : 'Demo production order: already there, left as it is',
     );
     console.log(`\nDemo accounts (password for all: ${DEMO_PASSWORD}):`);
     for (const demo of DEMO_USERS) {

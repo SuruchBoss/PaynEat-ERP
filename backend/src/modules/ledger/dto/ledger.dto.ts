@@ -40,14 +40,15 @@ export interface ReversalRef extends DocumentRef {
 }
 
 export type StockDocumentType =
-  'opening_balance' | 'reversal' | 'stock_adjustment' | 'goods_receipt';
+  'opening_balance' | 'reversal' | 'stock_adjustment' | 'goods_receipt' | 'production_order';
 
 /**
  * draft → posted for an opening balance; draft → submitted → approved → posted, or rejected,
  * for a document a second person approves (stock adjustments, #8, ADR-0008; goods receipts
- * with a finding, #11).
+ * with a finding, #11); draft → released → posted, or cancelled, for a production order (#13).
  */
-export type StockDocumentStatus = 'draft' | 'submitted' | 'approved' | 'posted' | 'rejected';
+export type StockDocumentStatus =
+  'draft' | 'submitted' | 'approved' | 'posted' | 'rejected' | 'released' | 'cancelled';
 
 /** The header every stock document shares. */
 export interface StockDocumentView {
@@ -110,6 +111,22 @@ export interface StockOnHandView {
   totalValue: string;
   /** How many of the rows are flagged `countRecommended`. */
   negativeBranchBalances: number;
+}
+
+/**
+ * One genealogy link (ADR-0006): an output lot a production order made, and an input lot it
+ * consumed, with what the order consumed of that input as a whole.
+ */
+export interface GenealogyLink {
+  document: DocumentRef;
+  outputLot: { id: string; number: string; itemId: string };
+  inputLot: { id: string; number: string; itemId: string };
+  inputQuantity: string;
+  /**
+   * The order was reversed: the link stays in history but no longer belongs in a trace,
+   * because the output lot it describes was taken back out of stock.
+   */
+  reversed: boolean;
 }
 
 /** Where the balance snapshot and the ledger disagree for one lot at one location. */

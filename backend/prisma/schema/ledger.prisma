@@ -14,17 +14,21 @@ enum StockDocumentType {
   reversal
   stock_adjustment
   goods_receipt
+  production_order
 }
 
 /// draft → posted for opening balances; draft → submitted → approved → posted, or rejected, for
 /// documents that need a second person's approval (stock adjustments, #8, ADR-0008; goods receipts
-/// with a finding, #11). Posted and rejected are final.
+/// with a finding, #11); draft → released → posted, or cancelled, for production orders (#13).
+/// Posted, rejected and cancelled are final.
 enum StockDocumentStatus {
   draft
   posted
   submitted
   approved
   rejected
+  released
+  cancelled
 }
 
 /// A document header. A draft is edited freely and affects nothing; posting it writes all of
@@ -63,6 +67,8 @@ model StockDocument {
   openingBalance  OpeningBalance?
   stockAdjustment StockAdjustment?
   goodsReceipt    GoodsReceipt?
+  productionOrder ProductionOrder?
+  genealogy       LotGenealogy[]
 
   @@index([type, status])
   @@map("stock_documents")
@@ -95,6 +101,10 @@ model Lot {
   entries         LedgerEntry[]
   balances        StockBalance[]
   adjustmentLines StockAdjustmentLine[]
+  productionPicks ProductionOrderPick[]
+  /// Genealogy: the input lots this lot was made from, and the output lots made from it.
+  madeFrom        LotGenealogy[]        @relation("GenealogyOutput")
+  usedIn          LotGenealogy[]        @relation("GenealogyInput")
 
   @@unique([id, itemId])
   @@unique([originDocumentId, originLineNo])
@@ -157,4 +167,27 @@ model StockBalance {
   @@id([lotId, locationId])
   @@index([locationId, itemId])
   @@map("stock_balances")
+}
+
+/// Lot genealogy (ADR-0006): a link from an output lot a production order made back to an input
+/// lot it consumed, with how much of that input the order consumed. Written by the posting, in the
+/// same transaction, never updated or deleted (a trigger refuses both). When the order is reversed
+/// the links stay as history; traces leave out links whose document has been reversed.
+model LotGenealogy {
+  id            String        @id @default(uuid()) @db.Uuid
+  documentId    String        @map("document_id") @db.Uuid
+  document      StockDocument @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  outputLotId   String        @map("output_lot_id") @db.Uuid
+  outputLot     Lot           @relation("GenealogyOutput", fields: [outputLotId], references: [id], onDelete: Restrict)
+  inputLotId    String        @map("input_lot_id") @db.Uuid
+  inputLot      Lot           @relation("GenealogyInput", fields: [inputLotId], references: [id], onDelete: Restrict)
+  /// What the document consumed of the input lot as a whole, in its base unit: measured, never
+  /// apportioned to one output.
+  inputQuantity Decimal       @map("input_quantity") @db.Decimal(18, 3)
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@unique([documentId, outputLotId, inputLotId])
+  @@index([inputLotId])
+  @@index([outputLotId])
+  @@map("lot_genealogy")
 }

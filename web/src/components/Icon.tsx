@@ -24,7 +24,8 @@ export type IconName =
   | 'cart'
   | 'inbox'
   | 'gear'
-  | 'split';
+  | 'split'
+  | 'factory';
 
 const PATHS: Record<IconName, string> = {
   // System status: a heartbeat line.
@@ -57,6 +58,8 @@ const PATHS: Record<IconName, string> = {
   cart: 'M3 4h2l2.4 11h10.2L20 8H6.2M9 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2ZM17 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z',
   // Production BOMs (#12): one input split into several outputs.
   split: 'M3 12h6M9 12l4-6h8M9 12l4 6h8M9 12h12',
+  // Production orders (#13): a plant with its chimney.
+  factory: 'M3 21V10l6 4V10l6 4V4h4v17H3zM7 17h2M11 17h2',
   // Company settings (#10): a cog.
   gear: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2Z',
 };

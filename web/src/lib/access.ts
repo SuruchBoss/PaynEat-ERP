@@ -60,6 +60,10 @@ export const Permission = {
   PRODUCTION_BOM_READ: 'production_bom:read',
   /** Create BOMs, add and correct their versions: the admin (#12). */
   PRODUCTION_BOM_MANAGE: 'production_bom:manage',
+  /** Read production orders, their yields, costs and lot genealogy: plant, finance (#13). */
+  PRODUCTION_ORDER_READ: 'production_order:read',
+  /** Plan, release, record, post, cancel and reverse production orders: the plant (#13). */
+  PRODUCTION_ORDER_RUN: 'production_order:run',
 } as const;
 
 export type PermissionKey = (typeof Permission)[keyof typeof Permission];

@@ -721,3 +721,41 @@ export const DEMO_PRODUCTION_BOMS: readonly DemoProductionBom[] = [
     outputs: [{ itemCode: 'BATTER-MIX', quantity: '25.8' }],
   },
 ];
+
+export interface DemoProductionOrder {
+  bomCode: string;
+  locationCode: string;
+  /** Of the BOM's first input, in its base unit. */
+  plannedQuantity: string;
+  note: string;
+  /**
+   * Birds counted out of each lot FEFO picked, by the lot's place in FEFO order: the whole lot's
+   * count when it is used up, a count of what was taken when it is not.
+   */
+  piecesPerPick: readonly string[];
+  /** What came out, per BOM output line, in order. */
+  outputs: ReadonlyArray<{ quantity: string; pieces: string | null; weightKg: string | null }>;
+}
+
+/**
+ * One whole-chicken cutting order (#13), released, recorded and posted by the plant today: 200 kg
+ * of whole chicken, picked first-expired-first-out, so the three opening-balance lots go first and
+ * the rest comes from the warm-truck delivery received in #11. It yields 176 kg of pieces and
+ * frames, 88 % against the BOM's 90 %, so every piece carries a little more cost than the BOM
+ * expects; and because the oldest chicken it used expires tomorrow, so do the pieces it made
+ * (ADR-0014). Counts and weights are invented.
+ */
+export const DEMO_PRODUCTION_ORDER: DemoProductionOrder = {
+  bomCode: 'CUT-WHOLE-CHICKEN',
+  locationCode: 'PLANT-01',
+  plannedQuantity: '200',
+  note: 'Demo seed: morning cut, 111 birds (fictional)',
+  piecesPerPick: ['11', '24', '10', '66'],
+  outputs: [
+    { quantity: '220', pieces: null, weightKg: '49.2' },
+    { quantity: '222', pieces: null, weightKg: '35.4' },
+    { quantity: '222', pieces: null, weightKg: '27.6' },
+    { quantity: '218', pieces: null, weightKg: '21.5' },
+    { quantity: '42.3', pieces: '111', weightKg: null },
+  ],
+};

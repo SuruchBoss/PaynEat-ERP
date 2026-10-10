@@ -39,6 +39,7 @@ import {
 import type {
   BalanceDifference,
   DocumentRef,
+  GenealogyLink,
   LotView,
   PersonRef,
   StockDocumentStatus,
@@ -57,6 +58,7 @@ export type {
   LotView,
   DocumentRef,
   PersonRef,
+  GenealogyLink,
 } from './dto/ledger.dto';
 
 type Tx = Prisma.TransactionClient;
@@ -72,6 +74,7 @@ const SCOPES: Record<StockDocumentType, SequenceScope> = {
   reversal: 'REVERSAL',
   stock_adjustment: 'STOCK_ADJUSTMENT',
   goods_receipt: 'GOODS_RECEIPT',
+  production_order: 'PRODUCTION_ORDER',
 };
 
 /** Long enough for a posting to wait its turn behind another on the same lots. */
@@ -107,6 +110,14 @@ const REFUSAL_MESSAGES: Record<PostingRule, string> = {
   over_receipt: "This would receive more than was ordered plus the item's variance limit",
   needs_approval:
     'Something on this receipt is now outside tolerance: reload it and submit it again for approval',
+  not_released: 'Only a released production order can be posted',
+  nothing_picked: 'Every input needs at least one lot to take it from',
+  actuals_missing: 'Record what actually came out of every output before posting',
+  weight_required:
+    'A line not counted in kg or g needs its measured weight, so the yield is measured, not guessed',
+  pieces_required: 'A variable-weight output needs its piece count as well as its weight',
+  zero_output_quantity:
+    'An output with no actual quantity cannot carry a cost: record what came out, or cancel the order',
 };
 
 /**
@@ -159,13 +170,24 @@ export interface LotChange {
 }
 
 /**
+ * A production posting (#13, ADR-0006): the input lots it consumes, the output lots it creates,
+ * and the genealogy linking each output lot (by its line) to each input lot it consumed.
+ */
+export interface ProductionPosting {
+  consumed: LotChange[];
+  newLots: NewLot[];
+  genealogy: Array<{ outputLineNo: number; inputLotId: string; inputQuantity: string }>;
+}
+
+/**
  * What a document type hands the ledger to post: the lots to create, the changes to existing
- * lots, or why not.
+ * lots, both at once for a production order, or why not.
  */
 export type PostingPlan =
   | { refusal: { rule: PostingRule; lineNo?: number } }
   | { newLots: NewLot[] }
-  | { lotChanges: LotChange[] };
+  | { lotChanges: LotChange[] }
+  | { production: ProductionPosting };
 
 /** A document header as the ledger locks it. */
 export interface LockedDocument {
@@ -176,6 +198,18 @@ export interface LockedDocument {
   businessDate: string;
   revision: number;
   createdById: string;
+}
+
+/** A lot with stock at a location, as `lotsAt` reads it. */
+export interface StockedLot {
+  lotId: string;
+  number: string;
+  itemId: string;
+  expiryDate: string;
+  unitCost: string;
+  /** In the item's base unit, above zero. */
+  available: string;
+  availablePieces: string | null;
 }
 
 /** The facts a document type needs about a lot, read inside its transaction. */
@@ -406,6 +440,50 @@ export class LedgerService {
     );
   }
 
+  /**
+   * The lots of these items with stock above zero at a location now, from the balance snapshot,
+   * with what FEFO and a person overriding it need: expiry, cost and what is left. Inside a
+   * transaction it reads that transaction's view; nothing is locked (posting locks).
+   */
+  async lotsAt(
+    locationId: string,
+    itemIds: readonly string[],
+    tx: Tx = this.prisma,
+  ): Promise<StockedLot[]> {
+    const ids = [...new Set(itemIds)];
+    if (ids.length === 0) return [];
+    const rows = await tx.$queryRaw<
+      Array<{
+        lotId: string;
+        number: string;
+        itemId: string;
+        expiryDate: Date;
+        unitCost: string;
+        quantity: string;
+        secondaryQuantity: string | null;
+      }>
+    >`
+      SELECT l."id" AS "lotId", l."number", l."item_id" AS "itemId", l."expiry_date" AS "expiryDate",
+             l."unit_cost"::text AS "unitCost", b."quantity"::text AS "quantity",
+             b."secondary_quantity"::text AS "secondaryQuantity"
+      FROM "stock_balances" b
+      JOIN "lots" l ON l."id" = b."lot_id"
+      WHERE b."location_id" = ${locationId}::uuid AND b."item_id" = ANY(${ids}::uuid[])
+        AND b."quantity" > 0
+      ORDER BY l."expiry_date", l."number"
+    `;
+    return rows.map((row) => ({
+      lotId: row.lotId,
+      number: row.number,
+      itemId: row.itemId,
+      expiryDate: dateText(row.expiryDate),
+      unitCost: normaliseDecimal(row.unitCost),
+      available: normaliseDecimal(row.quantity),
+      availablePieces:
+        row.secondaryQuantity === null ? null : normaliseDecimal(row.secondaryQuantity),
+    }));
+  }
+
   /** Which of these lots have ever been held at this location (they have a balance row there). */
   async heldAt(
     locationId: string,
@@ -432,7 +510,11 @@ export class LedgerService {
     revision: number,
     actor: AuthenticatedUser,
     plan: (tx: Tx, doc: LockedDocument) => Promise<PostingPlan>,
-    options: { from: 'draft' | 'approved' } = { from: 'draft' },
+    options: {
+      from: 'draft' | 'approved' | 'released';
+      /** The rule that refuses a document not in `from`; `not_approved` unless said. */
+      notReady?: PostingRule;
+    } = { from: 'draft' },
   ): Promise<void> {
     let doc: LockedDocument | undefined;
     let written: Written = { entries: 0, negativeAtBranch: [] };
@@ -444,7 +526,9 @@ export class LedgerService {
           throw new PostingRefusedError('stale_revision', { currentRevision: doc.revision });
         }
         if (doc.status !== options.from) {
-          throw new PostingRefusedError('not_approved', { status: doc.status });
+          throw new PostingRefusedError(options.notReady ?? 'not_approved', {
+            status: doc.status,
+          });
         }
         const prepared = await plan(tx, doc);
         if ('refusal' in prepared) {
@@ -454,11 +538,21 @@ export class LedgerService {
         const dateRule = businessDateProblem(doc.businessDate, this.today());
         if (dateRule) throw new PostingRefusedError(dateRule);
 
-        const movements =
-          'newLots' in prepared
-            ? await this.createLots(tx, doc, prepared.newLots)
-            : await this.changesOf(tx, prepared.lotChanges);
-        written = await this.write(tx, doc, movements, actor);
+        let movements: Movement[];
+        if ('production' in prepared) {
+          const { consumed, newLots, genealogy } = prepared.production;
+          const consumption = await this.changesOf(tx, consumed);
+          const created = await this.createLots(tx, doc, newLots);
+          movements = [...consumption, ...created];
+          written = await this.write(tx, doc, movements, actor);
+          await this.writeGenealogy(tx, doc, created, genealogy);
+        } else {
+          movements =
+            'newLots' in prepared
+              ? await this.createLots(tx, doc, prepared.newLots)
+              : await this.changesOf(tx, prepared.lotChanges);
+          written = await this.write(tx, doc, movements, actor);
+        }
         await tx.$executeRaw`
           UPDATE "stock_documents"
           SET "status" = 'posted', "posted_by_id" = ${actor.userId}::uuid, "posted_at" = now(),
@@ -549,6 +643,58 @@ export class LedgerService {
     }
     this.recordSuccess('reversal', reversal!.number, written, original!.number);
     return reversal!;
+  }
+
+  // --- Genealogy -------------------------------------------------------------------
+
+  /**
+   * Genealogy links (ADR-0006) by the document that wrote them, or touching a lot from either
+   * side. A link whose document was reversed stays in history, flagged `reversed`; a trace asks
+   * for `current` links only and leaves it out.
+   */
+  async genealogy(
+    filter: { documentId: string } | { lotId: string },
+    options: { current: boolean } = { current: false },
+  ): Promise<GenealogyLink[]> {
+    const where =
+      'documentId' in filter
+        ? Prisma.sql`g."document_id" = ${filter.documentId}::uuid`
+        : Prisma.sql`(g."output_lot_id" = ${filter.lotId}::uuid OR g."input_lot_id" = ${filter.lotId}::uuid)`;
+    const rows = await this.prisma.$queryRaw<
+      Array<{
+        documentId: string;
+        documentNumber: string;
+        outputLotId: string;
+        outputLotNumber: string;
+        outputItemId: string;
+        inputLotId: string;
+        inputLotNumber: string;
+        inputItemId: string;
+        inputQuantity: string;
+        reversed: boolean;
+      }>
+    >`
+      SELECT g."document_id" AS "documentId", d."number" AS "documentNumber",
+             o."id" AS "outputLotId", o."number" AS "outputLotNumber", o."item_id" AS "outputItemId",
+             i."id" AS "inputLotId", i."number" AS "inputLotNumber", i."item_id" AS "inputItemId",
+             g."input_quantity"::text AS "inputQuantity",
+             EXISTS (SELECT 1 FROM "stock_documents" r WHERE r."reverses_id" = g."document_id") AS "reversed"
+      FROM "lot_genealogy" g
+      JOIN "stock_documents" d ON d."id" = g."document_id"
+      JOIN "lots" o ON o."id" = g."output_lot_id"
+      JOIN "lots" i ON i."id" = g."input_lot_id"
+      WHERE ${where}
+      ORDER BY d."number", o."number", i."number"
+    `;
+    return rows
+      .filter((row) => !options.current || !row.reversed)
+      .map((row) => ({
+        document: { id: row.documentId, number: row.documentNumber },
+        outputLot: { id: row.outputLotId, number: row.outputLotNumber, itemId: row.outputItemId },
+        inputLot: { id: row.inputLotId, number: row.inputLotNumber, itemId: row.inputItemId },
+        inputQuantity: normaliseDecimal(row.inputQuantity),
+        reversed: row.reversed,
+      }));
   }
 
   // --- Reading stock ---------------------------------------------------------------
@@ -788,6 +934,31 @@ export class LedgerService {
       secondaryQuantity: lot.secondaryQuantity,
       unitCost: lot.unitCost,
     }));
+  }
+
+  /** The genealogy links of a production posting, from each created lot to each input lot. */
+  private async writeGenealogy(
+    tx: Tx,
+    doc: LockedDocument,
+    created: Movement[],
+    links: ProductionPosting['genealogy'],
+  ): Promise<void> {
+    if (links.length === 0) return;
+    const lotByLine = new Map(created.map((m) => [m.lineNo, m.lotId]));
+    await tx.$executeRaw`
+      INSERT INTO "lot_genealogy"
+        ("id", "document_id", "output_lot_id", "input_lot_id", "input_quantity", "created_at")
+      VALUES ${Prisma.join(
+        links.map((link) => {
+          const outputLotId = lotByLine.get(link.outputLineNo);
+          if (!outputLotId) throw new Error(`no lot created for line ${link.outputLineNo}`);
+          return Prisma.sql`(
+            gen_random_uuid(), ${doc.id}::uuid, ${outputLotId}::uuid, ${link.inputLotId}::uuid,
+            ${link.inputQuantity}::numeric, now()
+          )`;
+        }),
+      )}
+    `;
   }
 
   /** Movements for changes to existing lots, each carrying its lot's own cost (ADR-0004). */

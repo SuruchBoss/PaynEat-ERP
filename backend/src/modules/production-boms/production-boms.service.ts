@@ -7,6 +7,7 @@ import { BusinessRuleError, ConflictError, NotFoundError } from '../../core/erro
 import type { ClientMeta } from '../../core/http/client-meta';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import type { AuthenticatedUser } from '../../core/security/current-user';
+import type { ExactDecimal } from '../../core/quantity/domain/exact-decimal';
 import { isIsoDate } from '../../core/time/domain/business-date';
 import {
   hasTakenEffect,
@@ -75,6 +76,31 @@ const BOM_SELECT = {
 type VersionRow = Prisma.ProductionBomVersionGetPayload<{ select: typeof VERSION_SELECT }>;
 type BomRow = Prisma.ProductionBomGetPayload<{ select: typeof BOM_SELECT }>;
 
+/**
+ * A BOM version as a production order follows it (#13): its lines in order, each output with
+ * the ratio it carries, and the weights the order's yield is measured against.
+ */
+export interface BomVersionForOrder {
+  bom: { id: string; code: string; nameTh: string; nameEn: string; active: boolean };
+  locationType: BomLocationType;
+  version: { id: string; number: number; effectiveFrom: string };
+  inputs: Array<{
+    lineNo: number;
+    itemId: string;
+    quantity: string;
+    expectedWeightKg: string | null;
+  }>;
+  outputs: Array<{
+    lineNo: number;
+    itemId: string;
+    quantity: string;
+    expectedWeightKg: string | null;
+    allocationRatio: string;
+  }>;
+  /** Exact, per batch. */
+  expected: { inputWeightKg: ExactDecimal; outputWeightsKg: ExactDecimal[] };
+}
+
 /** A line as it is stored and compared: decimals in their shortest exact spelling. */
 interface StoredLine {
   side: BomSide;
@@ -142,6 +168,35 @@ export class ProductionBomsService {
       today,
       versions: dated.map(({ v }) => versionView(v, dated, items, today)),
     };
+  }
+
+  /**
+   * The version of a BOM in force on a business date, as a production order follows it (#13);
+   * null when none is in force that day.
+   */
+  async versionForOrder(bomId: string, businessDate: string): Promise<BomVersionForOrder | null> {
+    const row = await this.prisma.productionBom.findUnique({
+      where: { id: bomId },
+      select: BOM_SELECT,
+    });
+    if (!row) throw new NotFoundError('ProductionBom', bomId);
+    const dated = row.versions.map((v) => ({ v, effectiveFrom: dateText(v.effectiveFrom) }));
+    const current = versionInEffect(dated, businessDate);
+    if (!current) return null;
+    const items = await this.items.describe(itemIdsOf([current.v]));
+    return forOrder(row, current.v, items);
+  }
+
+  /** Versions by id, as the orders that recorded them follow them. */
+  async versionsForOrders(ids: readonly string[]): Promise<Map<string, BomVersionForOrder>> {
+    const unique = [...new Set(ids)];
+    if (unique.length === 0) return new Map();
+    const rows = await this.prisma.productionBomVersion.findMany({
+      where: { id: { in: unique } },
+      select: { ...VERSION_SELECT, bom: { select: BOM_SELECT } },
+    });
+    const items = await this.items.describe(itemIdsOf(rows));
+    return new Map(rows.map((row) => [row.id, forOrder(row.bom, row, items)]));
   }
 
   /** What a version would give, with every problem it has; refuses nothing and writes nothing. */
@@ -544,6 +599,36 @@ function versionView(
     outputWeightKg: formatKg(figures.outputWeight),
     wasteKg: formatKg(figures.waste),
     yieldPercent: yieldPercent(figures),
+  };
+}
+
+function forOrder(
+  bom: BomRow,
+  row: VersionRow,
+  items: ReadonlyMap<string, ItemFacts>,
+): BomVersionForOrder {
+  const lines = storedLines(row);
+  const inputs = lines.filter((l) => l.side === BomSide.input);
+  const outputs = lines.filter((l) => l.side === BomSide.output);
+  const figures = bomFigures(inputs, outputs, items);
+  return {
+    bom: { id: bom.id, code: bom.code, nameTh: bom.nameTh, nameEn: bom.nameEn, active: bom.active },
+    locationType: bom.locationType as BomLocationType,
+    version: { id: row.id, number: row.number, effectiveFrom: dateText(row.effectiveFrom) },
+    inputs: inputs.map((l) => ({
+      lineNo: l.lineNo,
+      itemId: l.itemId,
+      quantity: l.quantity,
+      expectedWeightKg: l.expectedWeightKg,
+    })),
+    outputs: outputs.map((l) => ({
+      lineNo: l.lineNo,
+      itemId: l.itemId,
+      quantity: l.quantity,
+      expectedWeightKg: l.expectedWeightKg,
+      allocationRatio: l.allocationRatio ?? '0.00',
+    })),
+    expected: { inputWeightKg: figures.inputWeight, outputWeightsKg: figures.outputWeights },
   };
 }
 

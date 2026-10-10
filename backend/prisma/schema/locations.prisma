@@ -46,15 +46,16 @@ model Location {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  ledgerEntries   LedgerEntry[]
-  stockBalances   StockBalance[]
-  openingBalances OpeningBalance[]
-  adjustments     StockAdjustment[]
-  purchaseOrders  PurchaseOrder[]
-  goodsReceipts   GoodsReceipt[]
-  posInstances    PosInstanceBranch[]
-  salesEvents     SalesEvent[]
-  menuPrices      MenuPrice[]
+  ledgerEntries    LedgerEntry[]
+  stockBalances    StockBalance[]
+  openingBalances  OpeningBalance[]
+  adjustments      StockAdjustment[]
+  purchaseOrders   PurchaseOrder[]
+  goodsReceipts    GoodsReceipt[]
+  productionOrders ProductionOrder[]
+  posInstances     PosInstanceBranch[]
+  salesEvents      SalesEvent[]
+  menuPrices       MenuPrice[]
 
   @@index([type])
   @@map("locations")

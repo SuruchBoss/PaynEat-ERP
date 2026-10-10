@@ -40,7 +40,7 @@ export const en = {
     cta: 'Try the demo',
     cta2: 'View the code',
     status:
-      'Walking skeleton: the stock ledger, master data, access control, purchase orders, goods receipts with inspection and production BOMs work today. Production orders and transfers are next.',
+      'Walking skeleton: the stock ledger, master data, access control, purchase orders, goods receipts with inspection, production BOMs and production orders work today. Transfers are next.',
     shot: ['stock-dark', 'desktop', 'Stock on hand in dark mode: five lots at the Bang Na plant with unit cost and value'],
   },
   problemsHead: {
@@ -117,7 +117,7 @@ export const en = {
       kicker: 'Production BOMs',
       title: 'Know what a case of chicken should become, and what each piece should cost.',
       pain: 'The cutting yield lives in a supervisor’s head, and what a breast costs is whatever this week’s spreadsheet says.',
-      body: 'A production BOM says which inputs make which outputs: a case of whole chicken into breasts, thighs, drumsticks, wings and frames. Each output has its expected weight and yield, and the share of the batch’s cost it carries: by weight, unless the chain sets its own shares, which must add up to exactly 100 %. Waste is shown and carries no share. BOMs are versioned by date like recipes; production orders that use them come next (#13).',
+      body: 'A production BOM says which inputs make which outputs: a case of whole chicken into breasts, thighs, drumsticks, wings and frames. Each output has its expected weight and yield, and the share of the batch’s cost it carries: by weight, unless the chain sets its own shares, which must add up to exactly 100 %. Waste is shown and carries no share. BOMs are versioned by date like recipes. Production orders follow them (#13): lots picked FEFO, yield measured, the input’s cost split exactly by these shares, and every output lot linked to the lots it came from. They work in an installation; the public demo does not have them yet.',
       points: [
         ['Yield you can check', '20 kg in, 18 kg expected out, 2 kg waste: 90 %.'],
         ['Shares that add up', 'By weight, rounded so they sum to exactly 100 %, or set by hand.'],
@@ -180,7 +180,6 @@ export const en = {
     title: 'What’s cooking next.',
     sub: 'Built in public, one GitHub issue at a time. None of this is in the demo yet.',
     items: [
-      [13, 'Production orders: measured yield and lot genealogy'],
       [14, 'Transfers through in-transit'],
       [23, 'Traceability and the recall report'],
       [24, 'Stock counts'],
@@ -245,7 +244,7 @@ export const th = {
     lead: 'ระบบหลังบ้านสำหรับเชนร้านอาหารที่ดูแลซัพพลายเชนเอง สร้างแบบเปิดเผยต่อสาธารณะ เริ่มจากสิ่งที่ทุกอย่างต้องพึ่ง: ตัวเลขสต๊อกที่เชื่อได้',
     cta: 'ลองเดโม',
     cta2: 'ดูโค้ด',
-    status: 'ระยะโครงระบบ: บัญชีเคลื่อนไหวสต๊อก master data สิทธิ์การใช้งาน ใบสั่งซื้อ ใบรับสินค้าพร้อมการตรวจรับ และสูตรการผลิตใช้ได้แล้ววันนี้ ใบสั่งผลิตและการโอนตามมาถัดไป',
+    status: 'ระยะโครงระบบ: บัญชีเคลื่อนไหวสต๊อก master data สิทธิ์การใช้งาน ใบสั่งซื้อ ใบรับสินค้าพร้อมการตรวจรับ สูตรการผลิต และใบสั่งผลิตใช้ได้แล้ววันนี้ การโอนตามมาถัดไป',
     shot: ['stock-dark', 'desktop', 'สต๊อกคงเหลือในโหมดมืด: lot ห้ารายการที่โรงงานบางนา พร้อมต้นทุนต่อหน่วยและมูลค่า'],
   },
   problemsHead: {
@@ -322,7 +321,7 @@ export const th = {
       kicker: 'สูตรการผลิต',
       title: 'รู้ว่าไก่หนึ่งลังควรได้อะไร และแต่ละชิ้นควรมีต้นทุนเท่าไร',
       pain: 'อัตราผลได้ของการตัดแต่งอยู่ในหัวของหัวหน้าไลน์ และต้นทุนอกไก่ก็แล้วแต่สเปรดชีตสัปดาห์นั้น',
-      body: 'สูตรการผลิตบอกว่าวัตถุดิบอะไรกลายเป็นผลผลิตอะไร ไก่ทั้งตัวหนึ่งลังเป็นอก สะโพก น่อง ปีก และโครงไก่ ผลผลิตแต่ละอย่างมีน้ำหนักและอัตราผลได้ที่คาดไว้ และสัดส่วนปันต้นทุนของรอบการผลิตที่รับไป ตั้งต้นตามน้ำหนัก หรือเชนกำหนดเองได้แต่ต้องรวมกันได้ 100% พอดี ของเสียแสดงให้เห็นและไม่รับต้นทุน สูตรการผลิตมีเวอร์ชันตามวันที่แบบเดียวกับสูตรเมนู ใบสั่งผลิตที่ใช้สูตรเหล่านี้ตามมาถัดไป (#13)',
+      body: 'สูตรการผลิตบอกว่าวัตถุดิบอะไรกลายเป็นผลผลิตอะไร ไก่ทั้งตัวหนึ่งลังเป็นอก สะโพก น่อง ปีก และโครงไก่ ผลผลิตแต่ละอย่างมีน้ำหนักและอัตราผลได้ที่คาดไว้ และสัดส่วนปันต้นทุนของรอบการผลิตที่รับไป ตั้งต้นตามน้ำหนัก หรือเชนกำหนดเองได้แต่ต้องรวมกันได้ 100% พอดี ของเสียแสดงให้เห็นและไม่รับต้นทุน สูตรการผลิตมีเวอร์ชันตามวันที่แบบเดียวกับสูตรเมนู ใบสั่งผลิตทำตามสูตรเหล่านี้ (#13): เลือก lot แบบ FEFO วัดอัตราผลได้จริง ปันต้นทุนวัตถุดิบตามสัดส่วนนี้แบบไม่สูญหลัก และเชื่อม lot ผลผลิตทุก lot กลับไปยัง lot ที่ใช้ ใช้ได้ในระบบที่ติดตั้งแล้ว แต่ยังไม่อยู่ในเดโมสาธารณะ',
       points: [
         ['อัตราผลได้ที่ตรวจได้', 'วัตถุดิบ 20 กก. คาดว่าได้ผลผลิต 18 กก. ของเสีย 2 กก. คือ 90%'],
         ['สัดส่วนที่รวมได้พอดี', 'ตามน้ำหนัก ปัดเศษให้รวมได้ 100% พอดี หรือกำหนดเอง'],
@@ -385,7 +384,6 @@ export const th = {
     title: 'สิ่งที่กำลังจะมา',
     sub: 'สร้างแบบเปิดเผยทีละ GitHub issue ทั้งหมดนี้ยังไม่อยู่ในเดโม',
     items: [
-      [13, 'ใบสั่งผลิต: yield ที่วัดจริงและผังความสัมพันธ์ lot'],
       [14, 'ใบโอนผ่านระหว่างขนส่ง'],
       [23, 'การย้อนรอยและรายงาน recall'],
       [24, 'การตรวจนับสต๊อก'],
