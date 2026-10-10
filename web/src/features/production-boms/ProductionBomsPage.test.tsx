@@ -171,10 +171,10 @@ describe('production BOMs (#12)', () => {
     ]);
     expect(
       screen.getByText(
-        'วัตถุดิบ 20.000 กก. · ผลผลิตที่คาดไว้ 9.400 กก. · สูญเสีย 10.600 กก. · Yield 47.00%',
+        'วัตถุดิบ 20.000 กก. · ผลผลิตที่คาดไว้ 9.400 กก. · ของเสีย 10.600 กก. · อัตราผลได้ 47.00%',
       ),
     ).toBeVisible();
-    expect(screen.getByText('สัดส่วนต้นทุนกำหนดเอง')).toBeVisible();
+    expect(screen.getByText('สัดส่วนปันต้นทุนกำหนดเอง')).toBeVisible();
     expect(screen.queryByRole('button', { name: 'เพิ่มเวอร์ชันใหม่' })).toBeNull();
     expect(await axeViolations()).toEqual([]);
   });
@@ -196,11 +196,15 @@ describe('production BOMs (#12)', () => {
 
     expect(
       await screen.findByText(
-        'วัตถุดิบ 20.000 กก. · ผลผลิตที่คาดไว้ 9.400 กก. · สูญเสีย 10.600 กก. · Yield 47.00%',
+        'วัตถุดิบ 20.000 กก. · ผลผลิตที่คาดไว้ 9.400 กก. · ของเสีย 10.600 กก. · อัตราผลได้ 47.00%',
       ),
     ).toBeVisible();
-    expect(screen.getByText('5.000 กก. · Yield 25.00% · สัดส่วนตามน้ำหนัก 53.19%')).toBeVisible();
-    expect(screen.getByText('4.400 กก. · Yield 22.00% · สัดส่วนตามน้ำหนัก 46.81%')).toBeVisible();
+    expect(
+      screen.getByText('5.000 กก. · อัตราผลได้ 25.00% · สัดส่วนตามน้ำหนัก 53.19%'),
+    ).toBeVisible();
+    expect(
+      screen.getByText('4.400 กก. · อัตราผลได้ 22.00% · สัดส่วนตามน้ำหนัก 46.81%'),
+    ).toBeVisible();
     // A kg item weighs its quantity: no weight field for the frames.
     expect(screen.queryByLabelText('น้ำหนักที่คาดไว้ กก. (ผลผลิตบรรทัดที่ 2)')).toBeNull();
 
@@ -244,12 +248,12 @@ describe('production BOMs (#12)', () => {
 
     await u.click(await screen.findByRole('button', { name: 'สร้างสูตรการผลิต' }));
     await fillLines(u);
-    await screen.findByText('5.000 กก. · Yield 25.00% · สัดส่วนตามน้ำหนัก 53.19%');
-    await u.click(screen.getByLabelText('กำหนดสัดส่วนต้นทุนเอง'));
+    await screen.findByText('5.000 กก. · อัตราผลได้ 25.00% · สัดส่วนตามน้ำหนัก 53.19%');
+    await u.click(screen.getByLabelText('กำหนดสัดส่วนปันต้นทุนเอง'));
 
-    const breast = screen.getByLabelText('สัดส่วนต้นทุน % (ผลผลิตบรรทัดที่ 1)');
+    const breast = screen.getByLabelText('สัดส่วนปันต้นทุน % (ผลผลิตบรรทัดที่ 1)');
     expect(breast).toHaveValue('53.19');
-    expect(screen.getByLabelText('สัดส่วนต้นทุน % (ผลผลิตบรรทัดที่ 2)')).toHaveValue('46.81');
+    expect(screen.getByLabelText('สัดส่วนปันต้นทุน % (ผลผลิตบรรทัดที่ 2)')).toHaveValue('46.81');
     await u.clear(breast);
     await u.type(breast, '52.19');
 
@@ -322,7 +326,7 @@ describe('production BOMs (#12)', () => {
 
     await u.click(await screen.findByRole('button', { name: 'เปิดสูตร ตัดแต่งไก่ทั้งตัว' }));
     await u.click(await screen.findByRole('button', { name: 'เพิ่มเวอร์ชันใหม่' }));
-    expect(screen.getByLabelText('สัดส่วนต้นทุน % (ผลผลิตบรรทัดที่ 1)')).toHaveValue('70.00');
+    expect(screen.getByLabelText('สัดส่วนปันต้นทุน % (ผลผลิตบรรทัดที่ 1)')).toHaveValue('70.00');
     await u.type(screen.getByLabelText('เริ่มมีผลวันที่'), '12/10/2569');
     await u.click(screen.getByRole('button', { name: 'บันทึกเวอร์ชันใหม่' }));
 

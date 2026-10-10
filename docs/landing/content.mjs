@@ -40,7 +40,7 @@ export const en = {
     cta: 'Try the demo',
     cta2: 'View the code',
     status:
-      'Walking skeleton: the stock ledger, master data, access control, purchase orders and goods receipts with inspection work today. Production and transfers are next.',
+      'Walking skeleton: the stock ledger, master data, access control, purchase orders, goods receipts with inspection and production BOMs work today. Production orders and transfers are next.',
     shot: ['stock-dark', 'desktop', 'Stock on hand in dark mode: five lots at the Bang Na plant with unit cost and value'],
   },
   problemsHead: {
@@ -113,6 +113,20 @@ export const en = {
       try: 'Sign in as finance, open “Menu and prices” and open the bucket of eight pieces.',
     },
     {
+      id: 'production',
+      kicker: 'Production BOMs',
+      title: 'Know what a case of chicken should become, and what each piece should cost.',
+      pain: 'The cutting yield lives in a supervisor’s head, and what a breast costs is whatever this week’s spreadsheet says.',
+      body: 'A production BOM says which inputs make which outputs: a case of whole chicken into breasts, thighs, drumsticks, wings and frames. Each output has its expected weight and yield, and the share of the batch’s cost it carries: by weight, unless the chain sets its own shares, which must add up to exactly 100 %. Waste is shown and carries no share. BOMs are versioned by date like recipes; production orders that use them come next (#13).',
+      points: [
+        ['Yield you can check', '20 kg in, 18 kg expected out, 2 kg waste: 90 %.'],
+        ['Shares that add up', 'By weight, rounded so they sum to exactly 100 %, or set by hand.'],
+        ['Versioned by date', 'A version in force never changes; a scheduled one can be corrected.'],
+      ],
+      shots: [['boms', 'desktop', 'The whole-chicken cutting BOM: five outputs with their expected yield and cost share, and the waste']],
+      try: 'Sign in as plant, open “Production BOMs” and open “Cut whole chicken”.',
+    },
+    {
       id: 'access',
       kicker: 'Access and audit',
       title: 'The right people. Only the right people.',
@@ -166,7 +180,6 @@ export const en = {
     title: 'What’s cooking next.',
     sub: 'Built in public, one GitHub issue at a time. None of this is in the demo yet.',
     items: [
-      [12, 'Production BOMs: expected yield and cost allocation'],
       [13, 'Production orders: measured yield and lot genealogy'],
       [14, 'Transfers through in-transit'],
       [23, 'Traceability and the recall report'],
@@ -179,7 +192,7 @@ export const en = {
     body: 'The Community edition is Apache 2.0 and complete for one chain, with no limit on users, locations or data. A paid Enterprise edition for scale and regulation starts after the first release. Food safety, data integrity, basic security, access to your own data and the upgrade path are never behind a paywall.',
     facts: [
       ['Apache 2.0', 'Community edition'],
-      ['25', 'design decisions, in English and Thai'],
+      ['26', 'design decisions, in English and Thai'],
       ['TH · EN', 'the console and every decision record'],
     ],
     link: ['Read the editions decision', `${REPO}/blob/main/docs/adr/0015-editions-community-and-enterprise.md`],
@@ -232,7 +245,7 @@ export const th = {
     lead: 'ระบบหลังบ้านสำหรับเชนร้านอาหารที่ดูแลซัพพลายเชนเอง สร้างแบบเปิดเผยต่อสาธารณะ เริ่มจากสิ่งที่ทุกอย่างต้องพึ่ง: ตัวเลขสต๊อกที่เชื่อได้',
     cta: 'ลองเดโม',
     cta2: 'ดูโค้ด',
-    status: 'ระยะโครงระบบ: บัญชีเคลื่อนไหวสต๊อก master data สิทธิ์การใช้งาน ใบสั่งซื้อ และใบรับสินค้าพร้อมการตรวจรับใช้ได้แล้ววันนี้ การผลิตและการโอนตามมาถัดไป',
+    status: 'ระยะโครงระบบ: บัญชีเคลื่อนไหวสต๊อก master data สิทธิ์การใช้งาน ใบสั่งซื้อ ใบรับสินค้าพร้อมการตรวจรับ และสูตรการผลิตใช้ได้แล้ววันนี้ ใบสั่งผลิตและการโอนตามมาถัดไป',
     shot: ['stock-dark', 'desktop', 'สต๊อกคงเหลือในโหมดมืด: lot ห้ารายการที่โรงงานบางนา พร้อมต้นทุนต่อหน่วยและมูลค่า'],
   },
   problemsHead: {
@@ -305,6 +318,20 @@ export const th = {
       try: 'เข้าสู่ระบบเป็น finance เปิด “เมนูและราคา” แล้วเปิดไก่ทอดถัง 8 ชิ้น',
     },
     {
+      id: 'production',
+      kicker: 'สูตรการผลิต',
+      title: 'รู้ว่าไก่หนึ่งลังควรได้อะไร และแต่ละชิ้นควรมีต้นทุนเท่าไร',
+      pain: 'อัตราผลได้ของการตัดแต่งอยู่ในหัวของหัวหน้าไลน์ และต้นทุนอกไก่ก็แล้วแต่สเปรดชีตสัปดาห์นั้น',
+      body: 'สูตรการผลิตบอกว่าวัตถุดิบอะไรกลายเป็นผลผลิตอะไร ไก่ทั้งตัวหนึ่งลังเป็นอก สะโพก น่อง ปีก และโครงไก่ ผลผลิตแต่ละอย่างมีน้ำหนักและอัตราผลได้ที่คาดไว้ และสัดส่วนปันต้นทุนของรอบการผลิตที่รับไป ตั้งต้นตามน้ำหนัก หรือเชนกำหนดเองได้แต่ต้องรวมกันได้ 100% พอดี ของเสียแสดงให้เห็นและไม่รับต้นทุน สูตรการผลิตมีเวอร์ชันตามวันที่แบบเดียวกับสูตรเมนู ใบสั่งผลิตที่ใช้สูตรเหล่านี้ตามมาถัดไป (#13)',
+      points: [
+        ['อัตราผลได้ที่ตรวจได้', 'วัตถุดิบ 20 กก. คาดว่าได้ผลผลิต 18 กก. ของเสีย 2 กก. คือ 90%'],
+        ['สัดส่วนที่รวมได้พอดี', 'ตามน้ำหนัก ปัดเศษให้รวมได้ 100% พอดี หรือกำหนดเอง'],
+        ['เวอร์ชันตามวันที่', 'เวอร์ชันที่มีผลแล้วไม่เปลี่ยน เวอร์ชันที่ยังไม่เริ่มแก้ได้'],
+      ],
+      shots: [['boms', 'desktop', 'สูตรตัดแต่งไก่ทั้งตัว: ผลผลิตห้าอย่างพร้อมอัตราผลได้ที่คาดไว้ สัดส่วนปันต้นทุน และของเสีย']],
+      try: 'เข้าสู่ระบบเป็น plant เปิด “สูตรการผลิต (BOM)” แล้วเปิดสูตรตัดแต่งไก่ทั้งตัว',
+    },
+    {
       id: 'access',
       kicker: 'สิทธิ์และการตรวจสอบ',
       title: 'คนที่ใช่ และเฉพาะคนที่ใช่',
@@ -358,7 +385,6 @@ export const th = {
     title: 'สิ่งที่กำลังจะมา',
     sub: 'สร้างแบบเปิดเผยทีละ GitHub issue ทั้งหมดนี้ยังไม่อยู่ในเดโม',
     items: [
-      [12, 'สูตรการผลิต: yield ที่คาดไว้และการปันต้นทุน'],
       [13, 'ใบสั่งผลิต: yield ที่วัดจริงและผังความสัมพันธ์ lot'],
       [14, 'ใบโอนผ่านระหว่างขนส่ง'],
       [23, 'การย้อนรอยและรายงาน recall'],
@@ -371,7 +397,7 @@ export const th = {
     body: 'รุ่น Community เป็น Apache 2.0 และครบสำหรับหนึ่งเชน ไม่จำกัดผู้ใช้ สถานที่ หรือข้อมูล รุ่น Enterprise แบบเสียเงินสำหรับขนาดใหญ่และข้อกำหนดเฉพาะเริ่มหลังรุ่นแรก ความปลอดภัยของอาหาร ความถูกต้องของข้อมูล ความปลอดภัยพื้นฐาน การเข้าถึงข้อมูลของตัวเอง และทางอัปเกรด ไม่เคยถูกกั้นด้วยค่าใช้จ่าย',
     facts: [
       ['Apache 2.0', 'รุ่น Community'],
-      ['25', 'บันทึกการตัดสินใจ ทั้งไทยและอังกฤษ'],
+      ['26', 'บันทึกการตัดสินใจ ทั้งไทยและอังกฤษ'],
       ['ไทย · EN', 'ทั้ง console และบันทึกการตัดสินใจทุกฉบับ'],
     ],
     link: ['อ่านการตัดสินใจเรื่องรุ่นของระบบ', `${REPO}/blob/main/docs/adr/0015-editions-community-and-enterprise.th.md`],

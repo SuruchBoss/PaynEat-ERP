@@ -181,6 +181,22 @@ async function flows() {
     await page.context().close();
   }
 
+  // Plant: the whole-chicken cutting BOM, its yield, cost shares and waste (#12).
+  {
+    const page = await open(DESKTOP);
+    await signIn(page, 'plant');
+    await page.goto(`${BASE}/production-boms`);
+    await page.getByRole('button', { name: 'Open BOM Cut whole chicken' }).click();
+    await page.getByRole('table', { name: 'Outputs of version 1' }).waitFor();
+    // From the version's heading down to its waste and yield, all five outputs in view.
+    await page.evaluate(() => {
+      const heading = [...document.querySelectorAll('h3')].find((h) => h.textContent.includes('Version 1'));
+      window.scrollTo(0, heading.getBoundingClientRect().top + window.scrollY - 140);
+    });
+    await both(page, 'boms');
+    await page.context().close();
+  }
+
   // Purchasing: a supplier whose tax identification number has a mistyped digit.
   {
     const page = await open(DESKTOP);

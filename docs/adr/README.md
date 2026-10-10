@@ -33,6 +33,7 @@ edited to change their meaning; a new ADR supersedes them.
 | 0023 | [Menu prices and recipes start on a business date, and never change once in force](0023-menu-prices-and-versioned-recipes.md) | [ราคาและสูตรของเมนูเริ่มมีผลตามวันที่ทางธุรกิจ และไม่เปลี่ยนอีกเมื่อมีผลแล้ว](0023-menu-prices-and-versioned-recipes.th.md) | Accepted |
 | 0024 | [Purchase order totals round once per line, and the approval threshold compares the gross total](0024-purchase-order-totals-and-approval.md) | [ยอดของใบสั่งซื้อปัดเศษครั้งเดียวต่อบรรทัด และเกณฑ์วงเงินที่ต้องอนุมัติเทียบกับยอดรวม VAT](0024-purchase-order-totals-and-approval.th.md) | Accepted |
 | 0025 | [Goods receipts: what a delivery is expected to bring, how much an order line may receive, and when an order is received](0025-goods-receipts-expected-quantity-and-completion.md) | [ใบรับสินค้า: ของที่คาดว่าจะมาในแต่ละครั้ง รับต่อบรรทัดใบสั่งซื้อได้มากสุดเท่าไร และเมื่อไรจึงถือว่ารับครบ](0025-goods-receipts-expected-quantity-and-completion.th.md) | Accepted |
+| 0026 | [Production BOMs: weights, default allocation ratios, waste, and versions](0026-production-bom-weights-ratios-and-versions.md) | [สูตรการผลิต (BOM): น้ำหนัก สัดส่วนปันต้นทุนตั้งต้น ของเสีย และเวอร์ชัน](0026-production-bom-weights-ratios-and-versions.th.md) | Proposed |
 
 ## Template
 
