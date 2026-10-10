@@ -236,6 +236,20 @@ export interface ConsumptionUsageRow {
   consumedExpiredLot: boolean;
 }
 
+/** What a posted branch-consumption document took from one lot, for one of its lines (#17). */
+export interface ConsumedLot {
+  lineNo: number;
+  lotId: string;
+  lotNumber: string;
+  /** Taken, in the item's base unit (positive). */
+  quantity: string;
+  unitCost: string;
+  /** A placeholder lot (ADR-0030): its cost is an estimate, or unknown (0). */
+  placeholderCost: 'estimated' | 'unknown' | null;
+  /** The lot was past its expiry on the sale date. */
+  expired: boolean;
+}
+
 /** A document header as the ledger locks it. */
 export interface LockedDocument {
   id: string;
@@ -340,7 +354,7 @@ export class LedgerService {
     type: StockDocumentType,
     header: DraftHeader,
     actor: AuthenticatedUser,
-  ): Promise<DocumentRef> {
+  ): Promise<DocumentRef & { revision: number }> {
     this.assertBusinessDate(header.businessDate);
     const number = await this.sequences.next(tx, SCOPES[type], this.currentYear());
     const row = await tx.stockDocument.create({
@@ -351,7 +365,7 @@ export class LedgerService {
         note: header.note,
         createdById: actor.userId,
       },
-      select: { id: true, number: true },
+      select: { id: true, number: true, revision: true },
     });
     return row;
   }
@@ -637,6 +651,41 @@ export class LedgerService {
       estimatedCost: row.estimatedCost === true,
       unknownCost: row.unknownCost === true,
       consumedExpiredLot: row.consumedExpiredLot === true,
+    }));
+  }
+
+  /** What a posted branch-consumption document took, lot by lot, in line order (#17). */
+  async consumedLots(documentId: string): Promise<ConsumedLot[]> {
+    const tz = this.config.app.timeZone;
+    const rows = await this.prisma.$queryRaw<
+      Array<{
+        lineNo: number;
+        lotId: string;
+        lotNumber: string;
+        quantity: string;
+        unitCost: string;
+        placeholderCost: 'estimated' | 'unknown' | null;
+        expired: boolean | null;
+      }>
+    >`
+      SELECT e."line_no" AS "lineNo", l."id" AS "lotId", l."number" AS "lotNumber",
+             (-SUM(e."quantity"))::text AS "quantity", e."unit_cost"::text AS "unitCost",
+             l."placeholder_cost"::text AS "placeholderCost",
+             bool_or(l."expiry_date" < (e."business_time" AT TIME ZONE ${tz})::date) AS "expired"
+      FROM "ledger_entries" e
+      JOIN "lots" l ON l."id" = e."lot_id"
+      WHERE e."document_id" = ${documentId}::uuid
+      GROUP BY e."line_no", l."id", l."number", e."unit_cost", l."placeholder_cost"
+      ORDER BY e."line_no", l."number"
+    `;
+    return rows.map((row) => ({
+      lineNo: row.lineNo,
+      lotId: row.lotId,
+      lotNumber: row.lotNumber,
+      quantity: normaliseDecimal(row.quantity),
+      unitCost: normaliseDecimal(row.unitCost),
+      placeholderCost: row.placeholderCost,
+      expired: row.expired === true,
     }));
   }
 
@@ -1248,13 +1297,19 @@ export class LedgerService {
     doc: LockedDocument,
     placeholders: ConsumptionPosting['placeholders'],
   ): Promise<Movement[]> {
+    if (placeholders.length === 0) return [];
+    const locations = await this.locations.describe(
+      placeholders.map((p) => p.locationId),
+      tx,
+    );
+    const items = await this.items.describe(
+      placeholders.map((p) => p.itemId),
+      tx,
+    );
     const movements: Movement[] = [];
     for (const wanted of placeholders) {
-      const names = await tx.$queryRaw<Array<{ locationCode: string; itemCode: string }>>`
-        SELECT (SELECT "code" FROM "locations" WHERE "id" = ${wanted.locationId}::uuid) AS "locationCode",
-               (SELECT "code" FROM "items" WHERE "id" = ${wanted.itemId}::uuid) AS "itemCode"
-      `;
-      const { locationCode, itemCode } = names[0];
+      const locationCode = locations.get(wanted.locationId)?.code;
+      const itemCode = items.get(wanted.itemId)?.code;
       if (!locationCode) throw new NotFoundError('Location', wanted.locationId);
       if (!itemCode) throw new NotFoundError('Item', wanted.itemId);
       await tx.$executeRaw`

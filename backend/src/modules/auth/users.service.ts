@@ -63,7 +63,9 @@ export class UsersService {
   }
 
   async list(): Promise<UserView[]> {
+    // The automatic account (ADR-0030) is not a person to manage: it is left out.
     const rows = await this.prisma.user.findMany({
+      where: { system: false },
       select: USER_VIEW_SELECT,
       orderBy: { email: 'asc' },
     });
@@ -71,7 +73,10 @@ export class UsersService {
   }
 
   async get(id: string): Promise<UserView> {
-    const row = await this.prisma.user.findUnique({ where: { id }, select: USER_VIEW_SELECT });
+    const row = await this.prisma.user.findFirst({
+      where: { id, system: false },
+      select: USER_VIEW_SELECT,
+    });
     if (!row) throw new NotFoundError('User', id);
     return toView(row);
   }
@@ -192,7 +197,7 @@ export class UsersService {
   /** The user's row, locked for the rest of the transaction so role changes queue up. */
   private async lockUser(tx: Prisma.TransactionClient, userId: string): Promise<UserRow> {
     const locked = await tx.$queryRaw<{ id: string }[]>`
-      SELECT id FROM users WHERE id = ${userId}::uuid FOR UPDATE
+      SELECT id FROM users WHERE id = ${userId}::uuid AND NOT system FOR UPDATE
     `;
     if (locked.length === 0) throw new NotFoundError('User', userId);
     return tx.user.findUniqueOrThrow({ where: { id: userId }, select: USER_VIEW_SELECT });

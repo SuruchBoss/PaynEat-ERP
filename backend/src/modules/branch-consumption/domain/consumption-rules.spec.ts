@@ -1,7 +1,12 @@
 // Copyright 2026 Suruch Chakrapeesirisuk
 // SPDX-License-Identifier: Apache-2.0
 
-import { allocateAtBranch, consumedQuantity, saleTimeDecision } from './consumption-rules';
+import {
+  allocateAtBranch,
+  consumedQuantity,
+  reprocessBlock,
+  saleTimeDecision,
+} from './consumption-rules';
 
 /** Thighs at Silom: an older tray, a newer tray, and one that expired yesterday. */
 const lots = [
@@ -130,5 +135,33 @@ describe('branch consumption rules (#17)', () => {
         saleDate: '2026-10-03',
       }),
     ).toBe('process');
+  });
+});
+
+describe('reprocessBlock', () => {
+  const today = '2026-10-13';
+
+  it('lets master data a person can fix be tried again whenever', () => {
+    for (const reason of ['unknown_menu_item', 'unknown_modifier', 'inactive_ingredient']) {
+      expect(reprocessBlock(reason, '2026-10-01', today)).toBeNull();
+    }
+  });
+
+  it('keeps a sale held for its time until its date has come', () => {
+    expect(reprocessBlock('sale_time_ahead', '2026-10-14', today)).toBe('sale_date_not_yet');
+    expect(reprocessBlock('sale_time_ahead', today, today)).toBeNull();
+    expect(reprocessBlock('sale_time_ahead', '2026-10-12', today)).toBeNull();
+  });
+
+  it('rescues a sale without a recipe only on its own day: a recipe never starts in the past', () => {
+    expect(reprocessBlock('no_recipe_in_effect', today, today)).toBeNull();
+    expect(reprocessBlock('no_recipe_in_effect', '2026-10-12', today)).toBe(
+      'past_sale_without_recipe',
+    );
+  });
+
+  it('refuses what cannot be fixed for a sale that happened', () => {
+    expect(reprocessBlock('sold_by_mismatch', today, today)).toBe('not_fixable');
+    expect(reprocessBlock('negative_usage', today, today)).toBe('not_fixable');
   });
 });

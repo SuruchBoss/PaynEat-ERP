@@ -9,6 +9,7 @@ import { MasterDataModule } from '../master-data/master-data.module';
 import { MenuController } from './menu.controller';
 import { MenuItemsService } from './menu-items.service';
 import { ModifierGroupsService } from './modifier-groups.service';
+import { MenuService } from './menu.service';
 import { RecipesService } from './recipes.service';
 
 /**
@@ -20,7 +21,7 @@ import { RecipesService } from './recipes.service';
 @Module({
   imports: [MasterDataModule, ItemsModule, LocationsModule, LedgerModule],
   controllers: [MenuController],
-  providers: [MenuItemsService, ModifierGroupsService, RecipesService],
-  exports: [MenuItemsService, ModifierGroupsService, RecipesService],
+  providers: [MenuItemsService, ModifierGroupsService, RecipesService, MenuService],
+  exports: [MenuItemsService, ModifierGroupsService, RecipesService, MenuService],
 })
 export class MenuModule {}

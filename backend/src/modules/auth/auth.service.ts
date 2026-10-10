@@ -16,7 +16,7 @@
 //  (GHSA-3cgw-73cr-r8c6); the behaviour now agrees. ADR-0022 says how a weakness in
 //  another project is written about here.
 import { Inject, Injectable } from '@nestjs/common';
-import { AuditAction, UserStatus } from '@prisma/client';
+import { AuditAction, UserStatus, type Prisma } from '@prisma/client';
 import { APP_CONFIG } from '../../core/config/config.token';
 import type { RootConfig } from '../../core/config/configuration';
 import {
@@ -48,6 +48,10 @@ import { UserContextService } from './user-context.service';
 /** The catalogue event for a refused sign-in (docs/TELEMETRY.md v1.2). */
 export const SIGN_IN_FAILED_EVENT = 'auth.sign_in.failed';
 
+/** The automatic account's email: a reserved domain, so it can never be a person's (ADR-0030). */
+export const SYSTEM_ACCOUNT_EMAIL = 'automatic@payneat-erp.invalid';
+export const SYSTEM_ACCOUNT_NAME = 'PaynEat ERP — automatic';
+
 const invalidCredentials = () =>
   new AuthenticationError('INVALID_CREDENTIALS', 'Invalid email or password');
 
@@ -68,7 +72,14 @@ export class AuthService {
   async login(dto: LoginDto, meta: ClientMeta): Promise<LoginSession | MfaChallenge> {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
-      select: { id: true, passwordHash: true, status: true, lockedUntil: true, demo: true },
+      select: {
+        id: true,
+        passwordHash: true,
+        status: true,
+        lockedUntil: true,
+        demo: true,
+        system: true,
+      },
     });
 
     // Burn roughly the same time whether or not the account exists, so response timing
@@ -76,6 +87,14 @@ export class AuthService {
     if (!user) {
       await this.crypto.hashPassword(dto.password);
       await this.signInFailed(null, 'no account has that email', meta);
+      throw invalidCredentials();
+    }
+
+    // The automatic account (ADR-0030) has no usable password and never signs in. It is
+    // refused like an unknown email, without touching its failure counter.
+    if (user.system) {
+      await this.crypto.hashPassword(dto.password);
+      await this.signInFailed(user.id, 'the automatic account never signs in', meta);
       throw invalidCredentials();
     }
 
@@ -289,6 +308,38 @@ export class AuthService {
         userAgent: meta.userAgent,
       });
     });
+  }
+
+  /**
+   * The automatic account (ADR-0030) as a posting actor: what the branch-consumption processor
+   * posts as when no person asked. It holds no role and no usable password, never signs in and
+   * never approves anything; the database refuses each of these. The migration creates it, and
+   * this creates it again if it is missing (a test database truncates `users`).
+   */
+  async systemActor(
+    tx: Prisma.TransactionClient | PrismaService = this.prisma,
+  ): Promise<AuthenticatedUser> {
+    await tx.$executeRaw`
+      INSERT INTO "users" ("id", "email", "display_name", "password_hash", "system", "updated_at")
+      VALUES (gen_random_uuid(), ${SYSTEM_ACCOUNT_EMAIL}, ${SYSTEM_ACCOUNT_NAME}, '!', true, now())
+      ON CONFLICT DO NOTHING
+    `;
+    const user = await tx.user.findFirst({
+      where: { system: true },
+      select: { id: true, email: true, displayName: true },
+    });
+    if (!user) {
+      // Someone holds the reserved email as an ordinary account: refuse rather than post as them.
+      throw new Error(`the automatic account is missing and ${SYSTEM_ACCOUNT_EMAIL} is taken`);
+    }
+    return {
+      userId: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      roles: [],
+      permissions: [],
+      sessionId: '',
+    };
   }
 
   async buildSessionUser(userId: string): Promise<SessionUser> {

@@ -3,6 +3,7 @@
 
 import { createHash } from 'node:crypto';
 import { HttpStatus, Injectable } from '@nestjs/common';
+import { Prisma, type SalesEventStatus } from '@prisma/client';
 import { DomainError } from '../../core/errors/domain.errors';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { MetricsService } from '../../core/telemetry/metrics.service';
@@ -30,6 +31,24 @@ const REJECTION_MESSAGES: Record<Exclude<SalesEventReason, `credential_${string}
     'This idempotency key was already used for a different sale line; a key is never reused',
 };
 
+type Tx = Prisma.TransactionClient | PrismaService;
+
+/** A stored sales event, as branch consumption (#17) reads it. */
+export interface StoredSalesEvent {
+  id: string;
+  idempotencyKey: string;
+  posInstanceCode: string;
+  locationId: string;
+  locationCode: string;
+  saleTime: Date;
+  receivedAt: Date;
+  menuItemCode: string;
+  quantity: string | null;
+  weightKg: string | null;
+  modifiers: Array<{ code: string; quantity: string }>;
+  status: SalesEventStatus;
+}
+
 /**
  * Sales-event ingest (#9, contracts/pos/v1): a paid sale line from a POS, stored exactly once by
  * its idempotency key. The checks follow contracts/README.md in order — credential, schema, the
@@ -47,7 +66,29 @@ export class SalesEventsService {
     private readonly instances: PosInstancesService,
     private readonly logger: TelemetryLogger,
     private readonly metrics: MetricsService,
-  ) {}
+  ) {
+    // Branch consumption's backlog (#17, docs/TELEMETRY.md), read from the database at scrape.
+    metrics.gaugeFromDatabase(
+      'erp_sales_events_unprocessed',
+      'Sales events not yet branch consumption (received, waiting, held or failed), per branch.',
+      ['location_code'],
+      async () =>
+        (await this.unprocessedByBranch()).map((row) => ({
+          labels: { location_code: row.locationCode },
+          value: row.count,
+        })),
+    );
+    metrics.gaugeFromDatabase(
+      'erp_sales_events_oldest_unprocessed_age_seconds',
+      'Seconds since the ERP received the oldest sales event not yet branch consumption, per branch.',
+      ['location_code'],
+      async () =>
+        (await this.unprocessedByBranch()).map((row) => ({
+          labels: { location_code: row.locationCode },
+          value: row.oldestAgeSeconds,
+        })),
+    );
+  }
 
   async ingest(
     authorization: string | undefined,
@@ -113,6 +154,119 @@ export class SalesEventsService {
     );
     this.metrics.countSalesEvent('duplicate');
     return { created: false, receipt: receipt(event, stored.status, true, stored.receivedAt) };
+  }
+
+  // --- For branch consumption (#17) ---------------------------------------------------
+
+  /**
+   * The ids of events still `received`, oldest first, leaving out `excluding` (events held for
+   * a person). Nothing is locked: each is then claimed with `lock`.
+   */
+  async waitingIds(limit: number, excluding: readonly string[] = []): Promise<string[]> {
+    const rows = await this.prisma.$queryRaw<{ id: string }[]>`
+      SELECT "id" FROM "sales_events"
+      WHERE "status" = 'received' AND NOT ("id" = ANY(${[...excluding]}::uuid[]))
+      ORDER BY "received_at", "id"
+      LIMIT ${limit}
+    `;
+    return rows.map((row) => row.id);
+  }
+
+  /**
+   * Locks one event for the rest of the transaction when it is in one of `statuses`. With
+   * `skipLocked`, an event another transaction holds reads as absent, so two processors never
+   * work on the same event at once; without it, the caller waits its turn.
+   */
+  async lock(
+    tx: Tx,
+    id: string,
+    statuses: readonly SalesEventStatus[],
+    skipLocked: boolean,
+  ): Promise<StoredSalesEvent | null> {
+    const ids = await tx.$queryRaw<{ id: string }[]>`
+      SELECT "id" FROM "sales_events"
+      WHERE "id" = ${id}::uuid AND "status"::text = ANY(${[...statuses]}::text[])
+      FOR UPDATE ${skipLocked ? Prisma.sql`SKIP LOCKED` : Prisma.empty}
+    `;
+    if (ids.length === 0) return null;
+    return (await this.describe([id], tx)).get(id) ?? null;
+  }
+
+  /** These events, keyed by id; unknown ids are absent. */
+  async describe(
+    ids: readonly string[],
+    tx: Tx = this.prisma,
+  ): Promise<Map<string, StoredSalesEvent>> {
+    if (ids.length === 0) return new Map();
+    const rows = await tx.salesEvent.findMany({
+      where: { id: { in: [...new Set(ids)] } },
+      select: {
+        id: true,
+        idempotencyKey: true,
+        posInstance: { select: { code: true } },
+        locationId: true,
+        location: { select: { code: true } },
+        saleTime: true,
+        receivedAt: true,
+        menuItemCode: true,
+        quantity: true,
+        weightKg: true,
+        modifiers: true,
+        status: true,
+      },
+    });
+    return new Map(
+      rows.map((row) => [
+        row.id,
+        {
+          id: row.id,
+          idempotencyKey: row.idempotencyKey,
+          posInstanceCode: row.posInstance.code,
+          locationId: row.locationId,
+          locationCode: row.location.code,
+          saleTime: row.saleTime,
+          receivedAt: row.receivedAt,
+          menuItemCode: row.menuItemCode,
+          quantity: row.quantity === null ? null : row.quantity.toFixed(),
+          weightKg: row.weightKg === null ? null : row.weightKg.toFixed(),
+          modifiers: row.modifiers as StoredSalesEvent['modifiers'],
+          status: row.status,
+        },
+      ]),
+    );
+  }
+
+  /**
+   * Moves a locked event to `status`. The database lets it become `processed` only once its
+   * branch consumption is posted, and never lets it leave `processed`.
+   */
+  async setStatus(tx: Tx, id: string, status: SalesEventStatus): Promise<void> {
+    await tx.salesEvent.update({ where: { id }, data: { status } });
+  }
+
+  /**
+   * Per branch, the events not yet processed (received, waiting or held, and failed) and how
+   * long the oldest of them has waited since the ERP received it, for the gauges of #17.
+   */
+  async unprocessedByBranch(): Promise<
+    Array<{ locationCode: string; count: number; oldestAgeSeconds: number }>
+  > {
+    const rows = await this.prisma.$queryRaw<
+      Array<{ locationCode: string; count: bigint; oldestAgeSeconds: number }>
+    >`
+      SELECT l."code" AS "locationCode", COUNT(*) AS "count",
+             EXTRACT(EPOCH FROM (now() - MIN(e."received_at")))::float8 AS "oldestAgeSeconds"
+      FROM "sales_events" e
+      JOIN "locations" l ON l."id" = e."location_id"
+      WHERE e."status" <> 'processed'
+      GROUP BY l."code"
+      ORDER BY l."code"
+    `;
+    return rows.map((row) => ({
+      locationCode: row.locationCode,
+      count: Number(row.count),
+      oldestAgeSeconds: row.oldestAgeSeconds,
+    }));
   }
 
   /** A refusal after the credential: logged and counted, answered with 422. */

@@ -130,3 +130,31 @@ function decimal(text: string): ExactDecimal {
   if (!value) throw new Error(`not a decimal: "${text}"`);
   return value;
 }
+
+/**
+ * Why a failed or held sales event cannot be re-processed now, or null when it can (ADR-0030):
+ * - master data a person can fix (an unknown menu item or modifier, an ingredient no longer in
+ *   use) is always worth another try;
+ * - a sale held for its time waits until its date has come;
+ * - a recipe never starts in the past, so a sale with no recipe in force can be rescued only on
+ *   its own day; an older one stays failed (#76);
+ * - how it was sold, and recipes that disagree, cannot be fixed for a sale that happened.
+ */
+export function reprocessBlock(
+  reason: string,
+  saleDate: string,
+  today: string,
+): 'sale_date_not_yet' | 'past_sale_without_recipe' | 'not_fixable' | null {
+  switch (reason) {
+    case 'unknown_menu_item':
+    case 'unknown_modifier':
+    case 'inactive_ingredient':
+      return null;
+    case 'sale_time_ahead':
+      return saleDate > today ? 'sale_date_not_yet' : null;
+    case 'no_recipe_in_effect':
+      return saleDate < today ? 'past_sale_without_recipe' : null;
+    default:
+      return 'not_fixable';
+  }
+}

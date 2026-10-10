@@ -7,6 +7,7 @@ import { MasterDataModule } from '../master-data/master-data.module';
 import { PosFacingController } from './pos-facing.controller';
 import { PosInstancesController } from './pos-instances.controller';
 import { PosInstancesService } from './pos-instances.service';
+import { PosIntegrationService } from './pos-integration.service';
 import { SalesEventsService } from './sales-events.service';
 
 /**
@@ -17,7 +18,7 @@ import { SalesEventsService } from './sales-events.service';
 @Module({
   imports: [LocationsModule, MasterDataModule],
   controllers: [PosInstancesController, PosFacingController],
-  providers: [PosInstancesService, SalesEventsService],
-  exports: [PosInstancesService, SalesEventsService],
+  providers: [PosInstancesService, SalesEventsService, PosIntegrationService],
+  exports: [PosInstancesService, SalesEventsService, PosIntegrationService],
 })
 export class PosIntegrationModule {}

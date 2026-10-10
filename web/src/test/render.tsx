@@ -42,6 +42,8 @@ export const ADMIN: SessionUser = {
     'production_bom:manage',
     'requisition:read',
     'par_level:manage',
+    'branch_consumption:read',
+    'sales_event:reprocess',
   ],
   mfaEnabled: true,
 };

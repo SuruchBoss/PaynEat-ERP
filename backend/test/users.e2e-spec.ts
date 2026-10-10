@@ -136,6 +136,8 @@ describe('user administration', () => {
         'production_bom:manage',
         'requisition:read',
         'par_level:manage',
+        'branch_consumption:read',
+        'sales_event:reprocess',
       ],
       requiresSecondFactor: true,
     });

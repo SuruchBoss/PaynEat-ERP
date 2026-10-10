@@ -174,6 +174,17 @@ export class EnvironmentVariables {
   @Min(0)
   @Max(65535)
   METRICS_PORT: number = 9464;
+
+  /**
+   * Seconds between runs of the branch-consumption processor (#17): each run turns the sales
+   * events received since the last one into consumption. `0` turns it off; the end-to-end suite
+   * runs it on demand instead.
+   */
+  @toInt()
+  @IsInt()
+  @Min(0)
+  @Max(3600)
+  SALES_CONSUMPTION_INTERVAL_SECONDS: number = 30;
 }
 
 export function validateEnv(raw: Record<string, unknown>): EnvironmentVariables {

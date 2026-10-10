@@ -15,6 +15,8 @@ export interface AppConfig {
   demo: boolean;
   /** The company's time zone: what "today" is for business dates (ADR-0018). */
   timeZone: string;
+  /** Seconds between branch-consumption runs (#17); 0 is off. */
+  salesConsumptionIntervalSeconds: number;
 }
 
 export interface AuthConfig {
@@ -64,6 +66,7 @@ export function buildConfig(env: EnvironmentVariables): RootConfig {
         .filter(Boolean),
       demo: env.ERP_DEMO === '1',
       timeZone: env.COMPANY_TIME_ZONE,
+      salesConsumptionIntervalSeconds: env.SALES_CONSUMPTION_INTERVAL_SECONDS,
     },
     auth: {
       accessSecret: env.JWT_ACCESS_SECRET,
