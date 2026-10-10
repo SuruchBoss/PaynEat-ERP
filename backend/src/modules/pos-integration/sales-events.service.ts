@@ -246,7 +246,8 @@ export class SalesEventsService {
 
   /**
    * Per branch, the events not yet processed (received, waiting or held, and failed) and how
-   * long the oldest of them has waited since the ERP received it, for the gauges of #17.
+   * long the oldest of them has waited since the ERP received it, for the gauges of #17. Every
+   * active branch has a value, 0 when nothing waits, so "none" never reads as "missing".
    */
   async unprocessedByBranch(): Promise<
     Array<{ locationCode: string; count: number; oldestAgeSeconds: number }>
@@ -254,11 +255,11 @@ export class SalesEventsService {
     const rows = await this.prisma.$queryRaw<
       Array<{ locationCode: string; count: bigint; oldestAgeSeconds: number }>
     >`
-      SELECT l."code" AS "locationCode", COUNT(*) AS "count",
-             EXTRACT(EPOCH FROM (now() - MIN(e."received_at")))::float8 AS "oldestAgeSeconds"
-      FROM "sales_events" e
-      JOIN "locations" l ON l."id" = e."location_id"
-      WHERE e."status" <> 'processed'
+      SELECT l."code" AS "locationCode", COUNT(e."id") AS "count",
+             COALESCE(EXTRACT(EPOCH FROM (now() - MIN(e."received_at"))), 0)::float8 AS "oldestAgeSeconds"
+      FROM "locations" l
+      LEFT JOIN "sales_events" e ON e."location_id" = l."id" AND e."status" <> 'processed'
+      WHERE l."type" = 'branch' AND (l."active" OR e."id" IS NOT NULL)
       GROUP BY l."code"
       ORDER BY l."code"
     `;
