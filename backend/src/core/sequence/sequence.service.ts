@@ -14,7 +14,9 @@ export type SequenceScope =
   | 'PURCHASE_ORDER'
   | 'GOODS_RECEIPT'
   | 'SUPPLIER_RETURN'
-  | 'PRODUCTION_ORDER';
+  | 'PRODUCTION_ORDER'
+  | 'TRANSFER'
+  | 'TRANSFER_RECEIPT';
 
 const PREFIXES: Record<SequenceScope, string> = {
   OPENING_BALANCE: 'OB',
@@ -24,6 +26,8 @@ const PREFIXES: Record<SequenceScope, string> = {
   GOODS_RECEIPT: 'GR',
   SUPPLIER_RETURN: 'RTS',
   PRODUCTION_ORDER: 'MO',
+  TRANSFER: 'TR',
+  TRANSFER_RECEIPT: 'RT',
 };
 
 /**

@@ -82,20 +82,26 @@ const REFUSAL_MESSAGES: Record<PostingRule, string> = {
   temperature_required:
     'This item has a receiving temperature limit: record the temperature at the dock',
   reason_required: 'A line outside tolerance, or with goods turned away, needs a reason',
-  expired_on_arrival:
-    'The supplier says these goods have already expired: reject them, they cannot enter stock',
+  expired_on_arrival: 'These goods had already expired when they arrived: they cannot enter stock',
   over_receipt: "This would receive more than was ordered plus the item's variance limit",
   needs_approval:
     'Something on this receipt is now outside tolerance: reload it and submit it again for approval',
   // Production orders (#13) are not in the demo yet; listed for the same reason.
   not_released: 'Only a released production order can be posted',
-  nothing_picked: 'Every input needs at least one lot to take it from',
+  nothing_picked: 'Every line needs at least one lot to take it from',
   actuals_missing: 'Record what actually came out of every output before posting',
   weight_required:
     'A line not counted in kg or g needs its measured weight, so the yield is measured, not guessed',
-  pieces_required: 'A variable-weight output needs its piece count as well as its weight',
+  pieces_required: 'A variable-weight line needs its piece count as well as its weight',
   zero_output_quantity:
     'An output with no actual quantity cannot carry a cost: record what came out, or cancel the order',
+  // Transfers (#14) are not in the demo yet; listed for the same reason.
+  cancelled: 'This document was cancelled: nothing can be posted from it',
+  transfer_not_dispatched: 'Only a dispatched transfer can be received',
+  already_received: 'This transfer has already been received: another receipt of it posted first',
+  business_date_before_dispatch: 'A transfer cannot be received before the day it was dispatched',
+  difference_unresolved:
+    'Accepted, returned and written off must add up to exactly what was dispatched: nothing may stay in transit',
 };
 
 /** 422, or 409 when it lost a race with someone else (backend `PostingRefusedError`). */
@@ -267,6 +273,25 @@ export function currentLotCosts(
   return new Map(
     [...costs].map(([itemId, c]) => [itemId, { unitCost: c.unitCost, lotNumber: c.lotNumber }]),
   );
+}
+
+/**
+ * What each transfer holds in transit (backend transfers.service.ts inTransit, #14). The demo
+ * dispatches no transfers (transfers are not in the demo yet), so nothing is ever in transit: the
+ * stock on hand screen asks only when it shows an in-transit balance, and gets the truth.
+ */
+export function inTransit(_state: DemoState, ctx: Context) {
+  const asOfInput = queryValue(ctx.query, 'asOf', { isoDate: true });
+  const now = today(ctx.now);
+  const asOf = asOfInput ?? now;
+  if (!isIsoDate(asOf)) throw invalidDate('asOf');
+  if (compareDates(asOf, now) > 0) {
+    throw refused(
+      'AS_OF_IN_FUTURE',
+      'Stock in transit is known up to today, not for a date still to come',
+    );
+  }
+  return { asOf, transfers: [] };
 }
 
 export function stockOnHand(state: DemoState, ctx: Context) {

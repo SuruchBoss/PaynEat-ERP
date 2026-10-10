@@ -15,6 +15,8 @@ enum StockDocumentType {
   stock_adjustment
   goods_receipt
   production_order
+  transfer
+  transfer_receipt
 }
 
 /// draft → posted for opening balances; draft → submitted → approved → posted, or rejected, for
@@ -62,13 +64,16 @@ model StockDocument {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  lots            Lot[]
-  entries         LedgerEntry[]
-  openingBalance  OpeningBalance?
-  stockAdjustment StockAdjustment?
-  goodsReceipt    GoodsReceipt?
-  productionOrder ProductionOrder?
-  genealogy       LotGenealogy[]
+  lots             Lot[]
+  entries          LedgerEntry[]
+  openingBalance   OpeningBalance?
+  stockAdjustment  StockAdjustment?
+  goodsReceipt     GoodsReceipt?
+  productionOrder  ProductionOrder?
+  transfer         Transfer?        @relation("TransferDocument")
+  transferReceipt  TransferReceipt? @relation("TransferReceiptDocument")
+  receivedTransfer Transfer?        @relation("TransferReceivedBy")
+  genealogy        LotGenealogy[]
 
   @@index([type, status])
   @@map("stock_documents")
@@ -98,13 +103,15 @@ model Lot {
   secondaryQuantity  Decimal?      @map("secondary_quantity") @db.Decimal(18, 0)
   createdAt          DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  entries         LedgerEntry[]
-  balances        StockBalance[]
-  adjustmentLines StockAdjustmentLine[]
-  productionPicks ProductionOrderPick[]
+  entries              LedgerEntry[]
+  balances             StockBalance[]
+  adjustmentLines      StockAdjustmentLine[]
+  productionPicks      ProductionOrderPick[]
+  transferPicks        TransferPick[]
+  transferReceiptLines TransferReceiptLine[]
   /// Genealogy: the input lots this lot was made from, and the output lots made from it.
-  madeFrom        LotGenealogy[]        @relation("GenealogyOutput")
-  usedIn          LotGenealogy[]        @relation("GenealogyInput")
+  madeFrom             LotGenealogy[]        @relation("GenealogyOutput")
+  usedIn               LotGenealogy[]        @relation("GenealogyInput")
 
   @@unique([id, itemId])
   @@unique([originDocumentId, originLineNo])

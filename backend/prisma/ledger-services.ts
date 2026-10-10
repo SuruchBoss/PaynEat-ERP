@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * The ledger, opening-balance, stock-adjustment, purchase-order, goods-receipt and production-order
- * services, wired
+ * The ledger, opening-balance, stock-adjustment, purchase-order, goods-receipt, production-order and
+ * transfer services, wired
  * by hand for scripts that run without the API:
  * the demo seed and `npm run ledger:rebuild-balances`. The same code the API runs, so no script
  * writes stock any other way than the ledger module does (#7, ADR-0010).
@@ -28,6 +28,8 @@ import { ProductionOrdersService } from '../src/modules/production-orders/produc
 import { PurchaseOrdersService } from '../src/modules/purchase-orders/purchase-orders.service';
 import { StockAdjustmentsService } from '../src/modules/stock-adjustments/stock-adjustments.service';
 import { SuppliersService } from '../src/modules/suppliers/suppliers.service';
+import { TransferReceiptsService } from '../src/modules/transfers/transfer-receipts.service';
+import { TransfersService } from '../src/modules/transfers/transfers.service';
 
 export interface LedgerServices {
   ledger: LedgerService;
@@ -37,6 +39,8 @@ export interface LedgerServices {
   purchaseOrders: PurchaseOrdersService;
   goodsReceipts: GoodsReceiptsService;
   productionOrders: ProductionOrdersService;
+  transfers: TransfersService;
+  transferReceipts: TransferReceiptsService;
   items: ItemsService;
 }
 
@@ -86,6 +90,7 @@ export function ledgerServices(
     logger,
     config,
   );
+  const transfers = new TransfersService(db, ledger, items, locations, audit, logger, metrics);
   return {
     ledger,
     openingBalances: new OpeningBalancesService(db, ledger, items, locations),
@@ -113,6 +118,8 @@ export function ledgerServices(
       logger,
       metrics,
     ),
+    transfers,
+    transferReceipts: new TransferReceiptsService(db, ledger, transfers, items, audit, logger),
     items,
   };
 }

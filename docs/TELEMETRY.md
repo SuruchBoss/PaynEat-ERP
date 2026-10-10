@@ -170,6 +170,8 @@ Prometheus exposition at `GET /metrics` on each API, not exposed publicly.
 | `erp_master_data_last_pull_timestamp_seconds` | gauge | `pos_instance` | ERP |
 | `erp_negative_branch_balances` | gauge | `location_code` | ERP |
 | `erp_production_yield_percent` | gauge | `bom_code`, `measure` (`actual`, `expected`) | ERP |
+| `erp_transfers_in_transit` | gauge | `origin_code` | ERP |
+| `erp_transfers_oldest_in_transit_age_seconds` | gauge | `origin_code` | ERP |
 | `outbox_pending_events` | gauge | `app`, `destination` | POS, Cwork |
 | `outbox_oldest_pending_age_seconds` | gauge | `app`, `destination` | POS, Cwork |
 
@@ -178,7 +180,8 @@ Prometheus exposition at `GET /metrics` on each API, not exposed publicly.
 `erp_postings_total` label values:
 
 - `document_type`: the ERP's stock document type, as stored: `opening_balance`, `reversal`,
-  `stock_adjustment`, `goods_receipt` (#11) and `production_order` (#13) so far.
+  `stock_adjustment`, `goods_receipt` (#11), `production_order` (#13), `transfer` and
+  `transfer_receipt` (#14) so far.
   Each ticket that adds a document type adds its value here.
 - `outcome`: `succeeded` or `refused`.
 - `rule`: the rule that refused the posting (for example `negative_stock_plant`, `expired_lot`,
@@ -187,12 +190,22 @@ Prometheus exposition at `GET /metrics` on each API, not exposed publicly.
   `over_receipt` and `needs_approval`, counted when it is submitted or posted. A production order
   (#13) adds `not_released`, `nothing_picked`, `actuals_missing`, `weight_required`,
   `pieces_required` and `zero_output_quantity`; an input lot that expired or would take the plant
-  below zero is refused by `expired_lot` and `negative_stock_plant`, as for any document.
+  below zero is refused by `expired_lot` and `negative_stock_plant`, as for any document. A transfer
+  (#14) adds `cancelled` at dispatch; its receipt adds `transfer_not_dispatched`, `already_received`,
+  `business_date_before_dispatch` and `difference_unresolved`, and reuses `temperature_required`,
+  `reason_required`, `expired_on_arrival`, `needs_approval` and `self_approval`, counted when it is
+  submitted, approved or posted.
 
 `erp_production_yield_percent` is the yield of the most recent posted, unreversed production order
 of each BOM (#13, ADR-0027), `measure="actual"` as measured and `measure="expected"` as its BOM
 version expects; read from the database at scrape time. A gap between the two is poor yield, which
 also shows as higher output lot costs.
+
+`erp_transfers_in_transit` counts the transfers dispatched from each active plant and warehouse and
+not yet received (#14, ADR-0028), and `erp_transfers_oldest_in_transit_age_seconds` is how long the
+oldest of them has been on the road, counted from its dispatch; both are 0 for an origin with nothing
+in transit, and both are read from the database at scrape time. A growing age is a delivery nobody
+has received: stock that is neither at the plant nor at the branch.
 
 Values that describe the system rather than one process are **read from the database at scrape time**,
 never held in process memory. `erp_master_data_last_pull_timestamp_seconds` is the stored time of each

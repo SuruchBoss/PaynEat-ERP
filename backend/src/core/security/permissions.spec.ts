@@ -93,6 +93,18 @@ describe('roles and permissions (ADR-0008)', () => {
     }
   });
 
+  it('lets logistics dispatch, branch managers receive and the plant approve receipts (#14)', () => {
+    for (const role of ROLE_KEYS) {
+      const held = permissionsFor([role]);
+      expect(held.includes(Permission.TRANSFER_DISPATCH)).toBe(role === 'logistics');
+      expect(held.includes(Permission.TRANSFER_RECEIVE)).toBe(role === 'branch_manager');
+      expect(held.includes(Permission.TRANSFER_APPROVE_RECEIPT)).toBe(role === 'plant');
+      expect(held.includes(Permission.TRANSFER_READ)).toBe(
+        role === 'logistics' || role === 'branch_manager' || role === 'plant' || role === 'finance',
+      );
+    }
+  });
+
   it('merges several roles without duplicates', () => {
     expect(permissionsFor(['admin', 'finance', 'admin'])).toEqual([
       Permission.USER_READ,
@@ -111,6 +123,7 @@ describe('roles and permissions (ADR-0008)', () => {
       Permission.PRODUCTION_BOM_READ,
       Permission.PRODUCTION_BOM_MANAGE,
       Permission.PRODUCTION_ORDER_READ,
+      Permission.TRANSFER_READ,
     ]);
     expect(permissionsFor([])).toEqual([]);
   });

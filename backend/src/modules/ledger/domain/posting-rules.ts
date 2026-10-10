@@ -49,7 +49,13 @@ export type PostingRule =
   | 'actuals_missing'
   | 'weight_required'
   | 'pieces_required'
-  | 'zero_output_quantity';
+  | 'zero_output_quantity'
+  // Transfers (#14): checked by the transfer or its receipt inside the posting transaction.
+  | 'cancelled'
+  | 'transfer_not_dispatched'
+  | 'already_received'
+  | 'business_date_before_dispatch'
+  | 'difference_unresolved';
 
 /** Refusals that describe a race with another person rather than a wrong document: 409. */
 export const CONFLICT_RULES: ReadonlySet<PostingRule> = new Set([
@@ -62,6 +68,10 @@ export const CONFLICT_RULES: ReadonlySet<PostingRule> = new Set([
   'needs_approval',
   // A production order someone else cancelled, or posted, since it was opened (#13).
   'not_released',
+  // A transfer someone else cancelled before it was dispatched, or received by another receipt
+  // of it that posted first (#14).
+  'cancelled',
+  'already_received',
 ]);
 
 export type LocationType = 'plant' | 'warehouse' | 'branch' | 'in_transit' | 'subcontractor';
@@ -215,7 +225,14 @@ export function businessDateProblem(businessDate: string, today: string): Postin
 }
 
 export interface ReversibleDocument {
-  type: 'opening_balance' | 'reversal' | 'stock_adjustment' | 'goods_receipt' | 'production_order';
+  type:
+    | 'opening_balance'
+    | 'reversal'
+    | 'stock_adjustment'
+    | 'goods_receipt'
+    | 'production_order'
+    | 'transfer'
+    | 'transfer_receipt';
   status: 'draft' | 'submitted' | 'approved' | 'posted' | 'rejected' | 'released' | 'cancelled';
   businessDate: string;
   reversedBy: string | null;

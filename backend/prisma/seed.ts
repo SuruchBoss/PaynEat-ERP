@@ -53,6 +53,8 @@ import {
   DEMO_PURCHASE_ORDERS,
   DEMO_PRODUCTION_BOMS,
   DEMO_PRODUCTION_ORDER,
+  DEMO_ARRIVAL_TEMPERATURE,
+  DEMO_TRANSFERS,
   DEMO_RECEIVING_TOLERANCES,
   type DemoRecipeVersion,
 } from './demo-data';
@@ -355,7 +357,14 @@ async function seedSuppliers(prisma: PrismaClient): Promise<void> {
 /** A demo user as the services see the person acting. */
 async function demoActor(
   prisma: PrismaClient,
-  role: 'plant' | 'finance' | 'admin' | 'purchasing' | 'purchasing_approver',
+  role:
+    | 'plant'
+    | 'finance'
+    | 'admin'
+    | 'purchasing'
+    | 'purchasing_approver'
+    | 'logistics'
+    | 'branch_manager',
 ) {
   const user = await prisma.user.findUniqueOrThrow({
     where: { email: DEMO_USERS.find((u) => u.role === role)!.email },
@@ -1002,6 +1011,112 @@ async function seedProductionOrder(prisma: PrismaClient): Promise<string | null>
   return `${posted.number} posted: ${posted.inputs[0].quantity} kg in, yield ${posted.yield.actual} % against ${posted.yield.expected} %`;
 }
 
+/**
+ * Dispatches and receives the demo transfers (#14) through the same services the API uses:
+ * logistics confirms the lots FEFO suggests, the branch manager records what arrived, and the plant
+ * approves the receipts with a finding or a write-off. Once: an installation with any transfer
+ * is left as it is. Returns a line per transfer, or an empty list when there were some already.
+ */
+async function seedTransfers(prisma: PrismaClient): Promise<string[]> {
+  if (await prisma.transfer.findFirst()) return [];
+  const plant = await prisma.location.findUniqueOrThrow({
+    where: { code: DEMO_PRODUCTION_ORDER.locationCode },
+  });
+  const { transfers, transferReceipts } = ledgerServices(prisma, { quiet: true });
+  const [logistics, manager, plantUser] = await Promise.all([
+    demoActor(prisma, 'logistics'),
+    demoActor(prisma, 'branch_manager'),
+    demoActor(prisma, 'plant'),
+  ]);
+  const items = new Map(
+    (await prisma.item.findMany({ select: { id: true, code: true } })).map((i) => [i.code, i.id]),
+  );
+  const summaries: string[] = [];
+  for (const demo of DEMO_TRANSFERS) {
+    const destination = await prisma.location.findUniqueOrThrow({
+      where: { code: demo.destinationCode },
+    });
+    const draft = await transfers.create(
+      {
+        originId: plant.id,
+        destinationId: destination.id,
+        note: demo.note,
+        lines: demo.lines.map((l) => ({ itemId: items.get(l.itemCode)!, quantity: l.quantity })),
+      },
+      logistics,
+      {},
+    );
+    if (draft.blockers.length > 0 || draft.lines.some((l) => l.shortBy !== '0')) {
+      throw new Error(
+        `The demo transfer to ${demo.destinationCode} cannot be filled from ${plant.code}: ${JSON.stringify(draft.blockers)}`,
+      );
+    }
+    const dispatched = await transfers.dispatch(
+      draft.id,
+      {
+        revision: draft.revision,
+        picks: draft.lines.flatMap((l) =>
+          l.picks.map((p) => ({
+            lineNo: l.lineNo,
+            lotId: p.lotId,
+            quantity: p.quantity,
+            pieces: p.pieces,
+          })),
+        ),
+      },
+      logistics,
+      {},
+    );
+    const receipt = await transferReceipts.create(
+      dispatched.id,
+      {
+        lines: dispatched.lines.flatMap((line) =>
+          line.picks.map((pick) => {
+            const arrival = demo.arrivals[line.item.code];
+            const received = arrival?.received ?? pick.quantity;
+            return {
+              lineNo: pick.pickNo!,
+              received,
+              temperature: arrival?.temperature ?? DEMO_ARRIVAL_TEMPERATURE,
+              condition: 'good',
+              accepted: received,
+              returned: '0',
+              writtenOff: arrival?.writtenOff ?? '0',
+              reason: arrival?.reason ?? null,
+            };
+          }),
+        ),
+      },
+      manager,
+      {},
+    );
+    let posted = await transferReceipts.submit(
+      receipt.id,
+      { revision: receipt.revision },
+      manager,
+      {},
+    );
+    if (posted.status === 'submitted') {
+      posted = await transferReceipts.approve(
+        receipt.id,
+        { revision: posted.revision },
+        plantUser,
+        {},
+      );
+    }
+    if (posted.status !== 'posted') {
+      throw new Error(
+        `The demo receipt ${posted.number} did not post: ${JSON.stringify(posted.blockers)}`,
+      );
+    }
+    summaries.push(
+      `${dispatched.number} to ${demo.destinationCode} received by ${posted.number}` +
+        (posted.approved ? ', approved by the plant' : ''),
+    );
+  }
+  return summaries;
+}
+
 async function main(): Promise<void> {
   const refusal = seedRefusal({ erpDemo: process.env.ERP_DEMO, nodeEnv: process.env.NODE_ENV });
   if (refusal) throw new SeedRefused(`${refusal}\nNothing has been written.`);
@@ -1082,6 +1197,12 @@ async function main(): Promise<void> {
       productionOrder
         ? `Demo production order: ${productionOrder}`
         : 'Demo production order: already there, left as it is',
+    );
+    const transfers = await seedTransfers(prisma);
+    console.log(
+      transfers.length > 0
+        ? `Demo transfers: ${transfers.join('; ')}`
+        : 'Demo transfers: already there, left as they are',
     );
     console.log(`\nDemo accounts (password for all: ${DEMO_PASSWORD}):`);
     for (const demo of DEMO_USERS) {

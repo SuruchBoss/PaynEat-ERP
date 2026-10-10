@@ -759,3 +759,71 @@ export const DEMO_PRODUCTION_ORDER: DemoProductionOrder = {
     { quantity: '42.3', pieces: '111', weightKg: null },
   ],
 };
+
+export interface DemoTransfer {
+  destinationCode: string;
+  note: string;
+  /** What logistics asks for, per item, in its base unit. */
+  lines: ReadonlyArray<{ itemCode: string; quantity: string }>;
+  /**
+   * How lines arrived when they did not arrive as dispatched, by item. Everything else arrives
+   * whole, at the default temperature, in good condition.
+   */
+  arrivals: Readonly<
+    Record<string, { received?: string; temperature?: string; writtenOff?: string; reason: string }>
+  >;
+}
+
+/** The back-door probe reading for lines nothing else is said about: cold enough. */
+export const DEMO_ARRIVAL_TEMPERATURE = '3.2';
+
+/**
+ * Three transfers (#14), dispatched today by logistics from the plant to each branch with pieces
+ * from the morning cut (DEMO_PRODUCTION_ORDER), FEFO, and received by the branch manager. Silom
+ * receives everything as sent. Ari is two wings short: they are written off with a reason, which
+ * the plant approves. Bang Na's breasts arrive at 5.1 °C against a 4 °C limit: accepted with a
+ * reason, approved by the plant. Counts and temperatures are invented.
+ */
+export const DEMO_TRANSFERS: readonly DemoTransfer[] = [
+  {
+    destinationCode: 'BR-SILOM',
+    note: 'Demo seed: Silom morning delivery (fictional)',
+    lines: [
+      { itemCode: 'CHICKEN-BREAST', quantity: '40' },
+      { itemCode: 'CHICKEN-THIGH', quantity: '40' },
+      { itemCode: 'CHICKEN-DRUMSTICK', quantity: '40' },
+      { itemCode: 'CHICKEN-WING', quantity: '40' },
+    ],
+    arrivals: {},
+  },
+  {
+    destinationCode: 'BR-ARI',
+    note: 'Demo seed: Ari morning delivery (fictional)',
+    lines: [
+      { itemCode: 'CHICKEN-BREAST', quantity: '30' },
+      { itemCode: 'CHICKEN-THIGH', quantity: '30' },
+      { itemCode: 'CHICKEN-WING', quantity: '30' },
+    ],
+    arrivals: {
+      'CHICKEN-WING': {
+        received: '28',
+        writtenOff: '2',
+        reason: 'Two wings missing from the tray at the back door (fictional)',
+      },
+    },
+  },
+  {
+    destinationCode: 'BR-BANGNA',
+    note: 'Demo seed: Bang Na morning delivery (fictional)',
+    lines: [
+      { itemCode: 'CHICKEN-BREAST', quantity: '30' },
+      { itemCode: 'CHICKEN-DRUMSTICK', quantity: '30' },
+    ],
+    arrivals: {
+      'CHICKEN-BREAST': {
+        temperature: '5.1',
+        reason: 'Truck stuck in traffic; core temperature checked at 3.8 °C, accepted (fictional)',
+      },
+    },
+  },
+];

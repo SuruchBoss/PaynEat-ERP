@@ -42,19 +42,21 @@ model Item {
   createdAt                   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt                   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  purchaseUnits       ItemPurchaseUnit[]
-  lots                Lot[]
-  ledgerEntries       LedgerEntry[]
-  stockBalances       StockBalance[]
-  openingBalanceLines OpeningBalanceLine[]
-  adjustmentLines     StockAdjustmentLine[]
-  purchaseOrderLines  PurchaseOrderLine[]
-  recipeLines         RecipeLine[]
-  goodsReceiptLines   GoodsReceiptLine[]
-  supplierReturnLines SupplierReturnLine[]
-  productionBomLines  ProductionBomLine[]
-  productionInputs    ProductionOrderInput[]
-  productionOutputs   ProductionOrderOutput[]
+  purchaseUnits        ItemPurchaseUnit[]
+  lots                 Lot[]
+  ledgerEntries        LedgerEntry[]
+  stockBalances        StockBalance[]
+  openingBalanceLines  OpeningBalanceLine[]
+  adjustmentLines      StockAdjustmentLine[]
+  purchaseOrderLines   PurchaseOrderLine[]
+  recipeLines          RecipeLine[]
+  goodsReceiptLines    GoodsReceiptLine[]
+  supplierReturnLines  SupplierReturnLine[]
+  productionBomLines   ProductionBomLine[]
+  productionInputs     ProductionOrderInput[]
+  productionOutputs    ProductionOrderOutput[]
+  transferLines        TransferLine[]
+  transferReceiptLines TransferReceiptLine[]
 
   @@map("items")
 }

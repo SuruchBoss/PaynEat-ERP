@@ -64,6 +64,14 @@ export const Permission = {
   PRODUCTION_ORDER_READ: 'production_order:read',
   /** Plan, release, record, post, cancel and reverse production orders: the plant (#13). */
   PRODUCTION_ORDER_RUN: 'production_order:run',
+  /** Read transfers and their receipts: logistics, plant, branch managers, finance (#14). */
+  TRANSFER_READ: 'transfer:read',
+  /** Draft, edit, cancel and dispatch transfers: logistics (#14). */
+  TRANSFER_DISPATCH: 'transfer:dispatch',
+  /** Record what arrived: draft, edit and submit transfer receipts: branch managers (#14). */
+  TRANSFER_RECEIVE: 'transfer:receive',
+  /** Approve (which posts) or reject receipts with findings or write-offs: the plant, never its own (#14). */
+  TRANSFER_APPROVE_RECEIPT: 'transfer:approve_receipt',
 } as const;
 
 export type PermissionKey = (typeof Permission)[keyof typeof Permission];

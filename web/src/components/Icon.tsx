@@ -25,7 +25,8 @@ export type IconName =
   | 'inbox'
   | 'gear'
   | 'split'
-  | 'factory';
+  | 'factory'
+  | 'transfer';
 
 const PATHS: Record<IconName, string> = {
   // System status: a heartbeat line.
@@ -60,6 +61,8 @@ const PATHS: Record<IconName, string> = {
   split: 'M3 12h6M9 12l4-6h8M9 12l4 6h8M9 12h12',
   // Production orders (#13): a plant with its chimney.
   factory: 'M3 21V10l6 4V10l6 4V4h4v17H3zM7 17h2M11 17h2',
+  // Transfers (#14): stock going out and coming back.
+  transfer: 'M4 8h13M13 4l4 4-4 4M20 16H7M11 12l-4 4 4 4',
   // Company settings (#10): a cog.
   gear: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2Z',
 };

@@ -11,6 +11,7 @@ import { listLocations } from '@/features/locations/locations.api';
 import type { MessageKey } from '@/i18n/catalogue';
 import { useI18n } from '@/i18n/useI18n';
 import { formatBusinessDate, groupDigits } from '@/lib/format';
+import { inTransit } from '@/features/transfers/transfers.api';
 import { stockOnHand, type StockOnHandQuery } from './stock.api';
 
 const ERRORS: Record<string, MessageKey> = {
@@ -34,6 +35,13 @@ export function StockOnHandPage() {
   const locations = useQuery({ queryKey: qk.locations, queryFn: listLocations });
   const items = useQuery({ queryKey: qk.items, queryFn: listItems });
   const units = useQuery({ queryKey: qk.units, queryFn: listUnits });
+  // In-transit balances mix every transfer from one origin: the transfers say whose they are (#14).
+  const hasInTransit = (stock.data?.rows ?? []).some((r) => r.location.type === 'in_transit');
+  const transit = useQuery({
+    queryKey: qk.inTransit(stock.data?.asOf ?? ''),
+    queryFn: () => inTransit(stock.data?.asOf),
+    enabled: hasInTransit,
+  });
   const unitList = units.data ?? [];
   const nameOf = (x: { nameTh: string; nameEn: string }) =>
     language === 'th' ? x.nameTh : x.nameEn;
@@ -218,6 +226,40 @@ export function StockOnHandPage() {
               </table>
             </div>
           )}
+          {hasInTransit && transit.data && transit.data.transfers.length > 0 && (
+            <section aria-labelledby="stock-in-transit-title">
+              <h2 id="stock-in-transit-title">{t('stock.inTransit.title')}</h2>
+              <ul className="plain-list">
+                {transit.data.transfers.map((entry) => (
+                  <li key={entry.transfer.id}>
+                    <span className="cell-title">
+                      {t('stock.inTransit.transfer', {
+                        number: entry.transfer.number,
+                        origin: entry.origin.code,
+                        destination: entry.destination.code,
+                      })}
+                    </span>
+                    <ul className="plain-list">
+                      {entry.lots.map((lot) => (
+                        <li key={lot.lot.id}>
+                          {nameOf(lot.item)} <code>{lot.lot.number}</code>{' '}
+                          {groupDigits(lot.quantity)}{' '}
+                          {unitName(unitList, lot.item.baseUnitCode, language)}
+                          {lot.pieces !== null && (
+                            <span className="subtle">
+                              {' '}
+                              {t('stock.pieces', { count: groupDigits(lot.pieces) })}
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+          {hasInTransit && transit.isError && <ErrorCallout error={transit.error} />}
         </>
       )}
     </section>

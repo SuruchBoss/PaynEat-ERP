@@ -18,6 +18,7 @@ import { StatusPage } from '@/features/status/StatusPage';
 import { StockAdjustmentsPage } from '@/features/stock-adjustments/StockAdjustmentsPage';
 import { StockOnHandPage } from '@/features/stock/StockOnHandPage';
 import { SuppliersPage } from '@/features/suppliers/SuppliersPage';
+import { TransfersPage } from '@/features/transfers/TransfersPage';
 import { UsersPage } from '@/features/users/UsersPage';
 import { Permission } from '@/lib/access';
 import { AppLayout } from './AppLayout';
@@ -62,6 +63,10 @@ export const routes: RouteObject[] = [
           {
             element: <RequirePermission permission={Permission.PRODUCTION_ORDER_READ} />,
             children: [{ path: 'production-orders', element: <ProductionOrdersPage /> }],
+          },
+          {
+            element: <RequirePermission permission={Permission.TRANSFER_READ} />,
+            children: [{ path: 'transfers', element: <TransfersPage /> }],
           },
           {
             element: <RequirePermission permission={Permission.USER_READ} />,

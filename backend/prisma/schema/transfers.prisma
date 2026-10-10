@@ -1,0 +1,138 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
+// Transfers and transfer receipts — owned by the transfers module (#14; docs/GLOSSARY.md
+// "Transfer", "Dispatch", "Transfer receipt", "Write-off"; ADR-0007, ADR-0028). A transfer moves
+// stock from a plant or warehouse to a branch or warehouse through the origin's in-transit
+// location. Its dispatch is the posting of its own stock document (TR-2026-00001). The receipt at
+// the destination is a stock document of its own (RT-2026-00001), inspected like a goods
+// receipt; exactly one receipt of a transfer ever posts, and it accounts for every dispatched lot
+// line as accepted, returned to the origin or written off, so nothing stays in transit.
+
+/// The transfer part of a stock document: from where, to where, and how it ended. The document's
+/// status (draft, posted = dispatched, cancelled) and number live on `stock_documents`.
+model Transfer {
+  documentId         String         @id @map("document_id") @db.Uuid
+  document           StockDocument  @relation("TransferDocument", fields: [documentId], references: [id], onDelete: Restrict)
+  /// A plant or warehouse: stock leaves it for its own in-transit location.
+  originId           String         @map("origin_id") @db.Uuid
+  origin             Location       @relation("TransferOrigin", fields: [originId], references: [id], onDelete: Restrict)
+  /// A branch or warehouse.
+  destinationId      String         @map("destination_id") @db.Uuid
+  destination        Location       @relation("TransferDestination", fields: [destinationId], references: [id], onDelete: Restrict)
+  cancelledById      String?        @map("cancelled_by_id") @db.Uuid
+  cancelledBy        User?          @relation("TransferCancelledBy", fields: [cancelledById], references: [id], onDelete: Restrict)
+  cancelledAt        DateTime?      @map("cancelled_at") @db.Timestamptz(3)
+  cancellationReason String?        @map("cancellation_reason")
+  /// The one receipt that took this transfer out of transit, set when it posts and never again:
+  /// unique, so a second receipt of the same transfer can never post, whatever runs at once.
+  receiptDocumentId  String?        @unique @map("receipt_document_id") @db.Uuid
+  receiptDocument    StockDocument? @relation("TransferReceivedBy", fields: [receiptDocumentId], references: [id], onDelete: Restrict)
+
+  lines    TransferLine[]
+  picks    TransferPick[]
+  receipts TransferReceipt[]
+
+  @@index([originId])
+  @@index([destinationId])
+  @@map("transfers")
+}
+
+/// What the transfer asks for: one item per line, in its base unit. Changes only while the
+/// transfer is a draft.
+model TransferLine {
+  documentId String   @map("document_id") @db.Uuid
+  transfer   Transfer @relation(fields: [documentId], references: [documentId], onDelete: Cascade)
+  lineNo     Int      @map("line_no")
+  itemId     String   @map("item_id") @db.Uuid
+  item       Item     @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  quantity   Decimal  @db.Decimal(18, 3)
+
+  picks TransferPick[]
+
+  @@id([documentId, lineNo])
+  @@unique([documentId, itemId])
+  @@map("transfer_lines")
+}
+
+/// A lot that left, as dispatch confirmed it: the transfer's lot lines, numbered across the
+/// transfer, which its receipt inspects one by one. Written when the transfer is dispatched,
+/// never changed afterwards.
+model TransferPick {
+  documentId        String       @map("document_id") @db.Uuid
+  transfer          Transfer     @relation(fields: [documentId], references: [documentId], onDelete: Cascade)
+  pickNo            Int          @map("pick_no")
+  lineNo            Int          @map("line_no")
+  line              TransferLine @relation(fields: [documentId, lineNo], references: [documentId, lineNo], onDelete: Cascade)
+  lotId             String       @map("lot_id") @db.Uuid
+  lot               Lot          @relation(fields: [lotId], references: [id], onDelete: Restrict)
+  quantity          Decimal      @db.Decimal(18, 3)
+  /// Variable-weight items: the pieces that left with it (ADR-0005).
+  secondaryQuantity Decimal?     @map("secondary_quantity") @db.Decimal(18, 0)
+
+  @@id([documentId, pickNo])
+  @@unique([documentId, lotId])
+  @@map("transfer_picks")
+}
+
+/// The receipt part of a stock document: which transfer it receives, at its destination, and who
+/// moved it through its steps.
+model TransferReceipt {
+  documentId      String        @id @map("document_id") @db.Uuid
+  document        StockDocument @relation("TransferReceiptDocument", fields: [documentId], references: [id], onDelete: Restrict)
+  transferId      String        @map("transfer_id") @db.Uuid
+  transfer        Transfer      @relation(fields: [transferId], references: [documentId], onDelete: Restrict)
+  /// The transfer's destination, copied when the receipt is raised.
+  locationId      String        @map("location_id") @db.Uuid
+  location        Location      @relation("TransferReceiptLocation", fields: [locationId], references: [id], onDelete: Restrict)
+  submittedById   String?       @map("submitted_by_id") @db.Uuid
+  submittedBy     User?         @relation("TransferReceiptSubmittedBy", fields: [submittedById], references: [id], onDelete: Restrict)
+  submittedAt     DateTime?     @map("submitted_at") @db.Timestamptz(3)
+  /// Who approved the findings or write-offs. Never the receipt's creator (ADR-0008).
+  approvedById    String?       @map("approved_by_id") @db.Uuid
+  approvedBy      User?         @relation("TransferReceiptApprovedBy", fields: [approvedById], references: [id], onDelete: Restrict)
+  approvedAt      DateTime?     @map("approved_at") @db.Timestamptz(3)
+  rejectedById    String?       @map("rejected_by_id") @db.Uuid
+  rejectedBy      User?         @relation("TransferReceiptRejectedBy", fields: [rejectedById], references: [id], onDelete: Restrict)
+  rejectedAt      DateTime?     @map("rejected_at") @db.Timestamptz(3)
+  rejectionReason String?       @map("rejection_reason")
+
+  lines TransferReceiptLine[]
+
+  @@index([transferId])
+  @@index([locationId])
+  @@map("transfer_receipts")
+}
+
+/// One dispatched lot line as it arrived, in the item's base unit. Accepted goes into the
+/// destination, returned goes back to the origin, written off leaves stock: together exactly
+/// what was dispatched.
+model TransferReceiptLine {
+  documentId       String             @map("document_id") @db.Uuid
+  receipt          TransferReceipt    @relation(fields: [documentId], references: [documentId], onDelete: Cascade)
+  /// The transfer's pick number: one receipt line per dispatched lot line.
+  lineNo           Int                @map("line_no")
+  lotId            String             @map("lot_id") @db.Uuid
+  lot              Lot                @relation(fields: [lotId], references: [id], onDelete: Restrict)
+  itemId           String             @map("item_id") @db.Uuid
+  item             Item               @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  received         Decimal            @db.Decimal(18, 3)
+  receivedPieces   Decimal?           @map("received_pieces") @db.Decimal(18, 0)
+  /// °C at the back door, when measured.
+  temperature      Decimal?           @db.Decimal(3, 1)
+  condition        ReceivingCondition
+  accepted         Decimal            @db.Decimal(18, 3)
+  acceptedPieces   Decimal?           @map("accepted_pieces") @db.Decimal(18, 0)
+  returned         Decimal            @db.Decimal(18, 3)
+  returnedPieces   Decimal?           @map("returned_pieces") @db.Decimal(18, 0)
+  writtenOff       Decimal            @map("written_off") @db.Decimal(18, 3)
+  writtenOffPieces Decimal?           @map("written_off_pieces") @db.Decimal(18, 0)
+  reason           String?
+  /// The inspection's findings, fixed when the receipt is submitted for approval, so the approver
+  /// decides on exactly what was found.
+  findings         Json?
+
+  @@id([documentId, lineNo])
+  @@unique([documentId, lotId])
+  @@map("transfer_receipt_lines")
+}
