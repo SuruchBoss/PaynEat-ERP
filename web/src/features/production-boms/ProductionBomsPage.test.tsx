@@ -110,6 +110,7 @@ const SUMMARY: ProductionBomSummary = {
 const PREVIEW: BomPreview = {
   issues: [],
   problems: [],
+  zeroRatioOutputs: [],
   figures: {
     inputWeightKg: '20.000',
     outputWeightKg: '9.400',
@@ -267,6 +268,30 @@ describe('production BOMs (#12)', () => {
       };
       expect(last.outputs.map((o) => o.allocationRatio)).toEqual(['52.19', '46.81']);
     });
+  });
+
+  it('names the output whose share by weight rounds to 0.00 (#69)', async () => {
+    mockApi(
+      api({
+        'POST /production-boms/preview': () =>
+          jsonResponse(200, {
+            ...PREVIEW,
+            problems: ['default_ratio_zero'],
+            zeroRatioOutputs: [2],
+          }),
+      }),
+    );
+    renderApp('/production-boms', { as: ADMIN });
+    const u = userEvent.setup();
+
+    await u.click(await screen.findByRole('button', { name: 'สร้างสูตรการผลิต' }));
+    await fillLines(u);
+    expect(
+      await screen.findByText(
+        'สัดส่วนตามน้ำหนักของ โครงไก่ ปัดแล้วเหลือ 0.00 จึงจะไม่ได้รับต้นทุนเลย ให้กำหนดสัดส่วนเอง หรือแก้น้ำหนักที่คาดไว้',
+      ),
+    ).toBeVisible();
+    expect(await axeViolations()).toEqual([]);
   });
 
   it('marks the line the API refuses when saving', async () => {

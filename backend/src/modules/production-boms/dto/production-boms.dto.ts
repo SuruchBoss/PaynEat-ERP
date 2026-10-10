@@ -220,6 +220,8 @@ export interface ProductionBomView extends Omit<ProductionBomSummaryView, 'curre
 export interface BomPreviewView {
   issues: BomLineIssue[];
   problems: BomProblem[];
+  /** The 1-based output lines whose default ratio is 0.00 (problem `default_ratio_zero`). */
+  zeroRatioOutputs: number[];
   /** Null until every line is valid. */
   figures: {
     inputWeightKg: string;

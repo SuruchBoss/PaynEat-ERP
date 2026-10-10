@@ -101,6 +101,8 @@ export interface BomLineIssue {
 export interface BomPreview {
   issues: BomLineIssue[];
   problems: string[];
+  /** The 1-based output lines whose default ratio is 0.00 (problem `default_ratio_zero`). */
+  zeroRatioOutputs: number[];
   figures: {
     inputWeightKg: string;
     outputWeightKg: string;

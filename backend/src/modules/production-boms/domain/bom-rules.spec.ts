@@ -54,7 +54,11 @@ const d = (text: string): ExactDecimal => {
 
 describe('production BOM rules', () => {
   it('works through the whole-chicken cutting example', () => {
-    expect(bomIssues(cutting.inputs, cutting.outputs, items)).toEqual({ lines: [], problems: [] });
+    expect(bomIssues(cutting.inputs, cutting.outputs, items)).toEqual({
+      lines: [],
+      problems: [],
+      zeroRatioOutputs: [],
+    });
     const figures = bomFigures(cutting.inputs, cutting.outputs, items);
     expect(formatKg(figures.inputWeight)).toBe('20.000');
     expect(formatKg(figures.outputWeight)).toBe('18.000');
@@ -69,7 +73,11 @@ describe('production BOM rules', () => {
   it('keeps an overriding set of ratios that adds up to 100', () => {
     const ratios = ['35', '22', '18', '17', '8'];
     const outputs = cutting.outputs.map((line, i) => ({ ...line, allocationRatio: ratios[i] }));
-    expect(bomIssues(cutting.inputs, outputs, items)).toEqual({ lines: [], problems: [] });
+    expect(bomIssues(cutting.inputs, outputs, items)).toEqual({
+      lines: [],
+      problems: [],
+      zeroRatioOutputs: [],
+    });
     const figures = bomFigures(cutting.inputs, outputs, items);
     expect(allocationRatios(outputs, figures.outputWeights)).toEqual({
       ratios: ['35.00', '22.00', '18.00', '17.00', '8.00'],
@@ -120,13 +128,53 @@ describe('production BOM rules', () => {
     }
   });
 
+  it('refuses default ratios that cut a very light output down to 0.00, naming it', () => {
+    // 50 kg of frames and 1 g of trimmings from 50.001 kg: the trimmings are 0.0019999 % of the
+    // output weight. Cut to 0.01 %: 99.99 and 0.00; the missing hundredth goes to the frames,
+    // whose remainder (0.008) beats the trimmings' (0.0019999), so the trimmings stay at 0.00.
+    const inputs = [{ itemId: 'WHOLE-CHICKEN', quantity: '50.001' }];
+    const outputs = [
+      { itemId: 'CHICKEN-FRAME', quantity: '50' },
+      { itemId: 'SALT', quantity: '1' },
+    ];
+    const figures = bomFigures(inputs, outputs, items);
+    expect(defaultRatios(figures.outputWeights)).toEqual(['100.00', '0.00']);
+    expect(bomIssues(inputs, outputs, items)).toEqual({
+      lines: [],
+      problems: ['default_ratio_zero'],
+      zeroRatioOutputs: [2],
+    });
+
+    // 3 g is 0.006 %: cut to 0.00, but its remainder (0.006) beats the frames' (0.004), so the
+    // largest remainder hands it the missing hundredth and nothing is refused.
+    const three = [outputs[0], { itemId: 'SALT', quantity: '3' }];
+    const heavier = [{ itemId: 'WHOLE-CHICKEN', quantity: '50.003' }];
+    expect(defaultRatios(bomFigures(heavier, three, items).outputWeights)).toEqual([
+      '99.99',
+      '0.01',
+    ]);
+    expect(bomIssues(heavier, three, items).problems).toEqual([]);
+
+    // Overriding the ratios is the way out, and they already refuse zero themselves.
+    const stated = outputs.map((line, i) => ({ ...line, allocationRatio: ['99.5', '0.5'][i] }));
+    expect(bomIssues(inputs, stated, items)).toEqual({
+      lines: [],
+      problems: [],
+      zeroRatioOutputs: [],
+    });
+  });
+
   it('weighs g items as a thousandth of their quantity', () => {
     const inputs = [
       { itemId: 'WHOLE-CHICKEN', quantity: '1' },
       { itemId: 'SALT', quantity: '250' },
     ];
     const outputs = [{ itemId: 'CHICKEN-FRAME', quantity: '1.25' }];
-    expect(bomIssues(inputs, outputs, items)).toEqual({ lines: [], problems: [] });
+    expect(bomIssues(inputs, outputs, items)).toEqual({
+      lines: [],
+      problems: [],
+      zeroRatioOutputs: [],
+    });
     const figures = bomFigures(inputs, outputs, items);
     expect(formatKg(figures.inputWeight)).toBe('1.250');
     expect(formatKg(figures.waste)).toBe('0.000');

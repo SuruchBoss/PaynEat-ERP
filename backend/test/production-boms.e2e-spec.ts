@@ -247,6 +247,51 @@ describe('production BOMs (#12)', () => {
     ]);
   });
 
+  it('refuses default ratios that would give a very light output 0.00, and says which (#69)', async () => {
+    // 1 g of wing trim against 50 kg of frames is 0.0019999 % of the output weight: cut to
+    // 0.01 % it is 0.00, and the largest remainder hands the missing hundredth to the frames.
+    const light = {
+      inputs: [{ itemId: itemId('WHOLE-CHICKEN'), quantity: '50.001' }],
+      outputs: [
+        { itemId: itemId('CHICKEN-FRAME'), quantity: '50' },
+        { itemId: itemId('CHICKEN-WING'), quantity: '1', expectedWeightKg: '0.001' },
+      ],
+    };
+    const before = await prisma.productionBomVersion.count();
+
+    const preview = await as(admin).post('/production-boms/preview', light);
+    expect(preview.status).toBe(200);
+    expect(preview.body).toMatchObject({
+      issues: [],
+      problems: ['default_ratio_zero'],
+      zeroRatioOutputs: [2],
+      figures: { outputs: [{ defaultRatio: '100.00' }, { defaultRatio: '0.00' }] },
+    });
+
+    const res = await create(admin, light);
+    expect(res.status).toBe(422);
+    expect(res.body.code).toBe('INVALID_PRODUCTION_BOM');
+    expect(res.body.message).toContain('output line 2');
+    expect(res.body.details).toEqual({
+      issues: [],
+      problems: ['default_ratio_zero'],
+      zeroRatioOutputs: [2],
+    });
+    expect(await prisma.productionBomVersion.count()).toBe(before);
+
+    // Stating the ratios is the way out; a stated ratio of zero was already refused.
+    const stated = {
+      ...light,
+      outputs: light.outputs.map((line, i) => ({ ...line, allocationRatio: ['99', '1'][i] })),
+    };
+    const ok = await create(admin, stated);
+    expect(ok.status).toBe(201);
+    expect(ok.body.versions[0].outputs.map((o: Body) => o.allocationRatio)).toEqual([
+      '99.00',
+      '1.00',
+    ]);
+  });
+
   it('adds versions that never overlap or start before tomorrow once one is in force', async () => {
     const bom = (await create(admin)).body;
     const tooEarly = await as(admin).post(`/production-boms/${bom.id}/versions`, {
