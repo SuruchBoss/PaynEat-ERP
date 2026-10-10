@@ -28,6 +28,10 @@ model Transfer {
   /// unique, so a second receipt of the same transfer can never post, whatever runs at once.
   receiptDocumentId  String?        @unique @map("receipt_document_id") @db.Uuid
   receiptDocument    StockDocument? @relation("TransferReceivedBy", fields: [receiptDocumentId], references: [id], onDelete: Restrict)
+  /// The branch requisition this transfer fulfils (#15), when logistics created it from one. Set
+  /// when the transfer is created and never changed.
+  requisitionId      String?        @map("requisition_id") @db.Uuid
+  requisition        Requisition?   @relation(fields: [requisitionId], references: [id], onDelete: Restrict)
 
   lines    TransferLine[]
   picks    TransferPick[]
@@ -35,6 +39,7 @@ model Transfer {
 
   @@index([originId])
   @@index([destinationId])
+  @@index([requisitionId])
   @@map("transfers")
 }
 

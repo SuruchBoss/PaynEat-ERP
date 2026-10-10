@@ -36,6 +36,10 @@ model Item {
   /// not take a master data version.
   receivingMaxVariancePercent Decimal? @map("receiving_max_variance_percent") @db.Decimal(5, 2)
   receivingMaxTemperature     Decimal? @map("receiving_max_temperature") @db.Decimal(3, 1)
+  /// Requisition unit (#15, ADR-0029): base units the plant packs and sends the item in (a tray of
+  /// 12 pieces is 12). Suggestions round up to it, requests are whole numbers of it. Null means
+  /// none. Configuration, like the tolerances: no master data version.
+  requisitionUnit             Decimal? @map("requisition_unit") @db.Decimal(18, 3)
   active                      Boolean  @default(true)
   /// The master data version of this item's latest change.
   version                     BigInt
@@ -57,6 +61,8 @@ model Item {
   productionOutputs    ProductionOrderOutput[]
   transferLines        TransferLine[]
   transferReceiptLines TransferReceiptLine[]
+  parLevels            ParLevel[]
+  requisitionLines     RequisitionLine[]
 
   @@map("items")
 }
