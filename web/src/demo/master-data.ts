@@ -10,8 +10,10 @@
 import {
   normalisePurchaseUnits,
   purchaseUnitIssues,
+  requisitionUnitProblem,
   type PurchaseUnitInput,
 } from '@backend/src/modules/items/domain/item-rules';
+import { normaliseFactor } from '@backend/src/modules/items/domain/unit-conversion';
 import {
   createProblem,
   editProblem,
@@ -167,6 +169,7 @@ export function createItem(state: DemoState, ctx: Context) {
     active: true,
     purchaseUnits: units,
     receivingTolerances: { maxVariancePercent: null, maxTemperature: null },
+    requisitionUnit: null,
     version: ++state.masterDataVersion,
     createdAt: at,
     updatedAt: at,
@@ -248,6 +251,37 @@ export function setReceivingTolerances(state: DemoState, ctx: Context) {
   }
   const item = findItem(state, ctx.params[0]);
   item.receivingTolerances = normaliseTolerances(wanted);
+  return itemView(item);
+}
+
+const REQUISITION_UNIT_ERRORS = {
+  NOT_A_NUMBER: 'must be a number',
+  NOT_POSITIVE: 'must be more than zero',
+  TOO_PRECISE: 'has more decimals than the base unit allows',
+  TOO_LARGE: 'is too large',
+} as const;
+
+/**
+ * Sets or clears an item's requisition unit (#15): configuration, so it takes no master data
+ * version (backend `ItemsService.setRequisitionUnit`).
+ */
+export function setRequisitionUnit(state: DemoState, ctx: Context) {
+  const input = new Input(ctx.body, ['requisitionUnit']);
+  const wanted = input.optionalText('requisitionUnit', { trim: true }) || null;
+  input.done();
+  const item = findItem(state, ctx.params[0]);
+  if (wanted !== null) {
+    const decimals = unitDecimals(item.baseUnitCode);
+    const problem = requisitionUnitProblem(wanted, decimals);
+    if (problem) {
+      throw refused(
+        'INVALID_REQUISITION_UNIT',
+        `The requisition unit ${REQUISITION_UNIT_ERRORS[problem]} (${item.baseUnitCode}, ${decimals} decimals)`,
+        { problem },
+      );
+    }
+  }
+  item.requisitionUnit = wanted === null ? null : normaliseFactor(wanted);
   return itemView(item);
 }
 

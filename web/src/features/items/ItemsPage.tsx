@@ -15,6 +15,7 @@ import {
   listItems,
   listUnits,
   setReceivingTolerances,
+  setRequisitionUnit,
   unitName,
   updateItem,
   type ItemView,
@@ -49,6 +50,11 @@ const PROBLEMS: Record<string, MessageKey> = {
   UNKNOWN_UNIT: 'items.problem.UNKNOWN_UNIT',
   SAME_AS_BASE_UNIT: 'items.problem.SAME_AS_BASE_UNIT',
   DUPLICATE: 'items.problem.DUPLICATE',
+};
+
+const REQUISITION_UNIT_ERRORS: Record<string, MessageKey> = {
+  INVALID_REQUISITION_UNIT: 'items.requisitionUnit.error',
+  VALIDATION_FAILED: 'items.requisitionUnit.error',
 };
 
 const TOLERANCE_ERRORS: Record<string, MessageKey> = {
@@ -187,6 +193,14 @@ export function ItemsPage() {
               setNotice({ key: 'items.tolerances.done', params: { code: item.code } })
             }
           />
+          <RequisitionUnitForm
+            key={`requisition-unit-${editing.id}`}
+            item={editing}
+            unitLabel={unitName(units.data ?? [], editing.baseUnitCode, language)}
+            onSaved={(item) =>
+              setNotice({ key: 'items.requisitionUnit.done', params: { code: item.code } })
+            }
+          />
         </>
       )}
 
@@ -285,6 +299,14 @@ export function ItemsPage() {
                                 </li>
                               ))}
                             </ul>
+                          )}
+                          {item.requisitionUnit && (
+                            <p className="subtle">
+                              {t('items.requisitionUnit.shown', {
+                                factor: item.requisitionUnit,
+                                base: unitName(unitList, item.baseUnitCode, language),
+                              })}
+                            </p>
                           )}
                         </td>
                         <td data-label={t('items.column.shelfLife')}>
@@ -705,6 +727,61 @@ function ToleranceForm({ item, onSaved }: { item: ItemView; onSaved: (item: Item
       <div className="actions">
         <button type="submit" className="button" disabled={save.isPending}>
           {save.isPending ? t('items.tolerances.saving') : t('items.tolerances.save')}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+/**
+ * An item's requisition unit (#15): how many base units the plant packs and sends together, so
+ * branches are suggested and ask for whole ones. Configuration, like the tolerances: no version.
+ */
+function RequisitionUnitForm({
+  item,
+  unitLabel,
+  onSaved,
+}: {
+  item: ItemView;
+  unitLabel: string;
+  onSaved: (item: ItemView) => void;
+}) {
+  const { t } = useI18n();
+  const queryClient = useQueryClient();
+  const [value, setValue] = useState(item.requisitionUnit ?? '');
+  const save = useMutation({
+    mutationFn: () => setRequisitionUnit(item.id, value.trim() || null),
+    onSuccess: async (saved) => {
+      await queryClient.invalidateQueries({ queryKey: qk.items });
+      onSaved(saved);
+    },
+  });
+  const onSubmit = (event: FormEvent) => {
+    event.preventDefault();
+    save.mutate();
+  };
+  return (
+    <form className="panel" onSubmit={onSubmit} aria-labelledby={`requisition-unit-${item.id}`}>
+      <h2 id={`requisition-unit-${item.id}`}>
+        {t('items.requisitionUnit.title', { code: item.code })}
+      </h2>
+      <p className="subtle">{t('items.requisitionUnit.hint')}</p>
+      <div className="field">
+        <label htmlFor={`requisition-unit-value-${item.id}`}>
+          {t('items.requisitionUnit.label', { base: unitLabel })}
+        </label>
+        <input
+          id={`requisition-unit-value-${item.id}`}
+          inputMode="decimal"
+          autoComplete="off"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+        />
+      </div>
+      {save.isError && <ErrorCallout error={save.error} messages={REQUISITION_UNIT_ERRORS} />}
+      <div className="actions">
+        <button type="submit" className="button" disabled={save.isPending}>
+          {save.isPending ? t('items.tolerances.saving') : t('items.requisitionUnit.save')}
         </button>
       </div>
     </form>

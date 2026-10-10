@@ -31,6 +31,7 @@ const item = (overrides: Partial<ItemView>): ItemView => ({
   variableWeight: false,
   shelfLifeDays: 5,
   receivingTolerances: { maxVariancePercent: null, maxTemperature: null },
+  requisitionUnit: null,
   active: true,
   purchaseUnits: [],
   version: 1,
@@ -56,6 +57,7 @@ const WING = item({
   baseUnitCode: 'piece',
   shelfLifeDays: 1,
   receivingTolerances: { maxVariancePercent: null, maxTemperature: null },
+  requisitionUnit: null,
   version: 4,
 });
 const OLD = item({

@@ -71,4 +71,10 @@ export const qk = {
   transfer: (id: string) => ['transfers', id] as const,
   transferReceipt: (id: string) => ['transfers', 'receipt', id] as const,
   inTransit: (asOf: string) => ['transfers', 'in-transit', asOf] as const,
+  requisitions: ['requisitions'] as const,
+  requisitionList: (status: string) => ['requisitions', 'list', status] as const,
+  requisition: (id: string) => ['requisitions', id] as const,
+  suggestions: (branchId: string) => ['requisitions', 'suggestions', branchId] as const,
+  parLevels: ['par-levels'] as const,
+  parMisses: (query: string) => ['requisitions', 'par-misses', query] as const,
 };

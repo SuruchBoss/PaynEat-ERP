@@ -31,6 +31,8 @@ export interface ItemView {
   purchaseUnits: PurchaseUnit[];
   /** What the receiving dock checks (#11): configuration, not master data. Null = no check. */
   receivingTolerances: ReceivingTolerances;
+  /** Base units the plant packs and sends together (#15): requisitions are asked for in whole ones. */
+  requisitionUnit: string | null;
   /** The master data version of the item's latest change; sent back with an edit. */
   version: number;
   createdAt: string;
@@ -87,3 +89,7 @@ export const updateItem = (id: string, change: ItemChange) =>
 /** Replaces the item's receiving tolerances (#11): the admin's configuration of the dock. */
 export const setReceivingTolerances = (id: string, tolerances: ReceivingTolerances) =>
   api.put<ItemView>(`/items/${encodeURIComponent(id)}/receiving-tolerances`, tolerances);
+
+/** Sets or clears the item's requisition unit (#15); null clears it. */
+export const setRequisitionUnit = (id: string, requisitionUnit: string | null) =>
+  api.put<ItemView>(`/items/${encodeURIComponent(id)}/requisition-unit`, { requisitionUnit });

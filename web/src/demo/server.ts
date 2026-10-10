@@ -85,6 +85,9 @@ const ROUTES: readonly Route[] = [
   route('PUT', `${V1}/items/:id/receiving-tolerances`, masterData.setReceivingTolerances, {
     permission: Permission.ITEM_MANAGE,
   }),
+  route('PUT', `${V1}/items/:id/requisition-unit`, masterData.setRequisitionUnit, {
+    permission: Permission.ITEM_MANAGE,
+  }),
 
   route('GET', `${V1}/locations`, masterData.listLocations),
   route('GET', `${V1}/locations/:id`, masterData.getLocation),

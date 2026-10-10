@@ -13,6 +13,7 @@ import { lotNumber } from '@backend/src/modules/ledger/domain/posting-rules';
 import {
   DEMO_ITEMS,
   DEMO_RECEIVING_TOLERANCES,
+  DEMO_REQUISITION_UNITS,
   DEMO_LOCATIONS,
   DEMO_MFA_SECRET,
   DEMO_OPENING_BALANCE,
@@ -61,6 +62,8 @@ export interface ItemRecord {
   purchaseUnits: Array<{ unitCode: string; factor: string }>;
   /** What the receiving dock checks (#11): configuration, not master data. */
   receivingTolerances: { maxVariancePercent: string | null; maxTemperature: string | null };
+  /** Base units the plant sends together (#15): configuration, not master data. */
+  requisitionUnit: string | null;
   version: number;
   createdAt: string;
   updatedAt: string;
@@ -298,6 +301,7 @@ export function seedState(now: Date): DemoState {
         maxTemperature: null,
       }),
     },
+    requisitionUnit: DEMO_REQUISITION_UNITS[demo.code] ?? null,
     active: true,
     version: ++state.masterDataVersion,
     createdAt: at,

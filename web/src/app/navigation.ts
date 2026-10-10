@@ -98,6 +98,19 @@ export const NAV: readonly NavSection[] = [
         icon: 'transfer',
         permission: Permission.TRANSFER_READ,
       },
+      // What branches ask the plant for, and how their par levels hold up (#15).
+      {
+        to: '/requisitions',
+        labelKey: 'nav.requisitions',
+        icon: 'inbox',
+        permission: Permission.REQUISITION_READ,
+      },
+      {
+        to: '/par-levels',
+        labelKey: 'nav.parLevels',
+        icon: 'sliders',
+        permission: Permission.REQUISITION_READ,
+      },
     ],
   },
   {

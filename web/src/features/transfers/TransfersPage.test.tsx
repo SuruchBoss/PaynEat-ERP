@@ -73,6 +73,7 @@ const DRAFT: TransferView = {
   createdAt: '2026-10-10T02:00:00.000Z',
   origin: PLANT_01,
   destination: SILOM,
+  requisitionId: null,
   inTransit: IN_TRANSIT,
   dispatched: null,
   cancelled: null,
