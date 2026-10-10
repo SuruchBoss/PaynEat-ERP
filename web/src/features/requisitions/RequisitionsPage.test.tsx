@@ -191,7 +191,7 @@ describe('requisitions (#15)', () => {
   });
 });
 
-describe('par levels and par misses (#15)', () => {
+describe('ระดับสต๊อกมาตรฐานs and par misses (#15)', () => {
   const LEVEL: ParLevelView = {
     location: SILOM,
     item: BREAST,
@@ -239,7 +239,7 @@ describe('par levels and par misses (#15)', () => {
     await u.selectOptions(screen.getByLabelText('สาขา', { selector: '#par-set-branch' }), SILOM.id);
     await u.selectOptions(screen.getByLabelText('สินค้า'), BREAST.id);
     await u.type(screen.getByLabelText('จำนวน (หน่วยนับของสินค้า)'), '50');
-    await u.click(screen.getByRole('button', { name: 'บันทึก par level' }));
+    await u.click(screen.getByRole('button', { name: 'บันทึกระดับสต๊อกมาตรฐาน' }));
     const put = () => fetchMock.mock.calls.findIndex(([, init]) => init?.method === 'PUT');
     await vi.waitFor(() => expect(put()).toBeGreaterThanOrEqual(0));
     expect(sentBody(fetchMock, put())).toEqual({ quantity: '50' });
@@ -256,7 +256,7 @@ describe('par levels and par misses (#15)', () => {
     });
     renderApp('/par-levels', { as: LOGISTICS });
     expect(await screen.findByRole('cell', { name: '40 ชิ้น' })).toBeVisible();
-    expect(screen.queryByRole('button', { name: 'บันทึก par level' })).toBeNull();
-    expect(screen.queryByRole('button', { name: /ลบ par level/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'บันทึกระดับสต๊อกมาตรฐาน' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /ลบระดับสต๊อกมาตรฐาน/ })).toBeNull();
   });
 });
