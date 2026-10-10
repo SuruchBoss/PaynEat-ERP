@@ -86,6 +86,16 @@ export const Permission = {
    * production order follows, so only the admin changes it (ADR-0008).
    */
   PRODUCTION_BOM_MANAGE: 'production_bom:manage',
+  /**
+   * Read production orders, their yields, costs and lot genealogy (#13): they carry what each
+   * output lot cost, so reading needs a permission, like the BOMs they follow.
+   */
+  PRODUCTION_ORDER_READ: 'production_order:read',
+  /**
+   * Run production at the plant (#13): plan, release, pick lots, record actuals, post, cancel and
+   * reverse production orders (ADR-0008, the plant role).
+   */
+  PRODUCTION_ORDER_RUN: 'production_order:run',
 } as const;
 
 export type PermissionKey = (typeof Permission)[keyof typeof Permission];
@@ -146,7 +156,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly PermissionKey[]> = {
   // ADR-0008: receive goods, run production orders, manage plant stock. Bringing existing
   // stock in with an opening balance is managing it (#7), and so is adjusting it (#8). Receiving
   // means reading the order being received against (#11). Running production means reading the
-  // BOM it follows (#12).
+  // BOM it follows (#12), and running it is the production order itself (#13).
   plant: [
     Permission.OPENING_BALANCE_MANAGE,
     Permission.STOCK_ADJUSTMENT_RAISE,
@@ -154,6 +164,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly PermissionKey[]> = {
     Permission.GOODS_RECEIPT_READ,
     Permission.GOODS_RECEIPT_RECEIVE,
     Permission.PRODUCTION_BOM_READ,
+    Permission.PRODUCTION_ORDER_READ,
+    Permission.PRODUCTION_ORDER_RUN,
   ],
   // ADR-0008: dispatch transfers.
   logistics: [],
@@ -165,13 +177,15 @@ export const ROLE_PERMISSIONS: Record<Role, readonly PermissionKey[]> = {
   // changes the value of stock, so finance approves it (#8): never one it created itself.
   // Recipes and their theoretical cost are costs: finance reads them (#16), and so are the
   // prices the company has committed to pay (#10), what each received lot cost (#11) and how a
-  // batch's cost is split across its outputs (#12).
+  // batch's cost is split across its outputs (#12), and what each production order's output lots
+  // cost, with its yield (#13).
   finance: [
     Permission.STOCK_ADJUSTMENT_APPROVE,
     Permission.MENU_READ,
     Permission.PURCHASE_ORDER_READ,
     Permission.GOODS_RECEIPT_READ,
     Permission.PRODUCTION_BOM_READ,
+    Permission.PRODUCTION_ORDER_READ,
   ],
 };
 

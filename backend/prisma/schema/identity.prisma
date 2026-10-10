@@ -74,6 +74,8 @@ model User {
   goodsReceiptsApproved     GoodsReceipt[]    @relation("GoodsReceiptApprovedBy")
   goodsReceiptsRejected     GoodsReceipt[]    @relation("GoodsReceiptRejectedBy")
   supplierReturnsCreated    SupplierReturn[]  @relation("SupplierReturnCreatedBy")
+  productionOrdersReleased  ProductionOrder[] @relation("ProductionOrderReleasedBy")
+  productionOrdersCancelled ProductionOrder[] @relation("ProductionOrderCancelledBy")
   companySettingsUpdated    CompanySettings[] @relation("CompanySettingsUpdatedBy")
   posInstancesCreated       PosInstance[]     @relation("PosInstanceCreatedBy")
   posCredentialsCreated     PosCredential[]   @relation("PosCredentialCreatedBy")
