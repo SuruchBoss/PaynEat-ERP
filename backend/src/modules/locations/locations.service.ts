@@ -373,6 +373,31 @@ export class LocationsService {
     return new Map(rows.map((row) => [row.id, row]));
   }
 
+  /**
+   * The in-transit location of each of these plants or warehouses, keyed by its origin's id
+   * (ADR-0007): where their dispatched stock waits until it is received. Origins without one are
+   * absent.
+   */
+  async inTransitOf(
+    originIds: readonly string[],
+    tx: Tx = this.prisma,
+  ): Promise<Map<string, LocationFacts>> {
+    if (originIds.length === 0) return new Map();
+    const rows = await tx.location.findMany({
+      where: { type: 'in_transit', originId: { in: [...new Set(originIds)] } },
+      select: {
+        id: true,
+        code: true,
+        type: true,
+        nameTh: true,
+        nameEn: true,
+        active: true,
+        originId: true,
+      },
+    });
+    return new Map(rows.map(({ originId, ...row }) => [originId!, row]));
+  }
+
   async markFirstUse(tx: Tx, locationIds: string[], use: string): Promise<void> {
     if (locationIds.length === 0) return;
     await tx.location.updateMany({

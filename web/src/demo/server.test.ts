@@ -48,6 +48,8 @@ const EMAIL = {
   purchasing: 'purchasing@demo-chicken.example',
   plant: 'plant@demo-chicken.example',
   finance: 'finance@demo-chicken.example',
+  logistics: 'logistics@demo-chicken.example',
+  branch_manager: 'branch.manager@demo-chicken.example',
 };
 
 async function signIn(role: keyof typeof EMAIL): Promise<string> {
@@ -124,6 +126,8 @@ describe('the demo API: signing in', () => {
         'production_bom:read',
         'production_order:read',
         'production_order:run',
+        'transfer:read',
+        'transfer:approve_receipt',
       ],
       mfaEnabled: false,
     });
@@ -691,6 +695,21 @@ describe('the demo API: production BOMs (#12)', () => {
       await call('POST', '/api/v1/production-boms/preview', { token: plant, body: {} }),
       403,
       'ACCESS_DENIED',
+    );
+  });
+});
+
+describe('the demo API: transfers (#14)', () => {
+  it('has nothing in transit, and dispatching or receiving is not in the demo', async () => {
+    const token = await signIn('branch_manager');
+    const view = json(await call('GET', '/api/v1/transfers/in-transit', { token }));
+    expect(view.transfers).toEqual([]);
+    expectRefusal(await call('GET', '/api/v1/transfers/in-transit'), 401, 'UNAUTHENTICATED');
+    const logistics = await signIn('logistics');
+    expectRefusal(
+      await call('POST', '/api/v1/transfers', { token: logistics, body: {} }),
+      404,
+      'NOT_IN_DEMO',
     );
   });
 });

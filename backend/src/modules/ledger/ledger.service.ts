@@ -75,6 +75,8 @@ const SCOPES: Record<StockDocumentType, SequenceScope> = {
   stock_adjustment: 'STOCK_ADJUSTMENT',
   goods_receipt: 'GOODS_RECEIPT',
   production_order: 'PRODUCTION_ORDER',
+  transfer: 'TRANSFER',
+  transfer_receipt: 'TRANSFER_RECEIPT',
 };
 
 /** Long enough for a posting to wait its turn behind another on the same lots. */
@@ -105,19 +107,27 @@ const REFUSAL_MESSAGES: Record<PostingRule, string> = {
   temperature_required:
     'This item has a receiving temperature limit: record the temperature at the dock',
   reason_required: 'A line outside tolerance, or with goods turned away, needs a reason',
-  expired_on_arrival:
-    'The supplier says these goods have already expired: reject them, they cannot enter stock',
+  expired_on_arrival: 'These goods had already expired when they arrived: they cannot enter stock',
   over_receipt: "This would receive more than was ordered plus the item's variance limit",
   needs_approval:
     'Something on this receipt is now outside tolerance: reload it and submit it again for approval',
   not_released: 'Only a released production order can be posted',
-  nothing_picked: 'Every input needs at least one lot to take it from',
+  nothing_picked: 'Every line needs at least one lot to take it from',
   actuals_missing: 'Record what actually came out of every output before posting',
   weight_required:
     'A line not counted in kg or g needs its measured weight, so the yield is measured, not guessed',
-  pieces_required: 'A variable-weight output needs its piece count as well as its weight',
+  pieces_required: 'A variable-weight line needs its piece count as well as its weight',
   zero_output_quantity:
     'An output with no actual quantity cannot carry a cost: record what came out, or cancel the order',
+  cancelled: 'This document was cancelled: nothing can be posted from it',
+  transfer_not_dispatched: 'Only a dispatched transfer can be received',
+  already_received:
+    'This transfer has already been received: a receipt of it has posted, and a correction is an adjustment',
+  transfer_reversed:
+    'This transfer was reversed: its stock went back to the origin, so it can no longer be received',
+  business_date_before_dispatch: 'A transfer cannot be received before the day it was dispatched',
+  difference_unresolved:
+    'Accepted, returned and written off must add up to exactly what was dispatched: nothing may stay in transit',
 };
 
 /**
@@ -586,12 +596,15 @@ export class LedgerService {
    * Reverses a posted document: a new, posted reversal document whose entries negate the
    * original's exactly. Only once, whatever happens concurrently: the original is locked
    * first, so a second request waits, then finds the first one's reversal and is refused
-   * (and `reverses_id` is unique besides). Returns the reversal.
+   * (and `reverses_id` is unique besides). A document type that may refuse its own reversal
+   * passes `guard`, run in the same transaction once the original is locked: it locks whatever
+   * else it needs and throws a PostingRefusedError to refuse. Returns the reversal.
    */
   async reverse(
     documentId: string,
     input: { businessDate?: string; note: string | null },
     actor: AuthenticatedUser,
+    guard?: (tx: Tx, original: LockedDocument) => Promise<void>,
   ): Promise<DocumentRef> {
     let original: LockedDocument | undefined;
     let reversal: DocumentRef | undefined;
@@ -614,6 +627,7 @@ export class LedgerService {
           today,
         );
         if (rule) throw new PostingRefusedError(rule);
+        if (guard) await guard(tx, original);
 
         const number = await this.sequences.next(tx, SCOPES.reversal, this.currentYear());
         const created = await tx.$queryRaw<{ id: string }[]>`

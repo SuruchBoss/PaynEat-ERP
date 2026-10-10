@@ -96,6 +96,21 @@ export const Permission = {
    * reverse production orders (ADR-0008, the plant role).
    */
   PRODUCTION_ORDER_RUN: 'production_order:run',
+  /**
+   * Read transfers and their receipts (#14): what left, what arrived and what was returned or
+   * written off on the way.
+   */
+  TRANSFER_READ: 'transfer:read',
+  /** Draft, edit, cancel and dispatch transfers, confirming the lots that left (#14). */
+  TRANSFER_DISPATCH: 'transfer:dispatch',
+  /** Record what arrived at the destination: draft, edit and submit transfer receipts (#14). */
+  TRANSFER_RECEIVE: 'transfer:receive',
+  /**
+   * Approve or reject a transfer receipt with a finding or a write-off, which posts it, and retry
+   * the posting of an approved one the ledger refused (#14). Never a receipt the approver created
+   * (ADR-0008).
+   */
+  TRANSFER_APPROVE_RECEIPT: 'transfer:approve_receipt',
 } as const;
 
 export type PermissionKey = (typeof Permission)[keyof typeof Permission];
@@ -156,7 +171,9 @@ export const ROLE_PERMISSIONS: Record<Role, readonly PermissionKey[]> = {
   // ADR-0008: receive goods, run production orders, manage plant stock. Bringing existing
   // stock in with an opening balance is managing it (#7), and so is adjusting it (#8). Receiving
   // means reading the order being received against (#11). Running production means reading the
-  // BOM it follows (#12), and running it is the production order itself (#13).
+  // BOM it follows (#12), and running it is the production order itself (#13). What leaves the
+  // plant is its stock: it follows its transfers, and approves a receipt's findings and write-offs
+  // as the origin that confirmed what left (#14).
   plant: [
     Permission.OPENING_BALANCE_MANAGE,
     Permission.STOCK_ADJUSTMENT_RAISE,
@@ -166,19 +183,26 @@ export const ROLE_PERMISSIONS: Record<Role, readonly PermissionKey[]> = {
     Permission.PRODUCTION_BOM_READ,
     Permission.PRODUCTION_ORDER_READ,
     Permission.PRODUCTION_ORDER_RUN,
+    Permission.TRANSFER_READ,
+    Permission.TRANSFER_APPROVE_RECEIPT,
   ],
-  // ADR-0008: dispatch transfers.
-  logistics: [],
+  // ADR-0008: dispatch transfers (#14).
+  logistics: [Permission.TRANSFER_READ, Permission.TRANSFER_DISPATCH],
   // ADR-0008: raise requisitions, receive transfers, count branch stock. Adjusting branch
   // stock after a count is raising an adjustment (#8). A branch sells the menu: its manager
-  // reads it, with its recipes (#16).
-  branch_manager: [Permission.STOCK_ADJUSTMENT_RAISE, Permission.MENU_READ],
+  // reads it, with its recipes (#16). Receiving transfers is #14.
+  branch_manager: [
+    Permission.STOCK_ADJUSTMENT_RAISE,
+    Permission.MENU_READ,
+    Permission.TRANSFER_READ,
+    Permission.TRANSFER_RECEIVE,
+  ],
   // ADR-0008: view costs, variances and valuation; export financial data. An adjustment
   // changes the value of stock, so finance approves it (#8): never one it created itself.
   // Recipes and their theoretical cost are costs: finance reads them (#16), and so are the
   // prices the company has committed to pay (#10), what each received lot cost (#11) and how a
   // batch's cost is split across its outputs (#12), and what each production order's output lots
-  // cost, with its yield (#13).
+  // cost, with its yield (#13), and what was written off on the way to a branch (#14).
   finance: [
     Permission.STOCK_ADJUSTMENT_APPROVE,
     Permission.MENU_READ,
@@ -186,6 +210,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly PermissionKey[]> = {
     Permission.GOODS_RECEIPT_READ,
     Permission.PRODUCTION_BOM_READ,
     Permission.PRODUCTION_ORDER_READ,
+    Permission.TRANSFER_READ,
   ],
 };
 

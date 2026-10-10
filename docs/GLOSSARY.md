@@ -77,11 +77,14 @@ using a new domain concept anywhere else.
 | Production order | ใบสั่งผลิต | Consumes input lots and produces output lots at a plant, numbered `MO-2026-00001`. Raised from the BOM version in force on its business date with a planned quantity of the BOM's first input; draft → released → posted, or cancelled before posting. Posting creates one lot per output in the ledger's one transaction (ADR-0027). |
 | Release (production order) | ปล่อยใบสั่งผลิต | Sending a draft production order to the plant floor: its BOM version, plant and plan are fixed, and its input lots are picked FEFO. The supervisor may then change the picks, never to an expired lot (ADR-0027). |
 | Requisition | ใบขอเบิก | A branch's request for stock from a plant or warehouse. Writes no stock. |
-| Transfer | ใบโอน | Moves stock between locations via in-transit: **dispatch** at the origin, **receipt** at the destination. |
+| Transfer | ใบโอน | Moves stock from a plant or warehouse to a branch or warehouse via in-transit: **dispatch** at the origin, **receipt** at the destination. A stock document (TR-2026-00001): draft → dispatched → received, or reversed by logistics while no receipt of it has posted (กลับรายการแล้ว: its stock goes back to the origin), or cancelled before it leaves (ADR-0028). |
 | Dispatch | ส่งของ (dispatch) | The origin side of a transfer: confirms the lots and quantities that left, moving them to in-transit. Never ส่งออก, which means export. |
-| Transfer receipt | การรับโอน | The destination side of a transfer: records what arrived, with inspection. |
+| Lot line | บรรทัด lot | One lot a dispatch took, with its quantity (and pieces): what the transfer receipt inspects and accounts for, one by one. Numbered across the transfer. |
+| Transfer receipt | การรับโอน / ใบรับโอน | The destination side of a transfer: records what arrived, with inspection. A stock document of its own (RT-2026-00001); several may be drafted, exactly one posts (ADR-0028). |
+| Accepted / returned / written off | รับเข้า / ส่งคืนต้นทาง / ตัดจำหน่าย | How a transfer receipt accounts for each lot line: into the destination, back to the origin, or out of stock. Together exactly what was dispatched, so nothing stays in transit. Only what arrived is accepted or returned; what never arrived is written off. |
+| Return to origin | ส่งคืนต้นทาง | The part of a lot line that arrived and goes back on the truck to the origin, with a reason. Needs no approval of its own: nothing is lost. |
 | Issue | การเบิกจ่าย | Taking stock out of a location for use (for example into a production order). |
-| Write-off | ตัดจำหน่าย | An adjustment that removes stock that is expired, damaged or lost, with a reason and an approver. |
+| Write-off | ตัดจำหน่าย | Removing stock that is expired, damaged or lost, with a reason and an approver: a stock adjustment at a location, or the written-off part of a transfer receipt line, which a plant user other than whoever drafted or submitted the receipt approves (ADR-0028). |
 | Stock count | ใบตรวจนับ (เอกสาร) / การตรวจนับสต๊อก (กิจกรรม) | A physical count of a location, compared to the balance. |
 | Count time | เวลาตรวจนับ | The moment a stock count is compared at: its book quantities are balances as of that business time (ADR-0017). |
 | Book quantity | ยอดตามระบบ | The balance the ledger holds for a count line as of the count time. Hidden from the counter until the count is submitted (blind count). |

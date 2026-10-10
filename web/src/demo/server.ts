@@ -110,6 +110,9 @@ const ROUTES: readonly Route[] = [
   }),
 
   route('GET', `${V1}/stock-on-hand`, stock.stockOnHand),
+  // Transfers (#14) are not in the demo yet: what is in transit per transfer answers, and is empty;
+  // every other transfer route answers NOT_IN_DEMO.
+  route('GET', `${V1}/transfers/in-transit`, stock.inTransit),
   route('GET', `${V1}/opening-balances`, stock.listOpeningBalances),
   route('GET', `${V1}/opening-balances/:id`, stock.getOpeningBalance),
   route('POST', `${V1}/opening-balances`, stock.createOpeningBalance, {

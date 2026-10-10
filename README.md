@@ -47,12 +47,19 @@ screens from the demo.
 > picked first-expired-first-out and changeable but never to an expired lot, what really came out
 > recorded with its yield against the BOM, and posting that turns input lots into output lots in one
 > transaction, the input's value split by the BOM's shares to the last digit, each output lot no
-> longer-lived than its oldest input and linked to the input lots it came from — and the
+> longer-lived than its oldest input and linked to the input lots it came from — and **transfers**:
+> logistics dispatches the lots that really left, FEFO-suggested and never expired, into the plant's
+> in-transit location; the branch receives them with the goods receipt inspection, and accounts for
+> every lot line as accepted, returned to the plant or written off, so nothing stays in transit, with
+> findings and write-offs approved by someone else at the plant, exactly one receipt per transfer
+> posting whatever runs at once, and a dispatch sent by mistake reversed by logistics until a branch
+> has received it — and the
 > **POS integration contract** ([`contracts/`](contracts/README.md)): POS instances registered with a
 > machine credential pull master data by version and deliver sales events the ERP stores exactly once. The console works on a desktop, a tablet (the menu narrows to icons) and a phone (each table
 > row becomes a card), in light and dark mode, and anyone can try it in the browser on the
-[public demo](https://suruchboss.github.io/PaynEat-ERP/) (production orders are not in it yet). No
-> transfer exists yet; it is being built in public, one GitHub issue at a time. This README says only what is true
+[public demo](https://suruchboss.github.io/PaynEat-ERP/) (production orders and transfers are not in it
+> yet). Requisitions, traces and recalls do not exist yet; it is being built in public, one GitHub issue
+> at a time. This README says only what is true
 > today and will grow as things work.
 
 <!-- problems:start -->
@@ -136,7 +143,7 @@ Menu items, prices and modifiers live in the ERP and every connected POS mirrors
 
 **The problem:** The cutting yield lives in a supervisor’s head, and what a breast costs is whatever this week’s spreadsheet says.
 
-A production BOM says which inputs make which outputs: a case of whole chicken into breasts, thighs, drumsticks, wings and frames. Each output has its expected weight and yield, and the share of the batch’s cost it carries: by weight, unless the chain sets its own shares, which must add up to exactly 100 %. Waste is shown and carries no share. BOMs are versioned by date like recipes. Production orders follow them (#13): lots picked FEFO, yield measured, the input’s cost split exactly by these shares, and every output lot linked to the lots it came from. They work in an installation; the public demo does not have them yet.
+A production BOM says which inputs make which outputs: a case of whole chicken into breasts, thighs, drumsticks, wings and frames. Each output has its expected weight and yield, and the share of the batch’s cost it carries: by weight, unless the chain sets its own shares, which must add up to exactly 100 %. Waste is shown and carries no share. BOMs are versioned by date like recipes. Production orders follow them (#13): lots picked FEFO, yield measured, the input’s cost split exactly by these shares, and every output lot linked to the lots it came from. Transfers (#14) then send the pieces to the branches through in-transit: each branch receives them inspected, and whatever did not arrive in good condition goes back or is written off, never left on the road; a dispatch sent by mistake is reversed by logistics until a branch has received it. Both work in an installation; the public demo does not have them yet.
 
 - **Yield you can check** — 20 kg in, 18 kg expected out, 2 kg waste: 90 %.
 - **Shares that add up** — By weight, rounded so they sum to exactly 100 %, or set by hand.
@@ -263,6 +270,7 @@ The "why" matters more than the "what" in an ERP, so every decision is written d
 | [0024](docs/adr/0024-purchase-order-totals-and-approval.md) | Purchase order money rounds once per line to 2 decimals and the order is the sum of its lines; a line's cost per base unit is its price over the conversion factor, net of recoverable VAT, to 6 decimals; the approval threshold is an admin setting compared with the gross total, at or below it approved automatically, 0 until set; a rejected order is final; a line keeps its conversion factor; goods go to a plant or a warehouse (proposed with #10) |
 | [0025](docs/adr/0025-goods-receipts-expected-quantity-and-completion.md) | A goods receipt counts in the ordered unit or the base unit; each delivery is inspected against what is still outstanding on its order line; findings are fixed when submitted and the approver decides on those; an order line accepts at most what was ordered plus the item's variance limit, checked under the order's lock; a line is complete within that limit below what was ordered; rejected goods become one return to supplier with no ledger entries; receiving tolerances are configuration, not master data (proposed with #11) |
 | [0027](docs/adr/0027-production-orders-picking-cost-rounding-and-genealogy.md) | A production order is judged on one business date and plans from the BOM version in force; releasing it picks input lots FEFO, which the supervisor may change but never to an expired lot; yield is measured by weight, never estimated; each output's allocated value is kept to every digit and its lot's unit cost is the one rounding, half up to six decimals, the difference kept on the order, so lot values plus differences equal the input value exactly; a zero output refuses the order; genealogy links each output lot to each input lot with what was consumed, and a reversal keeps it as history out of traces (proposed with #13) |
+| [0028](docs/adr/0028-transfers-dispatch-receipt-and-resolution.md) | Dispatch and receipt are two stock documents; dispatch records the lots that left (FEFO-suggested, never expired) and moves them to in-transit; exactly one receipt of a transfer posts; the receipt inspects each lot line with the goods receipt inspection unchanged and splits what was dispatched into accepted, returned and written off, exactly; a finding or any write-off needs the approval of someone holding the plant's role other than whoever drafted or submitted the receipt; in transit per transfer is read from the transfers; logistics reverses a dispatch while no receipt of it has posted, and a posted receipt is corrected by an adjustment (proposed with #14) |
 | [0026](docs/adr/0026-production-bom-weights-ratios-and-versions.md) | A production BOM compares everything by weight in kg, stated for lines not counted in kg or g; default allocation ratios are each output's share of expected output weight to 0.01 %, rounded by largest remainder to exactly 100; an override covers every output, each above zero with two decimals, adding up to exactly 100; waste is input less expected output weight and carries no ratio, and heavier outputs are refused; versions follow ADR-0023; a BOM is configuration, not master data; the plant runs it in v1 (proposed with #12) |
 
 Domain vocabulary, in English and Thai: [`docs/GLOSSARY.md`](docs/GLOSSARY.md).
@@ -389,10 +397,10 @@ The password of every demo account is **`demo-chicken-2026`**.
 | `admin` | `admin@demo-chicken.example` | Manage users, roles, locations, configuration; reopen closed periods | Sign in with a second factor; **Users and roles**: list, create, give and take away roles; **Items and units**: create, edit, deactivate; **Locations**: create, correct a code, deactivate, supersede; **Suppliers**; **Company settings**: the purchase approval threshold; **Production BOMs**: create, add a version, correct a scheduled one, rename, deactivate; read stock on hand and opening balances; register POS instances and manage their credentials (API); read the audit trail (API) |
 | `purchasing` | `purchasing@demo-chicken.example` | Create and send purchase orders; manage suppliers | Sign in; **Suppliers**: create, edit, deactivate; read items, locations and stock on hand; **Purchase orders**: draft, edit, submit, mark as sent, cancel; read **Goods receipts** and returns to supplier |
 | `purchasing_approver` | `approver@demo-chicken.example` | Approve purchase orders above the approval threshold, and out-of-tolerance receipts | Sign in; **Purchase orders**: approve or reject, never one it raised; **Goods receipts**: approve (which posts) or reject one with findings, never one it recorded; read items, locations, suppliers and stock on hand |
-| `plant` | `plant@demo-chicken.example` | Receive goods, run production orders, manage plant stock | Sign in; **Goods receipts**: receive against a sent order, draft and submit; read purchase orders; **Opening balances**: draft, post, reverse; **Stock adjustments**: draft and submit; **Stock on hand**; read items, locations and suppliers; read **Production BOMs**; **Production orders**: raise, release (lots picked FEFO), change the picks, record actuals, post, cancel, reverse |
-| `logistics` | `logistics@demo-chicken.example` | Dispatch transfers | Sign in; read items, locations, suppliers and stock on hand; its screen arrives with #14 |
-| `branch_manager` | `branch.manager@demo-chicken.example` | Raise requisitions, receive transfers, count branch stock | Sign in; **Stock adjustments**: draft and submit; read items, locations, suppliers and stock on hand; its requisition and transfer screens arrive with #14 and #15 |
-| `finance` | `finance@demo-chicken.example` | View costs, variances and valuation; export financial data | Sign in; **Stock adjustments**: approve (which posts) or reject, never one it raised; **Stock on hand** with cost and value; read items, locations, suppliers, purchase orders, goods receipts, production BOMs and production orders; its screens arrive with the costing and period-close work of weeks 4–5 |
+| `plant` | `plant@demo-chicken.example` | Receive goods, run production orders, manage plant stock | Sign in; **Goods receipts**: receive against a sent order, draft and submit; read purchase orders; **Opening balances**: draft, post, reverse; **Stock adjustments**: draft and submit; **Stock on hand**; read items, locations and suppliers; read **Production BOMs**; **Production orders**: raise, release (lots picked FEFO), change the picks, record actuals, post, cancel, reverse; **Transfers**: approve or reject a receipt with a finding or a write-off, never one it recorded or submitted |
+| `logistics` | `logistics@demo-chicken.example` | Dispatch transfers | Sign in; read items, locations, suppliers and stock on hand; **Transfers**: draft, change the lots FEFO suggests, dispatch, cancel a draft, reverse a dispatch no receipt has taken in |
+| `branch_manager` | `branch.manager@demo-chicken.example` | Raise requisitions, receive transfers, count branch stock | Sign in; **Stock adjustments**: draft and submit; read items, locations, suppliers and stock on hand; **Transfers**: record what arrived lot by lot and submit it; its requisition screen arrives with #15 |
+| `finance` | `finance@demo-chicken.example` | View costs, variances and valuation; export financial data | Sign in; **Stock adjustments**: approve (which posts) or reject, never one it raised; **Stock on hand** with cost and value; read items, locations, suppliers, purchase orders, goods receipts, production BOMs, production orders and transfers; its screens arrive with the costing and period-close work of weeks 4–5 |
 
 A user may hold several roles; the API refuses anything none of them allows (403), and anything
 without a session (401). Nobody approves a document they created, whatever roles they hold: the API
@@ -566,7 +574,27 @@ undoes them.
    genealogy stays as history (`GET /api/v1/production-orders/genealogy/<lotId>?includeReversed=true`).
    Finance reads every order; nobody else sees them. `erp_production_yield_percent{bom_code,measure}`
    shows the latest yield of each BOM against what it expects.
-18. Connect a POS (Docker install; the public demo has no API for it). With the **admin**'s access
+18. Sign in as **logistics** (Docker install; the public demo does not have them yet) and open
+   **Transfers**. The seed sent pieces from that morning cut to all three branches: Silom received
+   everything as sent; Ari was two wings short, written off with a reason and approved by the plant;
+   Bang Na's breasts arrived at 5.1 °C against a 4 °C limit, accepted with a reason and approved by the
+   plant. **New transfer** from `PLANT-01` to a branch with, say, 20 breasts: the draft shows the lots
+   FEFO would send (an expired lot is shown but cannot be typed into) and what the plant cannot fill.
+   **Dispatch**: the pieces leave the plant for `IN-TRANSIT:PLANT-01`, at their own cost and expiry;
+   **Stock on hand** shows them there, broken down by transfer. Sign in as **branch manager** on a
+   phone, open the transfer and **Record what arrived**: one card per lot that left, prefilled with what
+   was sent. Type that two never came and the write-off is worked out; a warm temperature or a damaged
+   tray is a finding. **Save**, then confirm: a clean receipt is received at once; a finding or a
+   write-off goes to the plant, where someone other than you **Approves and receives** it. Accepted
+   goes into the branch, returned goes back to the plant, written off leaves stock — and nothing stays
+   in transit (`difference_unresolved` otherwise). Two receipts of one transfer submitted at once: one
+   is received, the other refused (`already_received`). Back as **logistics**, dispatch another and
+   **Reverse dispatch** it before anyone records the arrival: every lot goes back from in transit to
+   the plant, a receipt drafted for it can no longer go on (`transfer_reversed`), and once a receipt
+   has been received the reversal is refused instead (`already_received`).
+   `erp_transfers_in_transit{origin_code}` and
+   `erp_transfers_oldest_in_transit_age_seconds{origin_code}` show what is on the road and since when.
+19. Connect a POS (Docker install; the public demo has no API for it). With the **admin**'s access
    token, `POST /api/v1/pos-instances` with a `code` (`POS-SILOM-1`), a `name` and the `branchCodes` it
    sells for (`["BR-SILOM"]`): the answer carries the machine credential, `pnepos_…`, **once** — the ERP
    keeps only its hash. With that credential as the bearer token, `GET /api/v1/pos/instance` answers who
@@ -581,7 +609,7 @@ undoes them.
    Every one of these is a `sales_event.*` or `master_data.*` log line carrying `pos_instance`, the
    branch's `location_code`, and the event's idempotency key as its `correlation_id`, counted in
    `erp_sales_events_total` — and the credential itself never appears in a log.
-19. Every one of those changes, and every refused sign-in, is in the audit trail with who, when and
+20. Every one of those changes, and every refused sign-in, is in the audit trail with who, when and
    the request's correlation id. Read it through the API with the admin's access token:
    `GET /api/v1/audit-logs` (filters: `action`, `entityId`, `actorUserId`, `correlationId`, `from`,
    `to`). A refused sign-in is also a `WARNING` line with `"event":"auth.sign_in.failed"` in

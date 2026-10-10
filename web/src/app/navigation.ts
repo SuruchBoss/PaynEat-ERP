@@ -88,6 +88,19 @@ export const NAV: readonly NavSection[] = [
     ],
   },
   {
+    id: 'distribution',
+    headingKey: 'nav.section.distribution',
+    // What left the plant and what arrived: logistics, plant, branch managers, finance (#14).
+    items: [
+      {
+        to: '/transfers',
+        labelKey: 'nav.transfers',
+        icon: 'transfer',
+        permission: Permission.TRANSFER_READ,
+      },
+    ],
+  },
+  {
     id: 'menu',
     headingKey: 'nav.section.menu',
     // Recipes and their costs are commercial: admin, finance and branch managers read them (#16).

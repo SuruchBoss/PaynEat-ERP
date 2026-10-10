@@ -40,12 +40,20 @@ export interface ReversalRef extends DocumentRef {
 }
 
 export type StockDocumentType =
-  'opening_balance' | 'reversal' | 'stock_adjustment' | 'goods_receipt' | 'production_order';
+  | 'opening_balance'
+  | 'reversal'
+  | 'stock_adjustment'
+  | 'goods_receipt'
+  | 'production_order'
+  | 'transfer'
+  | 'transfer_receipt';
 
 /**
  * draft → posted for an opening balance; draft → submitted → approved → posted, or rejected,
  * for a document a second person approves (stock adjustments, #8, ADR-0008; goods receipts
- * with a finding, #11); draft → released → posted, or cancelled, for a production order (#13).
+ * with a finding, #11); draft → released → posted, or cancelled, for a production order (#13);
+ * draft → posted (dispatched), or cancelled, for a transfer, and draft → submitted → approved →
+ * posted, or rejected, for its receipt (#14).
  */
 export type StockDocumentStatus =
   'draft' | 'submitted' | 'approved' | 'posted' | 'rejected' | 'released' | 'cancelled';

@@ -66,4 +66,9 @@ export const qk = {
   productionOrders: ['production-orders'] as const,
   productionOrderList: (status: string) => ['production-orders', 'list', status] as const,
   productionOrder: (id: string) => ['production-orders', id] as const,
+  transfers: ['transfers'] as const,
+  transferList: (status: string) => ['transfers', 'list', status] as const,
+  transfer: (id: string) => ['transfers', id] as const,
+  transferReceipt: (id: string) => ['transfers', 'receipt', id] as const,
+  inTransit: (asOf: string) => ['transfers', 'in-transit', asOf] as const,
 };

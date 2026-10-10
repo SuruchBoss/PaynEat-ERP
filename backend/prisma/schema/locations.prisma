@@ -53,6 +53,9 @@ model Location {
   purchaseOrders   PurchaseOrder[]
   goodsReceipts    GoodsReceipt[]
   productionOrders ProductionOrder[]
+  transfersOut     Transfer[]          @relation("TransferOrigin")
+  transfersIn      Transfer[]          @relation("TransferDestination")
+  transferReceipts TransferReceipt[]   @relation("TransferReceiptLocation")
   posInstances     PosInstanceBranch[]
   salesEvents      SalesEvent[]
   menuPrices       MenuPrice[]

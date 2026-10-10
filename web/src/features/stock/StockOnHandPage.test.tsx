@@ -163,4 +163,52 @@ describe('stock on hand', () => {
       await screen.findByText('ดูสต๊อกได้ถึงวันนี้เท่านั้น เลือกวันที่ไม่เกินวันนี้'),
     ).toBeVisible();
   });
+
+  it('breaks stock in transit down by transfer (#14)', async () => {
+    const inTransit = {
+      id: '00000000-0000-4000-8000-0000000000a3',
+      code: 'IN-TRANSIT:PLANT-01',
+      type: 'in_transit' as const,
+      nameTh: 'ระหว่างขนส่งจาก โรงงานบางนา',
+      nameEn: 'In transit from Bang Na plant',
+    };
+    const view: StockOnHandView = {
+      asOf: '2026-09-26',
+      totalValue: '1566',
+      rows: [row({ location: inTransit })],
+      negativeBranchBalances: 0,
+    };
+    let asked = 0;
+    mockApi({
+      ...lists,
+      'GET /stock-on-hand': () => jsonResponse(200, view),
+      'GET /transfers/in-transit': () => {
+        asked += 1;
+        return jsonResponse(200, {
+          asOf: '2026-09-26',
+          transfers: [
+            {
+              transfer: { id: 'x', number: 'TR-2026-00001', businessDate: '2026-09-26' },
+              origin: PLANT,
+              destination: BRANCH,
+              inTransit,
+              lots: [
+                {
+                  item: { ...row({}).item, variableWeight: true },
+                  lot: row({}).lot,
+                  quantity: '21.6',
+                  pieces: '12',
+                },
+              ],
+            },
+          ],
+        });
+      },
+    });
+    renderApp('/stock', { as: STAFF });
+
+    expect(await screen.findByRole('heading', { name: 'ระหว่างขนส่ง แยกตามใบโอน' })).toBeVisible();
+    expect(screen.getByText('TR-2026-00001 · PLANT-01 → BR-SILOM')).toBeVisible();
+    expect(asked).toBe(1);
+  });
 });
