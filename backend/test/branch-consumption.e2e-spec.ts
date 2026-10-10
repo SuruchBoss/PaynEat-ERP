@@ -17,6 +17,7 @@ import { APP_CONFIG } from 'src/core/config/config.token';
 import type { RootConfig } from 'src/core/config/configuration';
 import { addDays, dateIn } from 'src/core/time/domain/business-date';
 import { LedgerService } from 'src/modules/ledger/ledger.service';
+import { DEMO_POS_INSTANCE, DEMO_SALES } from '../prisma/seed';
 import {
   API,
   bearer,
@@ -56,6 +57,9 @@ describe('branch consumption', () => {
     today = ctx.app.get(LedgerService).today();
     const res = await as(finance).get('/items').query({ status: 'all' });
     for (const item of res.body as Body[]) items[item.code] = item;
+    // Sales events other suites left received become consumption or problems now, so every count
+    // below is about this suite's own sales.
+    await run();
   });
   afterAll(async () => {
     await ctx.close();
@@ -164,6 +168,26 @@ describe('branch consumption', () => {
   const linesFor = (event: string, key: string) =>
     ctx.logs().filter((l) => l.labels?.event === event && l.labels?.correlation_id === key);
   const line = (doc: Body, code: string): Body => doc.lines.find((l: Body) => l.item.code === code);
+
+  describe('the demo chain', () => {
+    it("has a day of sales at every branch, all consumption, and Ari's wings below zero", async () => {
+      const demo = await prisma.salesEvent.findMany({
+        where: { idempotencyKey: { startsWith: `${DEMO_POS_INSTANCE.code}-DEMO-` } },
+        select: { id: true, status: true },
+      });
+      expect(demo).toHaveLength(DEMO_SALES.length);
+      expect(new Set(demo.map((e) => e.status))).toEqual(new Set(['processed']));
+      for (const event of demo) expect(await consumptionOf(event.id)).toHaveLength(1);
+
+      const ari = (await as(finance).get('/locations')).body.find((l: Body) => l.code === 'BR-ARI');
+      const wings = await as(finance)
+        .get('/stock-on-hand')
+        .query({ locationId: ari.id, itemId: items['CHICKEN-WING'].id });
+      expect(wings.body.rows).toEqual([
+        expect.objectContaining({ quantity: '-6', countRecommended: true }),
+      ]);
+    });
+  });
 
   describe('a sale at a stocked branch', () => {
     it('becomes one posted document: FEFO lots, the sale time, the automatic account', async () => {

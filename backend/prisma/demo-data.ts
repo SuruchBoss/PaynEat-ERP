@@ -860,3 +860,103 @@ export const DEMO_TRANSFERS: readonly DemoTransfer[] = [
     },
   },
 ];
+
+/** The demo POS (#9, #17): one instance selling for every demo branch. */
+export const DEMO_POS_INSTANCE = {
+  code: 'POS-DEMO',
+  name: 'Demo front counters (fictional)',
+  branchCodes: ['BR-SILOM', 'BR-ARI', 'BR-BANGNA'],
+} as const;
+
+/** A paid sale line the demo POS delivers (#17), `minutesAgo` before the seed runs. */
+export interface DemoSale {
+  branchCode: string;
+  minutesAgo: number;
+  menuItemCode: string;
+  quantity?: string;
+  weightKg?: string;
+  modifiers: ReadonlyArray<readonly [code: string, quantity: string]>;
+}
+
+/**
+ * A day of sales at each branch (#17), delivered through the real ingest code and turned into
+ * branch consumption. It shows a weighed sale, modifiers that add (`SAUCE-HOT`, `SPICY`) and
+ * remove (`NO-SAUCE`), and Ari selling more wings than the 28 it received this morning, so its
+ * wing lot goes below zero and the stock screen asks for a count. The branches were sent chicken
+ * only, never flour, oil or sauce: those go to each branch's placeholder lots, at an estimated
+ * cost (ADR-0030), until the branches are stocked with them.
+ */
+export const DEMO_SALES: readonly DemoSale[] = [
+  {
+    branchCode: 'BR-SILOM',
+    minutesAgo: 300,
+    menuItemCode: 'SET-2PC',
+    quantity: '2',
+    modifiers: [['SPICY', '1']],
+  },
+  {
+    branchCode: 'BR-SILOM',
+    minutesAgo: 240,
+    menuItemCode: 'BUCKET-8',
+    quantity: '1',
+    modifiers: [['SAUCE-HOT', '2']],
+  },
+  {
+    branchCode: 'BR-SILOM',
+    minutesAgo: 180,
+    menuItemCode: 'SET-WINGS-6',
+    quantity: '1',
+    modifiers: [['NO-SAUCE', '1']],
+  },
+  {
+    branchCode: 'BR-SILOM',
+    minutesAgo: 120,
+    menuItemCode: 'FRIED-CHICKEN-BY-WEIGHT',
+    weightKg: '0.8',
+    modifiers: [],
+  },
+  { branchCode: 'BR-SILOM', minutesAgo: 60, menuItemCode: 'SET-2PC', quantity: '3', modifiers: [] },
+  {
+    branchCode: 'BR-ARI',
+    minutesAgo: 290,
+    menuItemCode: 'SET-WINGS-6',
+    quantity: '2',
+    modifiers: [['SAUCE-HOT', '1']],
+  },
+  { branchCode: 'BR-ARI', minutesAgo: 230, menuItemCode: 'BUCKET-8', quantity: '2', modifiers: [] },
+  {
+    branchCode: 'BR-ARI',
+    minutesAgo: 170,
+    menuItemCode: 'SET-WINGS-6',
+    quantity: '3',
+    modifiers: [['SPICY', '1']],
+  },
+  {
+    branchCode: 'BR-ARI',
+    minutesAgo: 90,
+    menuItemCode: 'SET-2PC',
+    quantity: '1',
+    modifiers: [['NO-SAUCE', '1']],
+  },
+  {
+    branchCode: 'BR-BANGNA',
+    minutesAgo: 280,
+    menuItemCode: 'SET-2PC',
+    quantity: '2',
+    modifiers: [],
+  },
+  {
+    branchCode: 'BR-BANGNA',
+    minutesAgo: 200,
+    menuItemCode: 'BUCKET-8',
+    quantity: '1',
+    modifiers: [['SPICY', '1']],
+  },
+  {
+    branchCode: 'BR-BANGNA',
+    minutesAgo: 100,
+    menuItemCode: 'FRIED-CHICKEN-BY-WEIGHT',
+    weightKg: '1.2',
+    modifiers: [['SPICY', '1']],
+  },
+];

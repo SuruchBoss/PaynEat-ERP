@@ -55,6 +55,8 @@ import {
   DEMO_PRODUCTION_ORDER,
   DEMO_ARRIVAL_TEMPERATURE,
   DEMO_TRANSFERS,
+  DEMO_POS_INSTANCE,
+  DEMO_SALES,
   DEMO_PAR_LEVELS,
   DEMO_REQUISITION_UNITS,
   DEMO_RECEIVING_TOLERANCES,
@@ -1181,6 +1183,49 @@ async function seedTransfers(prisma: PrismaClient): Promise<string[]> {
   return summaries;
 }
 
+/**
+ * A day of sales at each branch (#17): the demo POS is registered, and every sale line goes
+ * through the same code the sales-event endpoint runs, with the POS's own credential; then the
+ * branch-consumption processor turns them into consumption, as it would on its timer. Once: an
+ * installation with any sales event is left as it is.
+ */
+async function seedSales(prisma: PrismaClient): Promise<string | null> {
+  if (await prisma.salesEvent.findFirst()) return null;
+  const { posInstances, salesEvents, branchConsumption } = ledgerServices(prisma, { quiet: true });
+  const admin = await demoActor(prisma, 'admin');
+  const existing = await prisma.posInstance.findUnique({ where: { code: DEMO_POS_INSTANCE.code } });
+  const issued = existing
+    ? await posInstances.issueCredential(existing.id, admin, {})
+    : await posInstances.register(
+        {
+          code: DEMO_POS_INSTANCE.code,
+          name: DEMO_POS_INSTANCE.name,
+          branchCodes: [...DEMO_POS_INSTANCE.branchCodes],
+        },
+        admin,
+        {},
+      );
+  const now = Date.now();
+  for (const [index, demo] of DEMO_SALES.entries()) {
+    await salesEvents.ingest(`Bearer ${issued.credential}`, {
+      schemaVersion: 1,
+      idempotencyKey: `${DEMO_POS_INSTANCE.code}-DEMO-${String(index + 1).padStart(4, '0')}`,
+      posInstance: DEMO_POS_INSTANCE.code,
+      branchCode: demo.branchCode,
+      saleTime: new Date(now - demo.minutesAgo * 60_000).toISOString(),
+      menuItemCode: demo.menuItemCode,
+      ...(demo.quantity !== undefined ? { quantity: demo.quantity } : {}),
+      ...(demo.weightKg !== undefined ? { weightKg: demo.weightKg } : {}),
+      modifiers: demo.modifiers.map(([code, quantity]) => ({ code, quantity })),
+    });
+  }
+  const run = await branchConsumption.run();
+  if (run.processed !== DEMO_SALES.length) {
+    throw new Error(`The demo sales did not all become consumption: ${JSON.stringify(run)}`);
+  }
+  return `${DEMO_SALES.length} sale lines at ${DEMO_POS_INSTANCE.branchCodes.length} branches through ${DEMO_POS_INSTANCE.code}, all processed`;
+}
+
 async function main(): Promise<void> {
   const refusal = seedRefusal({ erpDemo: process.env.ERP_DEMO, nodeEnv: process.env.NODE_ENV });
   if (refusal) throw new SeedRefused(`${refusal}\nNothing has been written.`);
@@ -1271,6 +1316,12 @@ async function main(): Promise<void> {
       transfers.length > 0
         ? `Demo requisitions and transfers: ${transfers.join('; ')}`
         : 'Demo requisitions and transfers: already there, left as they are',
+    );
+    const sales = await seedSales(prisma);
+    console.log(
+      sales
+        ? `Demo sales and branch consumption: ${sales}`
+        : 'Demo sales and branch consumption: already there, left as they are',
     );
     console.log(`\nDemo accounts (password for all: ${DEMO_PASSWORD}):`);
     for (const demo of DEMO_USERS) {

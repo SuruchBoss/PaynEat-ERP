@@ -192,6 +192,7 @@ describe('user administration', () => {
         'transfer:receive',
         'requisition:read',
         'requisition:raise',
+        'branch_consumption:read',
       ],
       requiresSecondFactor: false,
     });
@@ -206,6 +207,7 @@ describe('user administration', () => {
         'production_order:read',
         'transfer:read',
         'requisition:read',
+        'branch_consumption:read',
       ],
       requiresSecondFactor: false,
     });

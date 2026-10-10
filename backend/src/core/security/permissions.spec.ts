@@ -45,6 +45,16 @@ describe('roles and permissions (ADR-0008)', () => {
     }
   });
 
+  it('lets admin, finance and branch managers read branch consumption, and only the admin re-process (#17)', () => {
+    for (const role of ROLE_KEYS) {
+      const held = permissionsFor([role]);
+      expect(held.includes(Permission.BRANCH_CONSUMPTION_READ)).toBe(
+        role === 'admin' || role === 'finance' || role === 'branch_manager',
+      );
+      expect(held.includes(Permission.SALES_EVENT_REPROCESS)).toBe(role === 'admin');
+    }
+  });
+
   it('lets admin and purchasing, and nobody else, manage suppliers', () => {
     for (const role of ROLE_KEYS) {
       expect(permissionsFor([role]).includes(Permission.SUPPLIER_MANAGE)).toBe(
@@ -141,6 +151,8 @@ describe('roles and permissions (ADR-0008)', () => {
       Permission.TRANSFER_READ,
       Permission.REQUISITION_READ,
       Permission.PAR_LEVEL_MANAGE,
+      Permission.BRANCH_CONSUMPTION_READ,
+      Permission.SALES_EVENT_REPROCESS,
     ]);
     expect(permissionsFor([])).toEqual([]);
   });
