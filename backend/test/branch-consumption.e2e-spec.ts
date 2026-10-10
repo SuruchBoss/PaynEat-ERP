@@ -514,22 +514,22 @@ describe('branch consumption', () => {
   });
 
   describe('a sale dated ahead of its receipt', () => {
-    const setTolerance = async (minutes: number) => {
-      const current = await as(admin).get('/company/settings');
-      const res = await as(admin).patch('/company/settings', {
-        revision: current.body.revision,
-        purchaseApprovalThreshold: current.body.purchaseApprovalThreshold,
-        saleTimeAheadToleranceMinutes: minutes,
-      });
-      expect(res.status).toBe(200);
-      expect(res.body.saleTimeAheadToleranceMinutes).toBe(minutes);
-    };
-    afterEach(async () => setTolerance(10));
-
+    // The company settings are shared by every suite, and the purchase-order suite checks the
+    // seed left them at revision 1, so these cases use the default tolerance (10 minutes)
+    // instead of changing it.
     it('is held, not failed; a person re-processes it once its date has come', async () => {
+      const settings = await as(admin).get('/company/settings');
+      expect(settings.body.saleTimeAheadToleranceMinutes).toBe(10);
+      const outOfRange = await as(admin).patch('/company/settings', {
+        revision: settings.body.revision,
+        purchaseApprovalThreshold: settings.body.purchaseApprovalThreshold,
+        saleTimeAheadToleranceMinutes: 1441,
+      });
+      expect(outOfRange.status).toBe(400);
+      expect(outOfRange.body.code).toBe('VALIDATION_FAILED');
+
       const at = await newBranch();
-      await setTolerance(0);
-      const body = sale(at, { saleTime: new Date(Date.now() + 60_000).toISOString() });
+      const body = sale(at, { saleTime: new Date(Date.now() + 15 * 60_000).toISOString() });
       const id = await deliver(at.credential, body);
       const outcome = await run();
       expect(outcome.held).toBe(1);
@@ -549,7 +549,7 @@ describe('branch consumption', () => {
       );
       const res = await as(admin).post(`/branch-consumption/sales-events/${id}/reprocess`);
       if (saleDate > today) {
-        // A minute before midnight: its date has not come.
+        // Within 15 minutes of midnight: its date has not come.
         expect(res.status).toBe(409);
         return;
       }
