@@ -87,6 +87,15 @@ const REFUSAL_MESSAGES: Record<PostingRule, string> = {
   over_receipt: "This would receive more than was ordered plus the item's variance limit",
   needs_approval:
     'Something on this receipt is now outside tolerance: reload it and submit it again for approval',
+  // Production orders (#13) are not in the demo yet; listed for the same reason.
+  not_released: 'Only a released production order can be posted',
+  nothing_picked: 'Every input needs at least one lot to take it from',
+  actuals_missing: 'Record what actually came out of every output before posting',
+  weight_required:
+    'A line not counted in kg or g needs its measured weight, so the yield is measured, not guessed',
+  pieces_required: 'A variable-weight output needs its piece count as well as its weight',
+  zero_output_quantity:
+    'An output with no actual quantity cannot carry a cost: record what came out, or cancel the order',
 };
 
 /** 422, or 409 when it lost a race with someone else (backend `PostingRefusedError`). */

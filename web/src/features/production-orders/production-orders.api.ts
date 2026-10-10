@@ -74,7 +74,11 @@ export interface OutputLine {
   actualWeightKg: string | null;
   yield: YieldView;
   cost: CostView | null;
-  expiry: { expiryDate: string; computedExpiryDate: string; earliestInputExpiryDate: string } | null;
+  expiry: {
+    expiryDate: string;
+    computedExpiryDate: string;
+    earliestInputExpiryDate: string;
+  } | null;
   lot: { id: string; number: string } | null;
 }
 

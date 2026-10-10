@@ -78,6 +78,13 @@ export const NAV: readonly NavSection[] = [
         icon: 'split',
         permission: Permission.PRODUCTION_BOM_READ,
       },
+      // What each output lot cost and how the cut yielded: plant and finance (#13).
+      {
+        to: '/production-orders',
+        labelKey: 'nav.productionOrders',
+        icon: 'factory',
+        permission: Permission.PRODUCTION_ORDER_READ,
+      },
     ],
   },
   {
