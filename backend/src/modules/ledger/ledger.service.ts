@@ -121,7 +121,10 @@ const REFUSAL_MESSAGES: Record<PostingRule, string> = {
     'An output with no actual quantity cannot carry a cost: record what came out, or cancel the order',
   cancelled: 'This document was cancelled: nothing can be posted from it',
   transfer_not_dispatched: 'Only a dispatched transfer can be received',
-  already_received: 'This transfer has already been received: another receipt of it posted first',
+  already_received:
+    'This transfer has already been received: a receipt of it has posted, and a correction is an adjustment',
+  transfer_reversed:
+    'This transfer was reversed: its stock went back to the origin, so it can no longer be received',
   business_date_before_dispatch: 'A transfer cannot be received before the day it was dispatched',
   difference_unresolved:
     'Accepted, returned and written off must add up to exactly what was dispatched: nothing may stay in transit',
@@ -593,12 +596,15 @@ export class LedgerService {
    * Reverses a posted document: a new, posted reversal document whose entries negate the
    * original's exactly. Only once, whatever happens concurrently: the original is locked
    * first, so a second request waits, then finds the first one's reversal and is refused
-   * (and `reverses_id` is unique besides). Returns the reversal.
+   * (and `reverses_id` is unique besides). A document type that may refuse its own reversal
+   * passes `guard`, run in the same transaction once the original is locked: it locks whatever
+   * else it needs and throws a PostingRefusedError to refuse. Returns the reversal.
    */
   async reverse(
     documentId: string,
     input: { businessDate?: string; note: string | null },
     actor: AuthenticatedUser,
+    guard?: (tx: Tx, original: LockedDocument) => Promise<void>,
   ): Promise<DocumentRef> {
     let original: LockedDocument | undefined;
     let reversal: DocumentRef | undefined;
@@ -621,6 +627,7 @@ export class LedgerService {
           today,
         );
         if (rule) throw new PostingRefusedError(rule);
+        if (guard) await guard(tx, original);
 
         const number = await this.sequences.next(tx, SCOPES.reversal, this.currentYear());
         const created = await tx.$queryRaw<{ id: string }[]>`

@@ -33,7 +33,7 @@ import { isExpired } from '../../../core/stock/domain/fefo';
 import { compareDates } from '../../../core/time/domain/business-date';
 
 /** A transfer as people see it: its stock document's status, and whether its receipt posted. */
-export type TransferStatus = 'draft' | 'dispatched' | 'received' | 'cancelled';
+export type TransferStatus = 'draft' | 'dispatched' | 'received' | 'reversed' | 'cancelled';
 export type ReceiptStatus = 'draft' | 'submitted' | 'approved' | 'posted' | 'rejected';
 
 export const NOTE_MAX_LENGTH = 500;
@@ -328,6 +328,7 @@ export function needsApproval(
 export type ReceiptRefusal =
   | { rule: 'transfer_not_dispatched' }
   | { rule: 'already_received' }
+  | { rule: 'transfer_reversed' }
   | { rule: 'business_date_before_dispatch' }
   | { rule: 'inactive_location' }
   | { rule: 'temperature_required'; lineNo: number }
@@ -363,6 +364,7 @@ export function receiptRefusal(receipt: {
   lines: readonly CheckedReceiptLine[];
 }): ReceiptRefusal | null {
   if (receipt.transferStatus === 'received') return { rule: 'already_received' };
+  if (receipt.transferStatus === 'reversed') return { rule: 'transfer_reversed' };
   if (receipt.transferStatus !== 'dispatched') return { rule: 'transfer_not_dispatched' };
   if (compareDates(receipt.businessDate, receipt.dispatchDate) < 0) {
     return { rule: 'business_date_before_dispatch' };
@@ -402,16 +404,28 @@ export function receiptStepAllowed(status: ReceiptStatus, step: ReceiptStep): bo
 }
 
 /**
- * The transfer's status from its stock document's and its receipt's: a posted dispatch is
- * dispatched until a receipt of it posts, then received.
+ * The transfer's status from its stock document's, its receipt's and its reversal's: a posted
+ * dispatch is dispatched until a receipt of it posts (received) or logistics reverses it while no
+ * receipt has (reversed). The two exclude each other (ADR-0028).
  */
 export function transferStatus(
   documentStatus: 'draft' | 'posted' | 'cancelled',
   receiptPosted: boolean,
+  reversed = false,
 ): TransferStatus {
   if (documentStatus === 'draft') return 'draft';
   if (documentStatus === 'cancelled') return 'cancelled';
+  if (reversed) return 'reversed';
   return receiptPosted ? 'received' : 'dispatched';
+}
+
+/**
+ * Why a dispatch cannot be reversed as the transfer stands, or null: only a dispatched transfer
+ * is, never one a receipt has taken out of transit (that is corrected by an adjustment). The
+ * ledger refuses a draft, a cancelled one and a second reversal on its own.
+ */
+export function dispatchReversalRefusal(status: TransferStatus): 'already_received' | null {
+  return status === 'received' ? 'already_received' : null;
 }
 
 function compare(a: ExactDecimal, b: ExactDecimal): number {

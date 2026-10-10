@@ -5,8 +5,9 @@
  * Transfers (#14), end to end against a real PostgreSQL: the demo transfers, dispatch through
  * in-transit with FEFO lots that never include an expired one, receipt with the goods receipt
  * inspection, every dispatched quantity accounted for as accepted, returned or written off,
- * approval by someone else holding the plant's role, two receipts of one transfer racing, stock in
- * transit per transfer, who may do what, and the logs and metrics.
+ * approval by someone else holding the plant's role than whoever drafted or submitted the receipt,
+ * two receipts of one transfer racing, a dispatch reversed while nothing was received (and racing a
+ * receipt), stock in transit per transfer, who may do what, and the logs and metrics.
  */
 import request from 'supertest';
 import { PrismaService } from 'src/core/prisma/prisma.service';
@@ -734,6 +735,167 @@ describe('transfers (#14)', () => {
     const third = await receive(transfer, arrival(transfer));
     expect(third.status).toBe(409);
     expect(third.body.code).toBe('TRANSFER_NOT_RECEIVABLE');
+  });
+
+  describe('reversing a dispatch', () => {
+    /** One transfer of 20 breast pieces (15 from the older lot, 5 from the newer), dispatched. */
+    const sentBreast = async () => {
+      const r = await route();
+      const transfer = ok(
+        await dispatch(await draft(r.origin, r.destination, [['CHICKEN-BREAST', '20']])),
+      );
+      return { ...r, transfer, inTransitId: transfer.inTransit.id as string };
+    };
+    const reverse = (transfer: Body, by: Session = logistics, body: Body = {}) =>
+      as(by).post(`/transfers/${transfer.id}/reverse`, body);
+
+    it('takes a dispatch with no receipt back to the origin, once, and only by logistics', async () => {
+      const { origin, transfer, inTransitId, breastOld, breastNew } = await sentBreast();
+      expect(await balance(breastOld.id, origin.id)).toBe('0');
+      expect(await balance(breastOld.id, inTransitId)).toBe('15');
+
+      expect((await reverse(transfer, plant)).status).toBe(403);
+      expect((await reverse(transfer, manager)).status).toBe(403);
+      const before = await postings('reversal', 'succeeded');
+      const reversed = ok(await reverse(transfer, logistics, { note: 'Truck never left' }));
+      expect(reversed.status).toBe('reversed');
+      expect(reversed.reversed).toMatchObject({
+        reversal: { number: expect.stringMatching(/^RV-\d{4}-\d{5}$/), businessDate: today },
+        note: 'Truck never left',
+      });
+      expect(reversed.reversed.by.displayName).toBe('Demo logistics');
+      expect(reversed.received).toBeNull();
+      expect(await postings('reversal', 'succeeded')).toBe(before + 1);
+
+      // Every lot is back at the origin with nothing left in transit.
+      expect(await balance(breastOld.id, origin.id)).toBe('15');
+      expect(await balance(breastNew.id, origin.id)).toBe('40');
+      expect(await balance(breastOld.id, inTransitId)).toBe('0');
+      expect(await balance(breastNew.id, inTransitId)).toBe('0');
+      const inTransit = ok(await as(manager).get('/transfers/in-transit'));
+      expect(inTransit.transfers.some((t: Body) => t.transfer.id === transfer.id)).toBe(false);
+      const listed = ok(await as(logistics).get('/transfers').query({ status: 'reversed' }));
+      expect(listed.map((t: Body) => t.id)).toContain(transfer.id);
+      expect(await metric('erp_transfers_in_transit', { origin_code: origin.code })).toBe(0);
+
+      const again = await reverse(transfer);
+      expect(again.status).toBe(409);
+      expect(again.body.details.rule).toBe('already_reversed');
+    });
+
+    it('refuses to reverse a transfer a receipt has taken out of transit', async () => {
+      const { origin, destination, transfer, breastOld } = await sentBreast();
+      ok(await submit(ok(await receive(transfer, arrival(transfer)), 201)));
+
+      const before = await postings('reversal', 'refused', 'already_received');
+      const res = await reverse(transfer);
+      expect(res.status).toBe(409);
+      expect(res.body.details.rule).toBe('already_received');
+      expect(await postings('reversal', 'refused', 'already_received')).toBe(before + 1);
+      expect(ok(await as(logistics).get(`/transfers/${transfer.id}`)).status).toBe('received');
+      expect(await balance(breastOld.id, destination.id)).toBe('15');
+      expect(await balance(breastOld.id, origin.id)).toBe('0');
+    });
+
+    it('refuses every receipt of a reversed transfer, whatever step it has reached', async () => {
+      const { transfer } = await sentBreast();
+      // One clean draft, and one waiting for approval because two pieces never arrived.
+      const clean = ok(await receive(transfer, arrival(transfer)), 201);
+      const short = ok(
+        await receive(
+          transfer,
+          arrival(transfer, (pick) =>
+            pick.pickNo === 1
+              ? { received: '13', accepted: '13', writtenOff: '2', reason: 'Two pieces missing' }
+              : {},
+          ),
+        ),
+        201,
+      );
+      const submitted = ok(await submit(short));
+      expect(submitted.status).toBe('submitted');
+      ok(await reverse(transfer));
+
+      const before = await postings('transfer_receipt', 'refused', 'transfer_reversed');
+      let res = await submit(clean);
+      expect(res.status).toBe(409);
+      expect(res.body.details.rule).toBe('transfer_reversed');
+      res = await as(plant).post(`/transfer-receipts/${short.id}/approve`, {
+        revision: submitted.revision,
+      });
+      expect(res.status).toBe(409);
+      expect(res.body.details.rule).toBe('transfer_reversed');
+      expect(await postings('transfer_receipt', 'refused', 'transfer_reversed')).toBe(before + 2);
+
+      // Both stay where they were, and say why they cannot go on.
+      const draftNow = ok(await as(manager).get(`/transfer-receipts/${clean.id}`));
+      expect(draftNow.status).toBe('draft');
+      expect(draftNow.transfer.status).toBe('reversed');
+      expect(draftNow.blockers).toEqual([{ rule: 'transfer_reversed' }]);
+      expect(ok(await as(manager).get(`/transfer-receipts/${short.id}`)).status).toBe('submitted');
+      // A new receipt cannot even be raised.
+      res = await receive(transfer, arrival(transfer));
+      expect(res.status).toBe(409);
+      expect(res.body.code).toBe('TRANSFER_NOT_RECEIVABLE');
+    });
+
+    it('lets exactly one of a reversal and a receipt posting at once win', async () => {
+      for (let round = 0; round < 3; round += 1) {
+        const { origin, destination, transfer, inTransitId, breastOld } = await sentBreast();
+        const receipt = ok(await receive(transfer, arrival(transfer)), 201);
+        const [posting, reversal] = await Promise.all([submit(receipt), reverse(transfer)]);
+        expect([posting.status, reversal.status].sort()).toEqual([200, 409]);
+
+        const after = ok(await as(logistics).get(`/transfers/${transfer.id}`));
+        expect(await balance(breastOld.id, inTransitId)).toBe('0');
+        if (posting.status === 200) {
+          expect(reversal.body.details.rule).toBe('already_received');
+          expect(after.status).toBe('received');
+          expect(after.reversed).toBeNull();
+          expect(await balance(breastOld.id, destination.id)).toBe('15');
+          expect(await balance(breastOld.id, origin.id)).toBe('0');
+        } else {
+          expect(posting.body.details.rule).toBe('transfer_reversed');
+          expect(after.status).toBe('reversed');
+          expect(after.received).toBeNull();
+          expect(await balance(breastOld.id, destination.id)).toBeNull();
+          expect(await balance(breastOld.id, origin.id)).toBe('15');
+        }
+      }
+    });
+  });
+
+  it('refuses approval by whoever submitted the receipt, even when someone else drafted it', async () => {
+    const r = await route();
+    const transfer = ok(
+      await dispatch(await draft(r.origin, r.destination, [['CHICKEN-BREAST', '20']])),
+    );
+    const lines = arrival(transfer, (pick) =>
+      pick.pickNo === 1
+        ? { received: '14', accepted: '14', writtenOff: '1', reason: 'One piece missing' }
+        : {},
+    );
+    // The branch manager drafts it; a colleague holding the plant role as well submits it.
+    const receipt = ok(await receive(transfer, lines), 201);
+    const both = await person(['branch_manager', 'plant']);
+    const submitted = ok(await submit(receipt, both));
+    expect(submitted.submitted.by.id).not.toBe(submitted.createdBy.id);
+
+    const before = await postings('transfer_receipt', 'refused', 'self_approval');
+    const res = await as(both).post(`/transfer-receipts/${receipt.id}/approve`, {
+      revision: submitted.revision,
+    });
+    expect(res.status).toBe(422);
+    expect(res.body.details.rule).toBe('self_approval');
+    expect(await postings('transfer_receipt', 'refused', 'self_approval')).toBe(before + 1);
+    expect(ok(await as(manager).get(`/transfer-receipts/${receipt.id}`)).status).toBe('submitted');
+
+    const approved = ok(
+      await as(plant).post(`/transfer-receipts/${receipt.id}/approve`, {
+        revision: submitted.revision,
+      }),
+    );
+    expect(approved.status).toBe('posted');
   });
 
   it('lets logistics dispatch, branch managers receive, and finance only read', async () => {

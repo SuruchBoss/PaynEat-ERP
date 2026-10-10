@@ -5,6 +5,7 @@ import { inspect, type ReceivingTolerances } from '../../../core/receiving/domai
 import {
   differenceResolved,
   dispatchBlockers,
+  dispatchReversalRefusal,
   needsApproval,
   positiveQuantityProblem,
   reasonRequired,
@@ -309,6 +310,9 @@ describe('receipt refusals (#14)', () => {
     expect(receiptRefusal(receipt({ transferStatus: 'received' }))).toEqual({
       rule: 'already_received',
     });
+    expect(receiptRefusal(receipt({ transferStatus: 'reversed' }))).toEqual({
+      rule: 'transfer_reversed',
+    });
     expect(receiptRefusal(receipt({ transferStatus: 'draft' }))).toEqual({
       rule: 'transfer_not_dispatched',
     });
@@ -372,5 +376,13 @@ describe('steps and status', () => {
     expect(transferStatus('cancelled', false)).toBe('cancelled');
     expect(transferStatus('posted', false)).toBe('dispatched');
     expect(transferStatus('posted', true)).toBe('received');
+    expect(transferStatus('posted', false, true)).toBe('reversed');
+    // A draft or cancelled transfer was never dispatched, so never reversed.
+    expect(transferStatus('cancelled', false, true)).toBe('cancelled');
+  });
+
+  it('reverses a dispatch only while no receipt of it has posted', () => {
+    expect(dispatchReversalRefusal('dispatched')).toBeNull();
+    expect(dispatchReversalRefusal('received')).toBe('already_received');
   });
 });

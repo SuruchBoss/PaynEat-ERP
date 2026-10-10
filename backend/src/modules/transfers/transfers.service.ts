@@ -24,6 +24,8 @@ import { AuditService } from '../audit/audit.service';
 import { ItemsService, type ItemFacts } from '../items/items.service';
 import {
   LedgerService,
+  PostingRefusedError,
+  type DocumentRef,
   type LockedDocument,
   type LotChange,
   type LotFacts,
@@ -34,6 +36,7 @@ import {
 import { LocationsService, type LocationFacts } from '../locations/locations.service';
 import {
   dispatchBlockers,
+  dispatchReversalRefusal,
   piecesValid,
   positiveQuantityProblem,
   routeProblem,
@@ -56,6 +59,7 @@ import type {
   LocationRef,
   PickOutcome,
   ReceiptRef,
+  ReverseTransferDto,
   TransferLineDto,
   TransferLineView,
   TransferPickView,
@@ -287,6 +291,18 @@ export class TransfersService {
         ? { by: row.cancelledBy, at: row.cancelledAt!, reason: row.cancellationReason! }
         : null,
       received: receiptView,
+      reversed: document.reversedBy
+        ? {
+            reversal: {
+              id: document.reversedBy.id,
+              number: document.reversedBy.number,
+              businessDate: document.reversedBy.businessDate,
+            },
+            by: document.reversedBy.postedBy,
+            at: document.reversedBy.postedAt,
+            note: document.reversedBy.note,
+          }
+        : null,
       lines,
       blockers,
       receipts,
@@ -317,8 +333,10 @@ export class TransfersService {
       FROM "transfers" t
       JOIN "stock_documents" d ON d."id" = t."document_id"
       LEFT JOIN "stock_documents" r ON r."id" = t."receipt_document_id"
+      LEFT JOIN "stock_documents" v ON v."reverses_id" = t."document_id"
       WHERE d."status" = 'posted' AND d."business_date" <= ${asOf}::date
         AND (r."id" IS NULL OR r."business_date" > ${asOf}::date)
+        AND (v."id" IS NULL OR v."business_date" > ${asOf}::date)
       ORDER BY d."number"
     `;
     if (rows.length === 0) return { asOf, transfers: [] };
@@ -635,11 +653,51 @@ export class TransfersService {
     return { lotChanges };
   }
 
+  // --- reversing -------------------------------------------------------------------
+
+  /**
+   * Reverses a dispatch while no receipt of the transfer has posted (ADR-0028): the ledger's
+   * reversal (#7) negates the dispatch exactly, so every lot goes back from in transit to the
+   * origin with its cost and expiry. The transfer is locked as a receipt's posting locks it, so a
+   * reversal and a receipt posting at once queue there and only the first wins: the reversal is
+   * refused once a receipt has posted, and a receipt of a reversed transfer is refused from then
+   * on. A posted receipt is never reversed here; it is corrected by an adjustment.
+   */
+  async reverse(
+    id: string,
+    dto: ReverseTransferDto,
+    actor: AuthenticatedUser,
+    meta: ClientMeta,
+  ): Promise<TransferView> {
+    const { number } = await this.existing(id);
+    const reversal: DocumentRef = await this.ledger.reverse(
+      id,
+      { businessDate: dto.businessDate, note: dto.note ?? null },
+      actor,
+      async (tx) => {
+        const transfer = await this.lockForReceipt(tx, id);
+        const refusal = dispatchReversalRefusal(transfer.status);
+        if (refusal) throw new PostingRefusedError(refusal);
+      },
+    );
+    await this.audit.record({
+      actorUserId: actor.userId,
+      action: AuditAction.UPDATE,
+      entityType: 'Transfer',
+      entityId: id,
+      summary: `Reversed the dispatch of transfer ${number} with ${reversal.number}`,
+      changes: { status: { from: 'dispatched', to: 'reversed' }, reversal: reversal.number },
+      ...meta,
+    });
+    return this.get(id);
+  }
+
   // --- for transfer receipts ---------------------------------------------------------
 
   /**
-   * Locks a transfer for its receipt's posting, then reads it: two receipts of the same transfer
-   * posting at once queue here, and the second finds it already received (ADR-0028).
+   * Locks a transfer for its receipt's posting, or its dispatch's reversal, then reads it: two
+   * receipts of the same transfer, or a receipt and a reversal, queue here, and the second finds
+   * it already received or reversed (ADR-0028).
    */
   async lockForReceipt(tx: Tx, transferId: string): Promise<ReceivableTransfer> {
     await tx.$queryRaw`
@@ -654,7 +712,14 @@ export class TransfersService {
       where: { documentId: transferId },
       include: {
         picks: { orderBy: { pickNo: 'asc' } },
-        document: { select: { number: true, status: true, businessDate: true } },
+        document: {
+          select: {
+            number: true,
+            status: true,
+            businessDate: true,
+            reversedBy: { select: { id: true } },
+          },
+        },
       },
     });
     if (!row) throw new NotFoundError('Transfer', transferId);
@@ -666,7 +731,11 @@ export class TransfersService {
     return {
       id: row.documentId,
       number: row.document.number,
-      status: transferStatus(documentStatus, row.receiptDocumentId !== null),
+      status: transferStatus(
+        documentStatus,
+        row.receiptDocumentId !== null,
+        row.document.reversedBy !== null,
+      ),
       businessDate: row.document.businessDate.toISOString().slice(0, 10),
       origin: locations.get(row.originId)!,
       destination: locations.get(row.destinationId)!,
@@ -834,6 +903,7 @@ export class TransfersService {
              MIN(d."posted_at") AS "oldest"
       FROM "locations" o
       LEFT JOIN "transfers" t ON t."origin_id" = o."id" AND t."receipt_document_id" IS NULL
+        AND NOT EXISTS (SELECT 1 FROM "stock_documents" v WHERE v."reverses_id" = t."document_id")
       LEFT JOIN "stock_documents" d ON d."id" = t."document_id" AND d."status" = 'posted'
       WHERE o."type" IN ('plant', 'warehouse') AND o."active"
       GROUP BY o."code"
@@ -901,7 +971,11 @@ function suggestedPicks(
 }
 
 function statusOf(document: StockDocumentView, received: boolean): TransferStatus {
-  return transferStatus(document.status as 'draft' | 'posted' | 'cancelled', received);
+  return transferStatus(
+    document.status as 'draft' | 'posted' | 'cancelled',
+    received,
+    document.reversedBy !== null,
+  );
 }
 
 function assertDraft(doc: LockedDocument): void {

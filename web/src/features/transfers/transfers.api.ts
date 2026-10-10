@@ -5,7 +5,7 @@
 import { api } from '@/lib/api-client';
 import type { PersonRef } from '@/features/opening-balances/opening-balances.api';
 
-export type TransferStatus = 'draft' | 'dispatched' | 'received' | 'cancelled';
+export type TransferStatus = 'draft' | 'dispatched' | 'received' | 'reversed' | 'cancelled';
 export type TransferStatusFilter = 'all' | TransferStatus;
 export type ReceiptStatus = 'draft' | 'submitted' | 'approved' | 'posted' | 'rejected';
 
@@ -117,6 +117,13 @@ export interface TransferView extends Header {
     by: PersonRef;
     approvedBy: PersonRef | null;
     at: string;
+  } | null;
+  /** The reversal that took the dispatch back to the origin while nothing had been received. */
+  reversed: {
+    reversal: { id: string; number: string; businessDate: string };
+    by: PersonRef;
+    at: string;
+    note: string | null;
   } | null;
   lines: TransferLine[];
   blockers: Check[];
@@ -243,6 +250,10 @@ export const dispatchTransfer = (id: string, revision: number, picks: DispatchPi
 
 export const cancelTransfer = (id: string, revision: number, reason: string) =>
   api.post<TransferView>(transferPath(id, 'cancel'), { revision, reason });
+
+/** Takes a dispatch back to the origin while no receipt of it has posted (ADR-0028). */
+export const reverseTransfer = (id: string, note: string) =>
+  api.post<TransferView>(transferPath(id, 'reverse'), note ? { note } : {});
 
 export const inTransit = (asOf?: string) =>
   api.get<InTransitView>('/transfers/in-transit', {

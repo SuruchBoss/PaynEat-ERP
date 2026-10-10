@@ -25,7 +25,8 @@ Building transfers (#14) leaves questions those decisions do not answer:
 ## Decision
 
 1. **Two stock documents.** A transfer is a stock document (`transfer`, TR-2026-00001) whose
-   posting is its dispatch: draft → dispatched, or cancelled before it leaves. Its receipt is a
+   posting is its dispatch: draft → dispatched → received, or reversed (decision 9), or cancelled
+   before it leaves. Its receipt is a
    stock document of its own (`transfer_receipt`, RT-2026-00001), raised at the destination against
    the transfer: draft → submitted → approved → posted, or rejected. Each posts once, in one
    transaction, like every other document.
@@ -55,7 +56,9 @@ Building transfers (#14) leaves questions those decisions do not answer:
    the destination (`expired_on_arrival`); it goes back or is written off.
 6. **Reasons and approval.** A line with a finding, a return or a write-off needs a reason. A
    receipt with a finding **or any write-off** needs the approval of someone other than its creator
-   holding `transfer:approve_receipt`, given to the plant role: the origin that confirmed what left.
+   **or submitter** holding `transfer:approve_receipt`, given to the plant role: the origin that
+   confirmed what left. Holding both roles changes nothing: the service refuses `self_approval`, and
+   the database refuses it again.
    A return alone needs no approval: nothing is lost. A receipt with neither posts when it is
    submitted.
 7. **Posting the receipt** moves, in one transaction: accepted from in-transit to the destination,
@@ -65,9 +68,17 @@ Building transfers (#14) leaves questions those decisions do not answer:
    dispatched, a transfer's share is exactly its dispatched lot lines until its receipt posts.
    `GET /transfers/in-transit?asOf=` answers that for any business date; stock on hand shows it next
    to the in-transit balances.
-9. **No reversal in this release.** A dispatch made by mistake is undone by a receipt that returns
-   everything to the origin; a receipt posted wrongly is corrected by a stock adjustment. Reversing
-   either is left for an issue of its own.
+9. **A dispatch is reversed while nothing has been received; a posted receipt is not.** Logistics
+   (`transfer:dispatch`) reverses a dispatch made by mistake with `POST /transfers/:id/reverse`,
+   using the ledger's reversal (#7): every lot goes back from in-transit to the origin with its cost
+   and expiry, and the transfer reads as reversed. That is refused once a receipt of the transfer
+   has posted (`already_received`), and from then on every receipt of a reversed transfer, drafted,
+   submitted or approved, is refused (`transfer_reversed`) rather than dropped; a new one cannot be
+   raised. The reversal locks the transfer as a receipt's posting does, so when both run at once
+   exactly one wins. The in-transit view leaves a reversed transfer out from the reversal's business
+   date. A branch never raises a receipt for a truck that did not leave, and a logistics mistake
+   stays a logistics document. A **posted receipt** is not reversible in this release: it is
+   corrected by a stock adjustment.
 
 ## Consequences
 
@@ -77,8 +88,9 @@ Building transfers (#14) leaves questions those decisions do not answer:
 - A receiver records three numbers per lot line instead of one. The console fills in the obvious
   case (all accepted) and asks only for the difference.
 - The ERP has no assignment of people to locations yet: anyone holding `transfer:receive` can
-  receive at any destination, and anyone holding `transfer:dispatch` can dispatch from any origin.
-  Restricting that is a separate issue.
+  receive at any destination, and anyone holding `transfer:dispatch` can dispatch from (and
+  reverse) any origin. Restricting that is
+  [#71](https://github.com/SuruchBoss/PaynEat-ERP/issues/71).
 
 ## Alternatives considered
 
@@ -90,3 +102,6 @@ Building transfers (#14) leaves questions those decisions do not answer:
   "somewhere" is the problem transfers exist to prevent.
 - **Approval for every difference, returns included.** A return loses nothing and the origin sees
   it come back; asking for an approval there adds a step without adding control.
+- **Undoing a mistaken dispatch with a receipt that returns everything.** The branch would raise a
+  receipt for a truck that may never have left, and a logistics mistake would hide behind a branch
+  document.

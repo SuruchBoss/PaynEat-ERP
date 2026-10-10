@@ -125,6 +125,24 @@ export class CancelTransferDto extends TransferStepDto {
   reason!: string;
 }
 
+/**
+ * Reverses a dispatch while no receipt of the transfer has posted (ADR-0028): what left goes back
+ * from in transit to the origin.
+ */
+export class ReverseTransferDto {
+  /** Today when left out; never before the dispatch, never later than today. */
+  @IsOptional()
+  @IsString()
+  @Matches(ISO_DATE, { message: `businessDate ${DATE_MESSAGE}` })
+  businessDate?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(NOTE_MAX_LENGTH)
+  @Transform(textOrNull)
+  note?: string | null;
+}
+
 /** A lot that left on a line, as dispatch confirms it. Quantities are decimal strings. */
 export class DispatchPickDto {
   @IsInt()
@@ -160,7 +178,7 @@ export type TransferStatusFilter = 'all' | TransferStatus;
 
 export class TransfersQueryDto {
   @IsOptional()
-  @IsIn(['all', 'draft', 'dispatched', 'received', 'cancelled'])
+  @IsIn(['all', 'draft', 'dispatched', 'received', 'reversed', 'cancelled'])
   status: TransferStatusFilter = 'all';
 
   /** Transfers leaving or arriving at this location. */
@@ -427,6 +445,13 @@ export interface TransferView extends Omit<StockDocumentView, 'status'> {
     by: PersonRef;
     approvedBy: PersonRef | null;
     at: Date;
+  } | null;
+  /** The reversal that took the dispatch back to the origin, while nothing had been received. */
+  reversed: {
+    reversal: { id: string; number: string; businessDate: string };
+    by: PersonRef;
+    at: Date;
+    note: string | null;
   } | null;
   lines: TransferLineView[];
   /** Draft: what would refuse dispatching the suggested lots now. */

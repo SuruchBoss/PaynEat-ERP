@@ -1535,6 +1535,7 @@ export const en: Messages = {
   'tr.status.draft': 'Draft',
   'tr.status.dispatched': 'Dispatched',
   'tr.status.received': 'Received',
+  'tr.status.reversed': 'Reversed',
   'tr.status.cancelled': 'Cancelled',
   'tr.column.number': 'Number',
   'tr.column.route': 'From → to',
@@ -1580,6 +1581,7 @@ export const en: Messages = {
   'tr.view.dispatched': 'Dispatched by',
   'tr.view.received': 'Received by',
   'tr.view.approvedBy': 'approved by {name}',
+  'tr.view.reversed': 'Reversed by',
   'tr.view.cancelled': 'Cancelled by',
   'tr.view.inTransit': 'In transit at',
   'tr.lines.title': 'Items and lots',
@@ -1601,6 +1603,11 @@ export const en: Messages = {
   'tr.cancel.label': 'Why it is cancelled',
   'tr.cancel.open': 'Cancel transfer',
   'tr.cancelledNotice': '{number} cancelled.',
+  'tr.reverse.hint':
+    'Sent by mistake, or the truck never left? Reverse it until a receipt of it posts: every lot goes back from in transit to the origin.',
+  'tr.reverse.label': 'Note on the reversal (optional)',
+  'tr.reverse.open': 'Reverse dispatch',
+  'tr.reversedNotice': '{number} reversed: its stock is back at the origin.',
   'tr.receipts.title': 'Receipts',
   'tr.receipt.open.label': 'Open receipt {number}',
   'tr.receipt.title': 'Receipt {number}',
@@ -1650,7 +1657,9 @@ export const en: Messages = {
   'tr.rule.pieces_required': 'Line {lineNo} needs the piece count of each lot sent.',
   'tr.rule.negative_stock': 'The origin does not hold enough of lot {lot}.',
   'tr.rule.transfer_not_dispatched': 'This transfer has not been dispatched.',
-  'tr.rule.already_received': 'Another receipt of this transfer was received first.',
+  'tr.rule.already_received': 'A receipt of this transfer has already been received.',
+  'tr.rule.transfer_reversed':
+    'This transfer was reversed and its stock went back to the origin, so it can no longer be received.',
   'tr.rule.business_date_before_dispatch': 'A transfer cannot be received before it was sent.',
   'tr.rule.temperature_required': 'Lot line {lineNo} needs its temperature.',
   'tr.rule.difference_unresolved':

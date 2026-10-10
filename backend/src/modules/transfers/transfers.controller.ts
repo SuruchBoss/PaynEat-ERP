@@ -27,6 +27,7 @@ import {
   InTransitQueryDto,
   ReceiptStepDto,
   RejectTransferReceiptDto,
+  ReverseTransferDto,
   TransferReceiptsQueryDto,
   TransfersQueryDto,
   UpdateTransferDto,
@@ -43,9 +44,10 @@ import { TransfersService } from './transfers.service';
 
 /**
  * Transfers (#14). `transfer:read` (logistics, plant, branch managers, finance) reads them;
- * `transfer:dispatch` (logistics, ADR-0008) drafts, edits, cancels and dispatches them;
+ * `transfer:dispatch` (logistics, ADR-0008) drafts, edits, cancels, dispatches and reverses them;
  * `transfer:receive` (branch managers) raises a receipt of a dispatched one. There is no DELETE:
- * a draft is cancelled, and what was dispatched is accounted for by its receipt.
+ * a draft is cancelled, and what was dispatched is accounted for by its receipt, or reversed by
+ * logistics while no receipt of it has posted (ADR-0028).
  */
 @Controller('transfers')
 export class TransfersController {
@@ -118,6 +120,18 @@ export class TransfersController {
     @Req() req: Request,
   ): Promise<TransferView> {
     return this.transfers.dispatch(id, dto, actor, clientMeta(req));
+  }
+
+  @Post(':id/reverse')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions(Permission.TRANSFER_DISPATCH)
+  reverse(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ReverseTransferDto,
+    @CurrentUser() actor: AuthenticatedUser,
+    @Req() req: Request,
+  ): Promise<TransferView> {
+    return this.transfers.reverse(id, dto, actor, clientMeta(req));
   }
 
   @Post(':id/receipts')

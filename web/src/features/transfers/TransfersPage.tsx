@@ -17,6 +17,7 @@ import { formatBusinessDate, formatDateTime, groupDigits } from '@/lib/format';
 import { useAuthStore } from '@/stores/auth.store';
 import {
   cancelTransfer,
+  reverseTransfer,
   createReceipt,
   createTransfer,
   dispatchTransfer,
@@ -71,6 +72,8 @@ const RULES: Record<string, MessageKey> = {
   cancelled: 'tr.error.step',
   transfer_not_dispatched: 'tr.rule.transfer_not_dispatched',
   already_received: 'tr.rule.already_received',
+  transfer_reversed: 'tr.rule.transfer_reversed',
+  already_reversed: 'tr.error.step',
   business_date_before_dispatch: 'tr.rule.business_date_before_dispatch',
   temperature_required: 'tr.rule.temperature_required',
   difference_unresolved: 'tr.rule.difference_unresolved',
@@ -112,6 +115,7 @@ const STATUS: Record<TransferStatus, { key: MessageKey; tone: string }> = {
   draft: { key: 'tr.status.draft', tone: 'badge--neutral' },
   dispatched: { key: 'tr.status.dispatched', tone: 'badge--neutral' },
   received: { key: 'tr.status.received', tone: 'badge--up' },
+  reversed: { key: 'tr.status.reversed', tone: 'badge--down' },
   cancelled: { key: 'tr.status.cancelled', tone: 'badge--down' },
 };
 
@@ -123,7 +127,14 @@ const RECEIPT_STATUS: Record<ReceiptStatus, { key: MessageKey; tone: string }> =
   rejected: { key: 'tr.receipt.status.rejected', tone: 'badge--down' },
 };
 
-const FILTERS: TransferStatusFilter[] = ['all', 'draft', 'dispatched', 'received', 'cancelled'];
+const FILTERS: TransferStatusFilter[] = [
+  'all',
+  'draft',
+  'dispatched',
+  'received',
+  'reversed',
+  'cancelled',
+];
 
 const nonZero = (value: string | null) => value !== null && /[1-9]/.test(value);
 
@@ -550,6 +561,7 @@ function TransferDocument({
   const editable = canDispatch && transfer.status === 'draft';
   const [picks, setPicks] = useState(() => initialPicks(transfer));
   const [reason, setReason] = useState('');
+  const [reversalNote, setReversalNote] = useState('');
   const [receiving, setReceiving] = useState(false);
   const [receiptId, setReceiptId] = useState<string | null>(null);
   const nameOf = (x: { nameTh: string; nameEn: string }) =>
@@ -579,7 +591,16 @@ function TransferDocument({
       onNotice({ key: 'tr.cancelledNotice', params: { number: result.number } });
     },
   });
-  const busy = dispatch.isPending || cancel.isPending;
+  const reverse = useMutation({
+    mutationFn: () => reverseTransfer(transfer.id, reversalNote.trim()),
+    onSuccess: async (result) => {
+      await refresh();
+      onNotice({ key: 'tr.reversedNotice', params: { number: result.number } });
+    },
+  });
+  const busy = dispatch.isPending || cancel.isPending || reverse.isPending;
+  // Logistics takes back a dispatch that should not have left, until a receipt of it posts.
+  const reversible = canDispatch && transfer.status === 'dispatched';
   const by = (record: { by: { displayName: string }; at: string }) =>
     t('tr.view.by', { name: record.by.displayName, time: formatDateTime(record.at, language) });
   const openReceipt = transfer.receipts.find(
@@ -629,6 +650,17 @@ function TransferDocument({
                   {' '}
                   · {t('tr.view.approvedBy', { name: transfer.received.approvedBy.displayName })}
                 </span>
+              )}
+            </dd>
+          </div>
+        )}
+        {transfer.reversed && (
+          <div>
+            <dt>{t('tr.view.reversed')}</dt>
+            <dd>
+              {by(transfer.reversed)} <code>{transfer.reversed.reversal.number}</code>
+              {transfer.reversed.note && (
+                <span className="subtle"> · {transfer.reversed.note}</span>
               )}
             </dd>
           </div>
@@ -780,6 +812,33 @@ function TransferDocument({
         )}
         {cancel.isError && (
           <ErrorCallout error={cancel.error} messages={ERRORS} describe={describeError} />
+        )}
+        {reversible && (
+          <>
+            <p className="subtle">{t('tr.reverse.hint')}</p>
+            <div className="field">
+              <label htmlFor={`tr-reverse-note-${transfer.id}`}>{t('tr.reverse.label')}</label>
+              <input
+                id={`tr-reverse-note-${transfer.id}`}
+                maxLength={500}
+                value={reversalNote}
+                onChange={(e) => setReversalNote(e.target.value)}
+              />
+            </div>
+            <div className="actions">
+              <button
+                type="button"
+                className="button button--ghost"
+                disabled={busy}
+                onClick={() => reverse.mutate()}
+              >
+                {t('tr.reverse.open')}
+              </button>
+            </div>
+          </>
+        )}
+        {reverse.isError && (
+          <ErrorCallout error={reverse.error} messages={ERRORS} describe={describeError} />
         )}
       </div>
       <div className="actions">

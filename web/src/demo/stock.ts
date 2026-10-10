@@ -98,7 +98,10 @@ const REFUSAL_MESSAGES: Record<PostingRule, string> = {
   // Transfers (#14) are not in the demo yet; listed for the same reason.
   cancelled: 'This document was cancelled: nothing can be posted from it',
   transfer_not_dispatched: 'Only a dispatched transfer can be received',
-  already_received: 'This transfer has already been received: another receipt of it posted first',
+  already_received:
+    'This transfer has already been received: a receipt of it has posted, and a correction is an adjustment',
+  transfer_reversed:
+    'This transfer was reversed: its stock went back to the origin, so it can no longer be received',
   business_date_before_dispatch: 'A transfer cannot be received before the day it was dispatched',
   difference_unresolved:
     'Accepted, returned and written off must add up to exactly what was dispatched: nothing may stay in transit',

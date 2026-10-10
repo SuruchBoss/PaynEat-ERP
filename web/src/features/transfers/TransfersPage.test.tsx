@@ -77,6 +77,7 @@ const DRAFT: TransferView = {
   dispatched: null,
   cancelled: null,
   received: null,
+  reversed: null,
   lines: [
     {
       lineNo: 1,
@@ -236,6 +237,61 @@ describe('transfers (#14)', () => {
       revision: 1,
       picks: [{ lineNo: 1, lotId: LOT_MO, quantity: '18', pieces: null }],
     });
+  });
+
+  it('lets logistics reverse a dispatch no receipt has taken in, sending its stock back', async () => {
+    let current = DISPATCHED;
+    const fetchMock = mockApi({
+      'GET /transfers': () => jsonResponse(200, [summary(current)]),
+      [`GET /transfers/${DISPATCHED.id}`]: () => jsonResponse(200, current),
+      'GET /units': () => jsonResponse(200, UNITS),
+      [`POST /transfers/${DISPATCHED.id}/reverse`]: () => {
+        current = {
+          ...DISPATCHED,
+          status: 'reversed',
+          reversed: {
+            reversal: {
+              id: '00000000-0000-4000-8000-0000000000b9',
+              number: 'RV-2026-00002',
+              businessDate: '2026-10-10',
+            },
+            by: PERSON,
+            at: '2026-10-10T02:30:00.000Z',
+            note: 'Truck never left',
+          },
+        };
+        return jsonResponse(200, current);
+      },
+    });
+    renderApp('/transfers', { as: LOGISTICS });
+    const u = userEvent.setup();
+
+    await u.click(await screen.findByRole('button', { name: 'เปิดใบโอน TR-2026-00004' }));
+    await u.type(
+      await screen.findByLabelText('หมายเหตุการกลับรายการ (ไม่บังคับ)'),
+      'Truck never left',
+    );
+    await u.click(screen.getByRole('button', { name: 'กลับรายการการส่ง' }));
+    expect(
+      await screen.findByText('กลับรายการ TR-2026-00004 แล้ว ของกลับไปที่ต้นทาง'),
+    ).toBeVisible();
+    const post = fetchMock.mock.calls.findIndex(([, init]) => init?.method === 'POST');
+    expect(sentBody(fetchMock, post)).toEqual({ note: 'Truck never left' });
+    expect(await screen.findByText('RV-2026-00002')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'กลับรายการการส่ง' })).toBeNull();
+  });
+
+  it('offers the reversal to logistics only', async () => {
+    mockApi({
+      'GET /transfers': () => jsonResponse(200, [summary(DISPATCHED)]),
+      [`GET /transfers/${DISPATCHED.id}`]: () => jsonResponse(200, DISPATCHED),
+      'GET /units': () => jsonResponse(200, UNITS),
+    });
+    renderApp('/transfers', { as: BRANCH_MANAGER });
+    const u = userEvent.setup();
+    await u.click(await screen.findByRole('button', { name: 'เปิดใบโอน TR-2026-00004' }));
+    expect(await screen.findByRole('button', { name: 'บันทึกการรับ' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'กลับรายการการส่ง' })).toBeNull();
   });
 
   it('lets a branch manager record what arrived, writing off what never came', async () => {

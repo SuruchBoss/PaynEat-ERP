@@ -194,7 +194,9 @@ Prometheus exposition at `GET /metrics` on each API, not exposed publicly.
   (#14) adds `cancelled` at dispatch; its receipt adds `transfer_not_dispatched`, `already_received`,
   `business_date_before_dispatch` and `difference_unresolved`, and reuses `temperature_required`,
   `reason_required`, `expired_on_arrival`, `needs_approval` and `self_approval`, counted when it is
-  submitted, approved or posted.
+  submitted, approved or posted; a receipt of a transfer whose dispatch was reversed is refused by
+  `transfer_reversed`. Reversing a dispatch counts under `document_type="reversal"`, refused by
+  `already_received` once a receipt of the transfer has posted.
 
 `erp_production_yield_percent` is the yield of the most recent posted, unreversed production order
 of each BOM (#13, ADR-0027), `measure="actual"` as measured and `measure="expected"` as its BOM
@@ -202,7 +204,7 @@ version expects; read from the database at scrape time. A gap between the two is
 also shows as higher output lot costs.
 
 `erp_transfers_in_transit` counts the transfers dispatched from each active plant and warehouse and
-not yet received (#14, ADR-0028), and `erp_transfers_oldest_in_transit_age_seconds` is how long the
+neither received nor reversed (#14, ADR-0028), and `erp_transfers_oldest_in_transit_age_seconds` is how long the
 oldest of them has been on the road, counted from its dispatch; both are 0 for an origin with nothing
 in transit, and both are read from the database at scrape time. A growing age is a delivery nobody
 has received: stock that is neither at the plant nor at the branch.

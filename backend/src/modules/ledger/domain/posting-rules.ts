@@ -54,6 +54,7 @@ export type PostingRule =
   | 'cancelled'
   | 'transfer_not_dispatched'
   | 'already_received'
+  | 'transfer_reversed'
   | 'business_date_before_dispatch'
   | 'difference_unresolved';
 
@@ -68,10 +69,11 @@ export const CONFLICT_RULES: ReadonlySet<PostingRule> = new Set([
   'needs_approval',
   // A production order someone else cancelled, or posted, since it was opened (#13).
   'not_released',
-  // A transfer someone else cancelled before it was dispatched, or received by another receipt
-  // of it that posted first (#14).
+  // A transfer someone else cancelled before it was dispatched, received by another receipt of
+  // it that posted first, or whose dispatch logistics reversed meanwhile (#14).
   'cancelled',
   'already_received',
+  'transfer_reversed',
 ]);
 
 export type LocationType = 'plant' | 'warehouse' | 'branch' | 'in_transit' | 'subcontractor';

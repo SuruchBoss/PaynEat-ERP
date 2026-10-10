@@ -241,7 +241,9 @@ export class TransferReceiptsService {
         'TRANSFER_NOT_RECEIVABLE',
         transfer.status === 'received'
           ? 'This transfer has already been received'
-          : 'Only a dispatched transfer can be received',
+          : transfer.status === 'reversed'
+            ? 'This transfer was reversed: its stock went back to the origin'
+            : 'Only a dispatched transfer can be received',
         HttpStatus.CONFLICT,
         { status: transfer.status },
       );
@@ -386,9 +388,10 @@ export class TransferReceiptsService {
 
   /**
    * Approves a submitted receipt's findings and write-offs and posts it. Nobody approves a receipt
-   * they created (ADR-0008): refused here, counted and logged, and refused again by the database.
-   * When the ledger then refuses the posting (another receipt of the transfer posted first, say),
-   * the receipt stays approved and the answer says why.
+   * they created or submitted (ADR-0008), whatever roles they hold: refused here, counted and
+   * logged, and refused again by the database. Nor is a receipt of a transfer whose dispatch was
+   * reversed approved. When the ledger then refuses the posting (another receipt of the transfer
+   * posted first, say), the receipt stays approved and the answer says why.
    */
   async approve(
     id: string,
@@ -404,7 +407,15 @@ export class TransferReceiptsService {
         const doc = await this.ledger.lockAt(tx, id, dto.revision);
         number = doc.number;
         assertStep(doc, 'approve');
-        if (doc.createdById === actor.userId) throw new PostingRefusedError('self_approval');
+        const receipt = await tx.transferReceipt.findUniqueOrThrow({
+          where: { documentId: id },
+          select: { transferId: true, submittedById: true },
+        });
+        if (doc.createdById === actor.userId || receipt.submittedById === actor.userId) {
+          throw new PostingRefusedError('self_approval');
+        }
+        const transfer = await this.transfers.receivable(receipt.transferId, tx);
+        if (transfer.status === 'reversed') throw new PostingRefusedError('transfer_reversed');
         await this.ledger.moveTo(tx, doc, 'approved');
         await tx.transferReceipt.update({
           where: { documentId: id },
