@@ -17,6 +17,7 @@ enum StockDocumentType {
   production_order
   transfer
   transfer_receipt
+  branch_consumption
 }
 
 /// draft → posted for opening balances; draft → submitted → approved → posted, or rejected, for
@@ -64,44 +65,61 @@ model StockDocument {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  lots             Lot[]
-  entries          LedgerEntry[]
-  openingBalance   OpeningBalance?
-  stockAdjustment  StockAdjustment?
-  goodsReceipt     GoodsReceipt?
-  productionOrder  ProductionOrder?
-  transfer         Transfer?        @relation("TransferDocument")
-  transferReceipt  TransferReceipt? @relation("TransferReceiptDocument")
-  receivedTransfer Transfer?        @relation("TransferReceivedBy")
-  genealogy        LotGenealogy[]
+  lots                 Lot[]
+  entries              LedgerEntry[]
+  openingBalance       OpeningBalance?
+  stockAdjustment      StockAdjustment?
+  goodsReceipt         GoodsReceipt?
+  productionOrder      ProductionOrder?
+  transfer             Transfer?              @relation("TransferDocument")
+  transferReceipt      TransferReceipt?       @relation("TransferReceiptDocument")
+  receivedTransfer     Transfer?              @relation("TransferReceivedBy")
+  genealogy            LotGenealogy[]
+  branchConsumption    BranchConsumption?     @relation("BranchConsumptionDocument")
+  salesEventProcessing SalesEventProcessing[] @relation("SalesEventProcessingDocument")
 
   @@index([type, status])
   @@map("stock_documents")
 }
 
+/// Where a placeholder lot's cost comes from (ADR-0030): never presented as a fact.
+enum PlaceholderCost {
+  /// The unit cost of the item's most recent lot anywhere in the chain when it was created.
+  estimated
+  /// No lot of the item had ever existed: the cost is 0, and nothing is known about it.
+  unknown
+}
+
 /// A quantity of one item that shares an origin, a cost and an expiry date (ADR-0006). Created
-/// only by posting, never changed afterwards.
+/// only by posting, never changed afterwards. A placeholder lot (ADR-0030) is the exception that
+/// proves it: one per branch and item, created the first time a sale at a branch that never held
+/// the item needs it, with no expiry and a cost that is an estimate at best.
 model Lot {
-  id                 String        @id @default(uuid()) @db.Uuid
+  id                    String           @id @default(uuid()) @db.Uuid
   /// The origin document's number and line: OB-2026-00001/2.
-  number             String        @unique
-  itemId             String        @map("item_id") @db.Uuid
-  item               Item          @relation(fields: [itemId], references: [id], onDelete: Restrict)
-  originDocumentId   String        @map("origin_document_id") @db.Uuid
-  originDocument     StockDocument @relation(fields: [originDocumentId], references: [id], onDelete: Restrict)
-  originLineNo       Int           @map("origin_line_no")
+  number                String           @unique
+  itemId                String           @map("item_id") @db.Uuid
+  item                  Item             @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  originDocumentId      String           @map("origin_document_id") @db.Uuid
+  originDocument        StockDocument    @relation(fields: [originDocumentId], references: [id], onDelete: Restrict)
+  originLineNo          Int              @map("origin_line_no")
   /// Per base unit, exact (ADR-0004, ADR-0019).
-  unitCost           Decimal       @map("unit_cost") @db.Decimal(18, 6)
-  expiryDate         DateTime      @map("expiry_date") @db.Date
+  unitCost              Decimal          @map("unit_cost") @db.Decimal(18, 6)
+  /// Null only for a placeholder lot, which has no expiry and is never picked FEFO.
+  expiryDate            DateTime?        @map("expiry_date") @db.Date
   /// Received lots only (ADR-0014): the receipt date plus the item's shelf life, and the date the
   /// supplier printed, kept so the reason for `expiry_date` stays visible. It is the earlier one.
-  computedExpiryDate DateTime?     @map("computed_expiry_date") @db.Date
-  supplierExpiryDate DateTime?     @map("supplier_expiry_date") @db.Date
+  computedExpiryDate    DateTime?        @map("computed_expiry_date") @db.Date
+  supplierExpiryDate    DateTime?        @map("supplier_expiry_date") @db.Date
   /// What the lot was created with, in the item's base unit.
-  quantity           Decimal       @db.Decimal(18, 3)
+  quantity              Decimal          @db.Decimal(18, 3)
   /// Variable-weight items only: the piece count it was created with (ADR-0005).
-  secondaryQuantity  Decimal?      @map("secondary_quantity") @db.Decimal(18, 0)
-  createdAt          DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  secondaryQuantity     Decimal?         @map("secondary_quantity") @db.Decimal(18, 0)
+  /// Placeholder lots only: the branch it stands in for, and what its cost is.
+  placeholderLocationId String?          @map("placeholder_location_id") @db.Uuid
+  placeholderLocation   Location?        @relation("PlaceholderLots", fields: [placeholderLocationId], references: [id], onDelete: Restrict)
+  placeholderCost       PlaceholderCost? @map("placeholder_cost")
+  createdAt             DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
 
   entries              LedgerEntry[]
   balances             StockBalance[]
@@ -115,6 +133,7 @@ model Lot {
 
   @@unique([id, itemId])
   @@unique([originDocumentId, originLineNo])
+  @@unique([placeholderLocationId, itemId])
   @@index([itemId, expiryDate])
   @@map("lots")
 }

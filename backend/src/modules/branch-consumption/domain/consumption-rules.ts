@@ -100,15 +100,16 @@ export function consumedQuantity(usage: string, baseUnitDecimals: number): strin
  * - `process`: its business date has come; turn it into consumption.
  * - `wait`: it is dated after today but within the tolerance of when the ERP received it (a sale
  *   just before midnight on a clock a little fast); it is left untouched until its day comes.
- * - `flag`: it is further ahead of its receipt than the tolerance, which usually means a tablet
- *   with a wrong clock. It is not posted into a distant period: it fails visibly with
- *   `sale_time_ahead` until a person re-processes it. Its time is never corrected.
+ * - `hold`: it is further ahead of its receipt than the tolerance, which usually means a tablet
+ *   with a wrong clock. It is not posted into a distant period: it stays received, held and
+ *   flagged `sale_time_ahead` where people see it, until a person re-processes it once its date
+ *   has come. It has not failed, and its time is never corrected.
  */
-export type SaleTimeDecision = 'process' | 'wait' | 'flag';
+export type SaleTimeDecision = 'process' | 'wait' | 'hold';
 
 /**
  * `toleranceSeconds` is configuration (ADR-0007), never a constant here. `reviewed` is true when
- * a person re-processes the event: the flag has been looked at, and the sale then only waits for
+ * a person re-processes the event: the hold has been looked at, and the sale then only waits for
  * its day, like any other.
  */
 export function saleTimeDecision(input: {
@@ -120,7 +121,7 @@ export function saleTimeDecision(input: {
   reviewed: boolean;
 }): SaleTimeDecision {
   const aheadMs = input.saleTime.getTime() - input.receivedAt.getTime();
-  if (!input.reviewed && aheadMs > input.toleranceSeconds * 1000) return 'flag';
+  if (!input.reviewed && aheadMs > input.toleranceSeconds * 1000) return 'hold';
   return input.saleDate > input.today ? 'wait' : 'process';
 }
 

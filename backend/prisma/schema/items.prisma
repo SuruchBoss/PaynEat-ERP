@@ -63,6 +63,7 @@ model Item {
   transferReceiptLines TransferReceiptLine[]
   parLevels            ParLevel[]
   requisitionLines     RequisitionLine[]
+  consumptionLines     BranchConsumptionLine[]
 
   @@map("items")
 }

@@ -234,7 +234,8 @@ export interface ReversibleDocument {
     | 'goods_receipt'
     | 'production_order'
     | 'transfer'
-    | 'transfer_receipt';
+    | 'transfer_receipt'
+    | 'branch_consumption';
   status: 'draft' | 'submitted' | 'approved' | 'posted' | 'rejected' | 'released' | 'cancelled';
   businessDate: string;
   reversedBy: string | null;

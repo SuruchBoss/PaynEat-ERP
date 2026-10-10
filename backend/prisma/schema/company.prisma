@@ -21,16 +21,19 @@ model Company {
 /// (ADR-0008). At most one row, like `companies`; until the admin saves them the defaults below
 /// apply. A separate table, so an installation can be configured before its company is recorded.
 model CompanySettings {
-  singleton                 Boolean  @id @default(true)
+  singleton                     Boolean  @id @default(true)
   /// Purchase orders whose gross total is above this need a purchasing approver; at or below it,
   /// submitting approves them (ADR-0024). Zero sends every order to an approver, which is where a
   /// new installation starts until the admin sets it.
-  purchaseApprovalThreshold Decimal  @default(0) @map("purchase_approval_threshold") @db.Decimal(18, 2)
+  purchaseApprovalThreshold     Decimal  @default(0) @map("purchase_approval_threshold") @db.Decimal(18, 2)
+  /// A sales event whose sale time is further ahead of when the ERP received it than this is held
+  /// as `sale_time_ahead` rather than posted into a period that has not come (#17, ADR-0030).
+  saleTimeAheadToleranceMinutes Int      @default(10) @map("sale_time_ahead_tolerance_minutes")
   /// Bumped by every save: a change made from an older one is refused.
-  revision                  Int      @default(1)
-  updatedById               String   @map("updated_by_id") @db.Uuid
-  updatedBy                 User     @relation("CompanySettingsUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
-  updatedAt                 DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  revision                      Int      @default(1)
+  updatedById                   String   @map("updated_by_id") @db.Uuid
+  updatedBy                     User     @relation("CompanySettingsUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  updatedAt                     DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@map("company_settings")
 }

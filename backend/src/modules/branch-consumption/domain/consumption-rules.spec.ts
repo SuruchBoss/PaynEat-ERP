@@ -82,7 +82,7 @@ describe('branch consumption rules (#17)', () => {
     expect(consumedQuantity('0.0004', 3)).toBeNull();
   });
 
-  it('processes a sale whose day has come, waits for one a little ahead, flags one far ahead', () => {
+  it('processes a sale whose day has come, waits for one a little ahead, holds one far ahead', () => {
     const base = {
       receivedAt: new Date('2026-10-10T16:59:00Z'),
       today: '2026-10-10',
@@ -105,14 +105,14 @@ describe('branch consumption rules (#17)', () => {
         saleDate: '2026-10-11',
       }),
     ).toBe('wait');
-    // A year ahead: flagged, never posted into next year.
+    // A year ahead: held, never posted into next year.
     expect(
       saleTimeDecision({
         ...base,
         saleTime: new Date('2027-10-10T09:00:00Z'),
         saleDate: '2027-10-10',
       }),
-    ).toBe('flag');
+    ).toBe('hold');
     // Once a person re-processes it, it only waits for its day.
     expect(
       saleTimeDecision({

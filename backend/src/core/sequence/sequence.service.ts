@@ -17,7 +17,8 @@ export type SequenceScope =
   | 'PRODUCTION_ORDER'
   | 'TRANSFER'
   | 'TRANSFER_RECEIPT'
-  | 'REQUISITION';
+  | 'REQUISITION'
+  | 'BRANCH_CONSUMPTION';
 
 const PREFIXES: Record<SequenceScope, string> = {
   OPENING_BALANCE: 'OB',
@@ -30,6 +31,7 @@ const PREFIXES: Record<SequenceScope, string> = {
   TRANSFER: 'TR',
   TRANSFER_RECEIPT: 'RT',
   REQUISITION: 'RQ',
+  BRANCH_CONSUMPTION: 'BC',
 };
 
 /**

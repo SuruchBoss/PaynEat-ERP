@@ -62,28 +62,31 @@ model PosCredential {
 /// One paid sale line from a POS (sales event v1), stored once per idempotency key. Turning it
 /// into ingredient usage (#17) moves its status on; nothing else about it ever changes.
 model SalesEvent {
-  id             String           @id @default(uuid()) @db.Uuid
-  idempotencyKey String           @unique @map("idempotency_key")
-  posInstanceId  String           @map("pos_instance_id") @db.Uuid
-  posInstance    PosInstance      @relation(fields: [posInstanceId], references: [id], onDelete: Restrict)
-  locationId     String           @map("location_id") @db.Uuid
-  location       Location         @relation(fields: [locationId], references: [id], onDelete: Restrict)
-  saleTime       DateTime         @map("sale_time") @db.Timestamptz(3)
-  menuItemCode   String           @map("menu_item_code")
+  id             String                 @id @default(uuid()) @db.Uuid
+  idempotencyKey String                 @unique @map("idempotency_key")
+  posInstanceId  String                 @map("pos_instance_id") @db.Uuid
+  posInstance    PosInstance            @relation(fields: [posInstanceId], references: [id], onDelete: Restrict)
+  locationId     String                 @map("location_id") @db.Uuid
+  location       Location               @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  saleTime       DateTime               @map("sale_time") @db.Timestamptz(3)
+  menuItemCode   String                 @map("menu_item_code")
   /// Sold by count: how many. Null when sold by weight.
-  quantity       Decimal?         @db.Decimal(18, 0)
+  quantity       Decimal?               @db.Decimal(18, 0)
   /// Sold by weight: the kilograms sold. Null when sold by count.
-  weightKg       Decimal?         @map("weight_kg") @db.Decimal(18, 3)
+  weightKg       Decimal?               @map("weight_kg") @db.Decimal(18, 3)
   /// `[{ code, quantity }]`, as sent.
   modifiers      Json
   /// The event exactly as validated, for #17 and for an investigator.
   payload        Json
   /// SHA-256 of the canonical payload: a key sent again with a different sale is refused.
-  payloadHash    String           @map("payload_hash")
-  status         SalesEventStatus @default(received)
-  receivedAt     DateTime         @default(now()) @map("received_at") @db.Timestamptz(3)
+  payloadHash    String                 @map("payload_hash")
+  status         SalesEventStatus       @default(received)
+  receivedAt     DateTime               @default(now()) @map("received_at") @db.Timestamptz(3)
+  consumption    BranchConsumption?
+  processing     SalesEventProcessing[]
 
   @@index([locationId, saleTime])
   @@index([posInstanceId, receivedAt])
+  @@index([status, receivedAt])
   @@map("sales_events")
 }

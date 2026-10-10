@@ -1,0 +1,91 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
+// Branch consumption — owned by the branch-consumption module (#17, ADR-0030; docs/GLOSSARY.md
+// "Branch consumption", "Placeholder lot"). Every sales event a POS delivered becomes one
+// branch-consumption document: the ingredients its menu item's recipe (and its modifiers') used,
+// taken from the branch's lots FEFO and posted by the ledger with the sale's own time.
+
+/// What happened when the processor, or a person, tried to turn a sales event into consumption.
+enum SalesEventOutcome {
+  /// It became a posted branch-consumption document.
+  processed
+  /// It needs a master data fix first; `reason` says which (docs/TELEMETRY.md).
+  failed
+  /// Its sale time is further ahead of its receipt than the tolerance: it stays received, held
+  /// until a person re-processes it once its date has come. It has not failed.
+  held
+  /// A person asked for it to be tried again; the attempt that follows is theirs.
+  reprocessed
+}
+
+/// One sales event's consumption: the header of a `branch_consumption` stock document. One per
+/// event, whatever runs concurrently: `sales_event_id` is unique.
+model BranchConsumption {
+  documentId          String        @id @map("document_id") @db.Uuid
+  document            StockDocument @relation("BranchConsumptionDocument", fields: [documentId], references: [id], onDelete: Restrict)
+  salesEventId        String        @unique @map("sales_event_id") @db.Uuid
+  salesEvent          SalesEvent    @relation(fields: [salesEventId], references: [id], onDelete: Restrict)
+  locationId          String        @map("location_id") @db.Uuid
+  location            Location      @relation("BranchConsumptionLocation", fields: [locationId], references: [id], onDelete: Restrict)
+  /// The sale's own time: every entry the document posts carries it as its business time.
+  saleTime            DateTime      @map("sale_time") @db.Timestamptz(3)
+  menuItemId          String        @map("menu_item_id") @db.Uuid
+  menuItem            MenuItem      @relation(fields: [menuItemId], references: [id], onDelete: Restrict)
+  /// The menu item's recipe version in force on the sale date.
+  recipeEffectiveFrom DateTime      @map("recipe_effective_from") @db.Date
+  /// Set when it posts: the branch's lots could not cover a line, so a lot went below zero.
+  shortfall           Boolean       @default(false)
+  /// Set when it posts: a shortfall was taken from a lot already past its expiry on the sale
+  /// date (ADR-0030). A food-safety signal, shown on the document and in the usage report.
+  consumedExpiredLot  Boolean       @default(false) @map("consumed_expired_lot")
+  /// Set when it posts: the branch had never held an item, so it went to the item's placeholder.
+  placeholder         Boolean       @default(false)
+  createdAt           DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  lines BranchConsumptionLine[]
+
+  @@index([locationId, saleTime])
+  @@map("branch_consumptions")
+}
+
+/// One ingredient a sale used: the exact theoretical usage and the quantity posted (rounded once,
+/// ADR-0019). The lots it came from are the document's ledger entries for this line.
+model BranchConsumptionLine {
+  documentId  String            @map("document_id") @db.Uuid
+  consumption BranchConsumption @relation(fields: [documentId], references: [documentId], onDelete: Restrict)
+  lineNo      Int               @map("line_no")
+  itemId      String            @map("item_id") @db.Uuid
+  item        Item              @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  /// Exact, before rounding, in the item's base unit.
+  usage       Decimal           @db.Decimal(18, 6)
+  /// What the ledger takes, in the item's base unit.
+  quantity    Decimal           @db.Decimal(18, 3)
+
+  @@id([documentId, lineNo])
+  @@unique([documentId, itemId])
+  @@map("branch_consumption_lines")
+}
+
+/// Every attempt to turn a sales event into consumption, and every re-process a person asked
+/// for, in order. Never updated or deleted. An event's current problem is its latest row.
+model SalesEventProcessing {
+  id           String            @id @default(uuid()) @db.Uuid
+  salesEventId String            @map("sales_event_id") @db.Uuid
+  salesEvent   SalesEvent        @relation(fields: [salesEventId], references: [id], onDelete: Restrict)
+  outcome      SalesEventOutcome
+  /// `failed` and `held` only: why (docs/TELEMETRY.md).
+  reason       String?
+  /// What a person needs to fix it: the unknown code, the item no longer in use.
+  detail       Json?
+  /// `processed` only: the branch-consumption document.
+  documentId   String?           @map("document_id") @db.Uuid
+  document     StockDocument?    @relation("SalesEventProcessingDocument", fields: [documentId], references: [id], onDelete: Restrict)
+  /// The automatic account for the processor's own attempts; the person for a re-process.
+  recordedById String            @map("recorded_by_id") @db.Uuid
+  recordedBy   User              @relation("SalesEventProcessingRecordedBy", fields: [recordedById], references: [id], onDelete: Restrict)
+  recordedAt   DateTime          @default(now()) @map("recorded_at") @db.Timestamptz(3)
+
+  @@index([salesEventId, recordedAt])
+  @@map("sales_event_processing")
+}
