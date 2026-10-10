@@ -193,10 +193,11 @@ describe('stock ledger and opening balances', () => {
       expect(list[0].number).toMatch(DOCUMENT_NUMBER);
 
       // The plant also holds what the demo goods receipts (#11) brought in: only the opening
-      // balance's lots here.
-      const rows = ((await stock({ locationId: plantId })).rows as Body[]).filter((r) =>
-        r.lot.number.startsWith(`${list[0].number}/`),
-      );
+      // balance's lots here, as of its own date, before today's write-off (#8) and the demo
+      // cutting order (#13) used the chickens.
+      const rows = (
+        (await stock({ locationId: plantId, asOf: addDays(today, -1) })).rows as Body[]
+      ).filter((r) => r.lot.number.startsWith(`${list[0].number}/`));
       expect(rows.map((r) => r.item.code).sort()).toEqual([
         'FLOUR',
         'FRYING-OIL',
@@ -206,8 +207,7 @@ describe('stock ledger and opening balances', () => {
       ]);
       const chickens = rows.filter((r) => r.item.code === 'WHOLE-CHICKEN');
       expect(new Set(chickens.map((r) => r.lot.expiryDate)).size).toBe(3);
-      // The first lot had 12 chickens; the demo write-off (#8) took one damaged bird off it.
-      expect(chickens.map((r) => r.secondaryQuantity).sort()).toEqual(['10', '11', '24']);
+      expect(chickens.map((r) => r.secondaryQuantity).sort()).toEqual(['10', '12', '24']);
     });
   });
 

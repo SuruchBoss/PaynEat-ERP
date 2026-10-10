@@ -12,6 +12,7 @@ import request from 'supertest';
 import { PrismaService } from 'src/core/prisma/prisma.service';
 import { addDays } from 'src/core/time/domain/business-date';
 import { LedgerService } from 'src/modules/ledger/ledger.service';
+import { DEMO_PRODUCTION_ORDER } from '../prisma/demo-data';
 import { DEMO_OPENING_BALANCE, DEMO_WRITE_OFF } from '../prisma/seed';
 import {
   API,
@@ -210,12 +211,22 @@ describe('stock adjustments', () => {
           },
         ],
       });
+      // What the write-off left of the lot is what the demo cutting order (#13) then took: all of it.
       const opening = DEMO_OPENING_BALANCE.lines[DEMO_WRITE_OFF.openingBalanceLineNo - 1];
+      expect(opening).toMatchObject({ quantity: '21.600', secondaryQuantity: '12' });
+      const cut = (await as(plant).get('/production-orders').query({ status: 'posted' }))
+        .body as Body[];
+      const demoOrder = cut.find((o) => o.note === DEMO_PRODUCTION_ORDER.note)!;
+      const order = (await as(plant).get(`/production-orders/${demoOrder.id}`)).body;
+      expect(order.inputs[0].picks[0]).toMatchObject({
+        lotId: doc.lines[0].lot.id,
+        quantity: '19.8',
+        pieces: '11',
+      });
       const row = (await stock({ locationId: plantId })).rows.find(
         (r: Body) => r.lot.id === doc.lines[0].lot.id,
       );
-      expect(opening).toMatchObject({ quantity: '21.600', secondaryQuantity: '12' });
-      expect(row).toMatchObject({ quantity: '19.800', secondaryQuantity: '11' });
+      expect(row).toBeUndefined();
     });
   });
 

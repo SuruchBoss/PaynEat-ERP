@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * The ledger, opening-balance, stock-adjustment, purchase-order and goods-receipt services, wired
+ * The ledger, opening-balance, stock-adjustment, purchase-order, goods-receipt and production-order
+ * services, wired
  * by hand for scripts that run without the API:
  * the demo seed and `npm run ledger:rebuild-balances`. The same code the API runs, so no script
  * writes stock any other way than the ledger module does (#7, ADR-0010).
@@ -22,6 +23,8 @@ import { LedgerService } from '../src/modules/ledger/ledger.service';
 import { LocationsService } from '../src/modules/locations/locations.service';
 import { MasterDataService } from '../src/modules/master-data/master-data.service';
 import { OpeningBalancesService } from '../src/modules/opening-balances/opening-balances.service';
+import { ProductionBomsService } from '../src/modules/production-boms/production-boms.service';
+import { ProductionOrdersService } from '../src/modules/production-orders/production-orders.service';
 import { PurchaseOrdersService } from '../src/modules/purchase-orders/purchase-orders.service';
 import { StockAdjustmentsService } from '../src/modules/stock-adjustments/stock-adjustments.service';
 import { SuppliersService } from '../src/modules/suppliers/suppliers.service';
@@ -33,6 +36,7 @@ export interface LedgerServices {
   company: CompanyService;
   purchaseOrders: PurchaseOrdersService;
   goodsReceipts: GoodsReceiptsService;
+  productionOrders: ProductionOrdersService;
   items: ItemsService;
 }
 
@@ -98,6 +102,16 @@ export function ledgerServices(
       suppliers,
       audit,
       logger,
+    ),
+    productionOrders: new ProductionOrdersService(
+      db,
+      ledger,
+      new ProductionBomsService(db, audit, items, ledger),
+      items,
+      locations,
+      audit,
+      logger,
+      metrics,
     ),
     items,
   };

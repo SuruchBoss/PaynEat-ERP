@@ -22,7 +22,8 @@ import {
   sumValues,
 } from '../../core/quantity/domain/stock-value';
 import type { AuthenticatedUser } from '../../core/security/current-user';
-import { fefoPick, isExpired } from '../../core/stock/domain/fefo';
+import { compareLotNumbers, fefoPick, isExpired } from '../../core/stock/domain/fefo';
+import { compareDates } from '../../core/time/domain/business-date';
 import { MetricsService } from '../../core/telemetry/metrics.service';
 import { labelRequestDocument, labelRequestLocation } from '../../core/telemetry/request-context';
 import { TelemetryLogger } from '../../core/telemetry/telemetry-logger';
@@ -52,6 +53,7 @@ import {
   plannedLines,
   plannedQuantityProblem,
   productionYield,
+  UNIT_COST_DECIMALS,
   type ActualProblem,
   type CostedOutput,
   type OutputExpiry,
@@ -300,7 +302,7 @@ export class ProductionOrdersService {
         posted && output.allocatedValue && output.roundingDifference && lot
           ? {
               allocatedValue: normaliseDecimal(output.allocatedValue.toFixed()),
-              unitCost: lot.unitCost,
+              unitCost: formatFixed(decimal(lot.unitCost), UNIT_COST_DECIMALS),
               lotValue: stockValue(lot.quantity, lot.unitCost),
               roundingDifference: normaliseDecimal(output.roundingDifference.toFixed()),
             }
@@ -907,7 +909,11 @@ export class ProductionOrdersService {
     return this.items.describe([...version.inputs, ...version.outputs].map((l) => l.itemId));
   }
 
-  /** FEFO picks for each input's planned quantity from the lots there are. */
+  /**
+   * FEFO picks for each input's planned quantity from the lots there are. A pick that takes all
+   * that is left of a lot takes all its pieces too; a part of a lot has its pieces counted by the
+   * supervisor, never estimated.
+   */
   private suggestedPicks(
     row: Pick<OrderRow, 'inputs'>,
     available: readonly StockedLot[],
@@ -922,12 +928,16 @@ export class ProductionOrdersService {
           expiryDate: lot.expiryDate,
           available: lot.available,
         }));
-      return fefoPick(lots, input.plannedQuantity.toFixed(), businessDate).picks.map((pick) => ({
-        inputLineNo: input.lineNo,
-        lotId: pick.lotId,
-        quantity: pick.quantity,
-        pieces: null,
-      }));
+      return fefoPick(lots, input.plannedQuantity.toFixed(), businessDate).picks.map((pick) => {
+        const lot = available.find((l) => l.lotId === pick.lotId)!;
+        const whole = normaliseDecimal(lot.available) === normaliseDecimal(pick.quantity);
+        return {
+          inputLineNo: input.lineNo,
+          lotId: pick.lotId,
+          quantity: pick.quantity,
+          pieces: whole ? lot.availablePieces : null,
+        };
+      });
     });
   }
 
@@ -1068,6 +1078,14 @@ function assess(
         ]
       : [];
   });
+
+  // In the order FEFO takes them, whatever order they were stored in.
+  picks.sort(
+    (a, b) =>
+      a.inputLineNo - b.inputLineNo ||
+      compareDates(a.expiryDate, b.expiryDate) ||
+      compareLotNumbers(a.number, b.number),
+  );
 
   let inputWeight: ExactDecimal | null = ZERO;
   for (const input of row.inputs) {
