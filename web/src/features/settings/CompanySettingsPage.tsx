@@ -17,11 +17,12 @@ import {
 const ERRORS: Record<string, MessageKey> = {
   COMPANY_SETTINGS_CHANGED: 'settings.error.changed',
   INVALID_APPROVAL_THRESHOLD: 'settings.error.threshold',
-  VALIDATION_FAILED: 'settings.error.threshold',
+  VALIDATION_FAILED: 'settings.error.invalid',
 };
 
 /**
- * The company's settings (#10): today, the purchase approval threshold. Configuration the admin
+ * The company's settings: the purchase approval threshold (#10) and how far ahead of its receipt
+ * a POS sale may be dated before it is held for a person (#17, ADR-0030). Configuration the admin
  * maintains (ADR-0008); every change is audited.
  */
 export function CompanySettingsPage() {
@@ -73,8 +74,14 @@ function ThresholdForm({
   const { t, language } = useI18n();
   const queryClient = useQueryClient();
   const [threshold, setThreshold] = useState(settings.purchaseApprovalThreshold);
+  const [tolerance, setTolerance] = useState(String(settings.saleTimeAheadToleranceMinutes));
   const save = useMutation({
-    mutationFn: () => updateCompanySettings(settings.revision, threshold.trim()),
+    mutationFn: () =>
+      updateCompanySettings(
+        settings.revision,
+        threshold.trim(),
+        tolerance.trim() === '' ? undefined : Number(tolerance.trim()),
+      ),
     onSuccess: async (result) => {
       queryClient.setQueryData(qk.companySettings, result);
       await queryClient.invalidateQueries({ queryKey: qk.purchaseOrders });
@@ -101,6 +108,19 @@ function ThresholdForm({
           required
           value={threshold}
           onChange={(e) => setThreshold(e.target.value)}
+        />
+      </div>
+      <h2 id="tolerance-title">{t('settings.tolerance.title')}</h2>
+      <p className="subtle">{t('settings.tolerance.hint')}</p>
+      <div className="field">
+        <label htmlFor="settings-tolerance">{t('settings.tolerance.label')}</label>
+        <input
+          id="settings-tolerance"
+          inputMode="numeric"
+          autoComplete="off"
+          required
+          value={tolerance}
+          onChange={(e) => setTolerance(e.target.value)}
         />
       </div>
       <p className="subtle">

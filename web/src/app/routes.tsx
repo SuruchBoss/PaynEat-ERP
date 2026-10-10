@@ -3,6 +3,7 @@
 
 import type { RouteObject } from 'react-router-dom';
 import { SignInPage } from '@/features/auth/SignInPage';
+import { BranchConsumptionPage } from '@/features/branch-consumption/BranchConsumptionPage';
 import { GoodsReceiptsPage } from '@/features/goods-receipts/GoodsReceiptsPage';
 import { ItemsPage } from '@/features/items/ItemsPage';
 import { LocationsPage } from '@/features/locations/LocationsPage';
@@ -76,6 +77,10 @@ export const routes: RouteObject[] = [
               { path: 'requisitions', element: <RequisitionsPage /> },
               { path: 'par-levels', element: <ParLevelsPage /> },
             ],
+          },
+          {
+            element: <RequirePermission permission={Permission.BRANCH_CONSUMPTION_READ} />,
+            children: [{ path: 'branch-consumption', element: <BranchConsumptionPage /> }],
           },
           {
             element: <RequirePermission permission={Permission.USER_READ} />,

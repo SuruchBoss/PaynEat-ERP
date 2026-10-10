@@ -58,10 +58,16 @@ screens from the demo.
 > whole trays; logistics fulfils it with transfers, its status following what they really dispatched,
 > and a par-miss report shows which par levels to change — and the
 > **POS integration contract** ([`contracts/`](contracts/README.md)): POS instances registered with a
-> machine credential pull master data by version and deliver sales events the ERP stores exactly once. The console works on a desktop, a tablet (the menu narrows to icons) and a phone (each table
+> machine credential pull master data by version and deliver sales events the ERP stores exactly once —
+> and **branch consumption**: every stored sale becomes one posted document that takes its recipe's
+> ingredients from the branch's lots FEFO at the sale's own time, as the automatic account; a branch
+> that sold more than it had goes below zero on the lot it received last, or on a placeholder lot when
+> it never held the item, with every estimated cost and expired lot marked; a sale whose master data
+> is wrong fails with its reason and a sale dated far ahead of its receipt is held, both for the admin
+> to re-process; and a theoretical usage report per branch, item and day. The console works on a desktop, a tablet (the menu narrows to icons) and a phone (each table
 > row becomes a card), in light and dark mode, and anyone can try it in the browser on the
-[public demo](https://suruchboss.github.io/PaynEat-ERP/) (production orders, transfers and requisitions are not
-> in it yet). Traces and recalls do not exist yet; it is being built in public, one GitHub issue
+[public demo](https://suruchboss.github.io/PaynEat-ERP/) (production orders, transfers, requisitions and branch consumption
+> are not in it yet). Traces and recalls do not exist yet; it is being built in public, one GitHub issue
 > at a time. This README says only what is true
 > today and will grow as things work.
 
@@ -130,7 +136,7 @@ An item has one base unit and exact purchase units — 1 bag = 25 kilograms — 
 
 **The problem:** The recipe lives in the head chef’s notebook, a branch quietly charges its own price, and nobody can say what a bucket costs to make.
 
-Menu items, prices and modifiers live in the ERP and every connected POS mirrors them. A price starts on a date, and a branch can have its own. Recipes are versioned: a new version starts on a date, and one in force never changes. Each recipe is priced at the cost of the lot FEFO would take next, shown as the estimate it is.
+Menu items, prices and modifiers live in the ERP and every connected POS mirrors them. A price starts on a date, and a branch can have its own. Recipes are versioned: a new version starts on a date, and one in force never changes. Each recipe is priced at the cost of the lot FEFO would take next, shown as the estimate it is. Every sale a connected POS delivers then becomes branch consumption (#17): its recipe, with the one in force on the day of the sale, takes the branch’s lots FEFO at the sale’s own time and cost. A branch that sold more than it had goes below zero and is asked for a count; a sale whose menu item is unknown, or whose POS clock is far ahead, waits on a screen for a person to fix and re-process it; and a theoretical usage report shows what each branch used, per day and ingredient, with every estimated cost marked. This works in an installation; the public demo does not have it yet.
 
 - **Prices from a date** — Chain-wide or per branch, scheduled ahead, never rewritten once started. A branch can go back to the chain price.
 - **Versioned recipes** — Per portion or per kilogram sold; “no sauce” takes the cup off.
@@ -275,6 +281,7 @@ The "why" matters more than the "what" in an ERP, so every decision is written d
 | [0027](docs/adr/0027-production-orders-picking-cost-rounding-and-genealogy.md) | A production order is judged on one business date and plans from the BOM version in force; releasing it picks input lots FEFO, which the supervisor may change but never to an expired lot; yield is measured by weight, never estimated; each output's allocated value is kept to every digit and its lot's unit cost is the one rounding, half up to six decimals, the difference kept on the order, so lot values plus differences equal the input value exactly; a zero output refuses the order; genealogy links each output lot to each input lot with what was consumed, and a reversal keeps it as history out of traces (proposed with #13) |
 | [0028](docs/adr/0028-transfers-dispatch-receipt-and-resolution.md) | Dispatch and receipt are two stock documents; dispatch records the lots that left (FEFO-suggested, never expired) and moves them to in-transit; exactly one receipt of a transfer posts; the receipt inspects each lot line with the goods receipt inspection unchanged and splits what was dispatched into accepted, returned and written off, exactly; a finding or any write-off needs the approval of someone holding the plant's role other than whoever drafted or submitted the receipt; in transit per transfer is read from the transfers; logistics reverses a dispatch while no receipt of it has posted, and a posted receipt is corrected by an adjustment (proposed with #14) |
 | [0029](docs/adr/0029-requisitions-par-levels-and-par-misses.md) | A requisition stores only draft, submitted or cancelled; partially fulfilled and fulfilled follow what its transfers dispatched, never what a draft plans or a reversed dispatch moved; the suggestion is par less the branch balance less what is on the road, rounded up to the item's requisition unit, and each line keeps the suggestion it was saved with; the requisition unit and par levels are the admin's configuration; a transfer from a requisition keeps its route, is prefilled with what is outstanding and locks the requisition; a requisition is cancelled only before anything was dispatched; par misses count the times a branch balance went below zero and the lines not dispatched by their needed-by date; branch scoping comes with #71 (proposed with #15) |
+| [0030](docs/adr/0030-branch-consumption-placeholder-lots-and-held-sales.md) | One branch-consumption document per sales event, unique in the database, posted at the sale's own time; a shortfall goes below zero on the lot the branch received last (flagged when it had expired) or on a placeholder lot (`PH-<branch>-<item>`, no expiry, estimated or unknown cost, never taken by FEFO or reported by a recall); a sale dated further after its receipt than the company's tolerance is held, not failed; failed and held sales are re-processed by the admin, who posts what follows; the automatic account posts the rest and can do nothing else; closed periods are checked when #25 adds them |
 | [0026](docs/adr/0026-production-bom-weights-ratios-and-versions.md) | A production BOM compares everything by weight in kg, stated for lines not counted in kg or g; default allocation ratios are each output's share of expected output weight to 0.01 %, rounded by largest remainder to exactly 100; a default ratio that rounds to 0.00 is refused (#69); an override covers every output, each above zero with two decimals, adding up to exactly 100; waste is input less expected output weight and carries no ratio, and heavier outputs are refused; versions follow ADR-0023; a BOM is configuration, not master data; the plant runs it in v1 (proposed with #12) |
 
 Domain vocabulary, in English and Thai: [`docs/GLOSSARY.md`](docs/GLOSSARY.md).
@@ -398,13 +405,13 @@ The password of every demo account is **`demo-chicken-2026`**.
 
 | Role | Email | What the role is for (ADR-0008) | What it can do in the console today |
 |---|---|---|---|
-| `admin` | `admin@demo-chicken.example` | Manage users, roles, locations, configuration; reopen closed periods | Sign in with a second factor; **Users and roles**: list, create, give and take away roles; **Items and units**: create, edit, deactivate; **Locations**: create, correct a code, deactivate, supersede; **Suppliers**; **Company settings**: the purchase approval threshold; **Production BOMs**: create, add a version, correct a scheduled one, rename, deactivate; **Par levels**: set and remove per branch and item, and an item's requisition unit (on **Items and units**); read requisitions and par misses; read stock on hand and opening balances; register POS instances and manage their credentials (API); read the audit trail (API) |
+| `admin` | `admin@demo-chicken.example` | Manage users, roles, locations, configuration; reopen closed periods | Sign in with a second factor; **Users and roles**: list, create, give and take away roles; **Items and units**: create, edit, deactivate; **Locations**: create, correct a code, deactivate, supersede; **Suppliers**; **Company settings**: the purchase approval threshold and how far ahead of its receipt a sale may be dated; **Production BOMs**: create, add a version, correct a scheduled one, rename, deactivate; **Par levels**: set and remove per branch and item, and an item's requisition unit (on **Items and units**); read requisitions and par misses; **Branch consumption**: process sales now, re-process a failed or held sale (it posts as you), read documents and usage; read stock on hand and opening balances; register POS instances and manage their credentials (API); read the audit trail (API) |
 | `purchasing` | `purchasing@demo-chicken.example` | Create and send purchase orders; manage suppliers | Sign in; **Suppliers**: create, edit, deactivate; read items, locations and stock on hand; **Purchase orders**: draft, edit, submit, mark as sent, cancel; read **Goods receipts** and returns to supplier |
 | `purchasing_approver` | `approver@demo-chicken.example` | Approve purchase orders above the approval threshold, and out-of-tolerance receipts | Sign in; **Purchase orders**: approve or reject, never one it raised; **Goods receipts**: approve (which posts) or reject one with findings, never one it recorded; read items, locations, suppliers and stock on hand |
 | `plant` | `plant@demo-chicken.example` | Receive goods, run production orders, manage plant stock | Sign in; **Goods receipts**: receive against a sent order, draft and submit; read purchase orders; **Opening balances**: draft, post, reverse; **Stock adjustments**: draft and submit; **Stock on hand**; read items, locations and suppliers; read **Production BOMs**; **Production orders**: raise, release (lots picked FEFO), change the picks, record actuals, post, cancel, reverse; **Transfers**: approve or reject a receipt with a finding or a write-off, never one it recorded or submitted; read requisitions and par misses |
 | `logistics` | `logistics@demo-chicken.example` | Dispatch transfers | Sign in; read items, locations, suppliers and stock on hand; **Transfers**: draft, change the lots FEFO suggests, dispatch, cancel a draft, reverse a dispatch no receipt has taken in; **Requisitions**: the queue of open ones by date needed, and a transfer from one prefilled with what is outstanding; read par misses |
-| `branch_manager` | `branch.manager@demo-chicken.example` | Raise requisitions, receive transfers, count branch stock | Sign in; **Stock adjustments**: draft and submit; read items, locations, suppliers and stock on hand; **Transfers**: record what arrived lot by lot and submit it; **Requisitions**: raise one on a phone from the suggestions, submit it, cancel it before anything was dispatched; read par misses (for any branch until #71) |
-| `finance` | `finance@demo-chicken.example` | View costs, variances and valuation; export financial data | Sign in; **Stock adjustments**: approve (which posts) or reject, never one it raised; **Stock on hand** with cost and value; read items, locations, suppliers, purchase orders, goods receipts, production BOMs, production orders, transfers, requisitions and par misses; its screens arrive with the costing and period-close work of weeks 4–5 |
+| `branch_manager` | `branch.manager@demo-chicken.example` | Raise requisitions, receive transfers, count branch stock | Sign in; **Stock adjustments**: draft and submit; read items, locations, suppliers and stock on hand; **Transfers**: record what arrived lot by lot and submit it; **Requisitions**: raise one on a phone from the suggestions, submit it, cancel it before anything was dispatched; read par misses (for any branch until #71); read **Branch consumption**: documents, the sales that failed or are held, and usage |
+| `finance` | `finance@demo-chicken.example` | View costs, variances and valuation; export financial data | Sign in; **Stock adjustments**: approve (which posts) or reject, never one it raised; **Stock on hand** with cost and value; read items, locations, suppliers, purchase orders, goods receipts, production BOMs, production orders, transfers, requisitions, par misses and branch consumption with its usage report; its screens arrive with the costing and period-close work of weeks 4–5 |
 
 A user may hold several roles; the API refuses anything none of them allows (403), and anything
 without a session (401). Nobody approves a document they created, whatever roles they hold: the API
@@ -630,7 +637,23 @@ undoes them.
    Every one of these is a `sales_event.*` or `master_data.*` log line carrying `pos_instance`, the
    branch's `location_code`, and the event's idempotency key as its `correlation_id`, counted in
    `erp_sales_events_total` — and the credential itself never appears in a log.
-21. Every one of those changes, and every refused sign-in, is in the audit trail with who, when and
+21. Open **Branch consumption** as **admin** (Docker install; the public demo does not have it yet).
+   The seed delivered a day of sales for each branch through the sales-event code (`POS-DEMO`) and
+   processed them: each is a `BC` document posted at its sale time by "PaynEat ERP — automatic". Open
+   one to see the lots each ingredient came from. Ari sold more wings than the 28 it received, so its
+   wing lot is below zero and **Stock on hand** asks for a count; flour, oil and sauce were never sent
+   to the branches, so they went to each branch's placeholder lot (`PH-BR-ARI-FLOUR`), marked
+   **estimated cost**. The usage report below adds it up per day, branch and ingredient. Send a sale
+   with a menu code that does not exist (step 20): after **Process sales now** it is listed as failed,
+   `unknown_menu_item`; create that menu item with a recipe from today on **Menu and prices**, press
+   **Re-process**, and it becomes consumption posted by you. A sale dated more than the tolerance
+   (**Company settings**, 10 minutes) after it arrived is **held** instead, until its date has come.
+   `sales_event.processed`, `sales_event.failed` and `sales_event.held` carry the sale's idempotency
+   key as their `correlation_id`; `erp_sales_events_unprocessed{location_code}` and
+   `erp_sales_events_oldest_unprocessed_age_seconds{location_code}` show the backlog. The processor
+   runs every `SALES_CONSUMPTION_INTERVAL_SECONDS` (30 by default; 0 turns it off) on one API replica
+   at a time.
+22. Every one of those changes, and every refused sign-in, is in the audit trail with who, when and
    the request's correlation id. Read it through the API with the admin's access token:
    `GET /api/v1/audit-logs` (filters: `action`, `entityId`, `actorUserId`, `correlationId`, `from`,
    `to`). A refused sign-in is also a `WARNING` line with `"event":"auth.sign_in.failed"` in

@@ -56,6 +56,8 @@ using a new domain concept anywhere else.
 | Closed-until date | วันที่ปิดงวดถึง | A location's period close: no entry with a business date on or before it can be posted there. Moves forward by closing, backward only by an audited reopen (ADR-0018). |
 | Reopen | เปิดงวดใหม่ | An `admin` moving a closed-until date backward, with a reason, audited. Supersedes any export of the reopened range. |
 | Late for a closed period | มาช้าสำหรับงวดที่ปิดแล้ว | Branch consumption from a sale whose time falls in a closed period, posted on the first open day and marked, keeping its original sale time (ADR-0018). |
+| Branch consumption | การใช้วัตถุดิบที่สาขา | What one sale took from its branch's stock: a document (`BC-2026-00001`) per sales event, posted at the sale's own time with the recipes in force that day, taking the branch's lots FEFO. Posted by the automatic account, or by the person who re-processed the sale (#17, ADR-0030). |
+| Shortfall | ของไม่พอ | The part of a sale the branch's usable lots could not cover. Taken from the lot the branch received last, which goes below zero, or from a placeholder lot. A sale is never refused because of it (ADR-0003, ADR-0030). |
 | Supplier | ซัพพลายเออร์ | A company the chain buys from. Owned by the ERP, never sent to a POS. Managed by `admin` and `purchasing`. |
 | Tax identification number | เลขประจำตัวผู้เสียภาษีอากร | The 13-digit Thai number of a company or a person, the last digit a check over the other twelve. Printed as 0-0000-00000-00-0. |
 | Purchase order (PO) | ใบสั่งซื้อ | Commitment to buy from a supplier. Writes no stock. Delivered to a plant or a warehouse. Moves draft → submitted → approved → sent → partially received → received; it can be rejected by an approver or cancelled with a reason before anything is received. Only a draft is edited; nothing is deleted (ADR-0024). |
@@ -113,6 +115,8 @@ using a new domain concept anywhere else.
 | Forward trace | การย้อนรอยไปข้างหน้า | From a supplier lot to every production order, output lot, transfer, branch and consumption it reached. |
 | Backward trace | การย้อนรอยย้อนกลับ | From a sale at a branch to the candidate branch lots and, through transfers and genealogy, to the supplier lots they came from. |
 | Certain / inferred link | ความเชื่อมโยงที่แน่นอน / ที่อนุมาน | A trace step backed by a posted document (receipt, genealogy, transfer) is certain; a step from branch FEFO allocation is inferred. Every trace labels each step as one or the other (ADR-0006). |
+| Placeholder lot | lot แทน | The lot a branch's shortfall goes to when the branch never held the item: one per branch and item, `PH-<branch>-<item>`, holding nothing, with no expiry. FEFO never takes it; its cost is an estimate (the item's latest received lot in the chain) or, when the chain never held the item, 0 with no cost known. Never reported as the lot something came from (ADR-0030). |
+| Consumed expired lot | ตัดจาก lot ที่หมดอายุ | A shortfall taken from a lot that was already past its expiry on the sale date: shown on the document and the usage report as a food-safety signal (ADR-0030). |
 
 ## Menu · เมนู
 
@@ -191,6 +195,10 @@ What branches sell, kept in the ERP and mirrored by the POS (ADR-0002, ADR-0023)
 | Standalone mode | โหมดใช้งานเดี่ยว | A POS instance with no ERP. Everything works as it does today. |
 | Machine credential | machine credential | The secret a POS instance authenticates with, issued by an ERP administrator and shown once (`pnepos_…`). The ERP keeps only its hash; it can be revoked and a new one issued, all audited. Never logged on either side (#9, `contracts/`). |
 | Sales event | event ยอดขาย | A POS sale line sent to the ERP: menu item, quantity or weighed weight, modifiers, time. |
+| Failed sales event | event ยอดขายที่ไม่สำเร็จ | A received sale that could not become consumption, with its reason: an unknown menu item or modifier, no recipe on the sale date, an ingredient no longer in use, sold by count or weight unlike its menu item, or modifiers that remove more than the recipe uses (#17). |
+| Held sales event | event ยอดขายที่ถูกพัก | A received sale dated further after its receipt than the sale-time tolerance (usually a POS clock that is wrong): not posted, not failed, waiting for a person to re-process it once its date has come (ADR-0030). |
+| Sale-time tolerance | เวลาขายที่ล้ำหน้าได้ | How many minutes a sale may be dated after the ERP received it before it is held. A company setting, 10 by default (ADR-0007, ADR-0030). |
+| Re-process | ประมวลผลใหม่ | Trying a failed or held sales event again once its master data is fixed or its date has come; the person who asks posts the consumption that follows (ADR-0030). |
 | Outbox | outbox | A table written in the same transaction as the business change, drained to the other system afterwards. |
 | Idempotency key | idempotency key | A unique key per event so a retried delivery is applied once. |
 | Correlation id | correlation id | An id carried in every log line and event of one business flow across systems (a sale's idempotency key, a document number), so an investigator can follow it end to end. |
@@ -226,6 +234,7 @@ What branches sell, kept in the ERP and mirrored by the POS (ADR-0002, ADR-0023)
 | Product page | หน้าแนะนำผลิตภัณฑ์ | The static page at `/PaynEat-ERP/about/`, in English and Thai, that presents what works today problem by problem, with screenshots of the public demo (#45). Generated from `docs/landing/content.mjs` together with the README section "The problems it solves today"; it claims nothing `main` cannot do. |
 | Approval threshold | เกณฑ์วงเงินที่ต้องอนุมัติ | The document value above which a second person must approve. Configuration, not code. For purchase orders: a company setting `admin` maintains, compared with the gross total; 0 until first saved, so every order waits for an approver (ADR-0024). |
 | Segregation of duties | การแยกหน้าที่ | Nobody approves a document they created, whatever roles they hold. |
+| Automatic account | บัญชีอัตโนมัติ | "PaynEat ERP — automatic": the account the branch-consumption processor posts as. No usable password, no role, never signs in, never approves; left out of the user list but named on what it posts (ADR-0030). |
 
 ## Editions · รุ่นของระบบ
 

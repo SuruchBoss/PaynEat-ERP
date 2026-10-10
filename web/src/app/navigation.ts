@@ -111,6 +111,13 @@ export const NAV: readonly NavSection[] = [
         icon: 'sliders',
         permission: Permission.REQUISITION_READ,
       },
+      // What each branch's sales consumed, and the sales a person has to fix (#17).
+      {
+        to: '/branch-consumption',
+        labelKey: 'nav.branchConsumption',
+        icon: 'layers',
+        permission: Permission.BRANCH_CONSUMPTION_READ,
+      },
     ],
   },
   {

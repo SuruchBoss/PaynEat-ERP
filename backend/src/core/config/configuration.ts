@@ -15,6 +15,8 @@ export interface AppConfig {
   demo: boolean;
   /** The company's time zone: what "today" is for business dates (ADR-0018). */
   timeZone: string;
+  /** Seconds between branch-consumption runs (#17); 0 is off. */
+  salesConsumptionIntervalSeconds: number;
 }
 
 export interface AuthConfig {
@@ -44,8 +46,14 @@ export interface TelemetryConfig {
   metricsPort: number;
 }
 
+export interface JobsConfig {
+  /** How long one run of scheduled work may hold its job lock. */
+  lockTimeoutMs: number;
+}
+
 export interface RootConfig {
   app: AppConfig;
+  jobs: JobsConfig;
   auth: AuthConfig;
   security: SecurityConfig;
   telemetry: TelemetryConfig;
@@ -64,7 +72,9 @@ export function buildConfig(env: EnvironmentVariables): RootConfig {
         .filter(Boolean),
       demo: env.ERP_DEMO === '1',
       timeZone: env.COMPANY_TIME_ZONE,
+      salesConsumptionIntervalSeconds: env.SALES_CONSUMPTION_INTERVAL_SECONDS,
     },
+    jobs: { lockTimeoutMs: env.JOB_LOCK_TIMEOUT_MS },
     auth: {
       accessSecret: env.JWT_ACCESS_SECRET,
       refreshSecret: env.JWT_REFRESH_SECRET,

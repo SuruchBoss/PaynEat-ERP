@@ -42,6 +42,8 @@ export const ADMIN: SessionUser = {
     'production_bom:manage',
     'requisition:read',
     'par_level:manage',
+    'branch_consumption:read',
+    'sales_event:reprocess',
   ],
   mfaEnabled: true,
 };
@@ -131,6 +133,7 @@ export const BRANCH_MANAGER: SessionUser = {
     'transfer:receive',
     'requisition:read',
     'requisition:raise',
+    'branch_consumption:read',
   ],
 };
 

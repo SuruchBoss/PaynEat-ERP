@@ -14,6 +14,7 @@ import {
   stockValue,
   sumValues,
 } from '../../core/quantity/domain/stock-value';
+import { formatMinimal, negate, parseDecimal } from '../../core/quantity/domain/exact-decimal';
 import { SequenceService, type SequenceScope } from '../../core/sequence/sequence.service';
 import { compareDates, dateIn, isIsoDate } from '../../core/time/domain/business-date';
 import { MetricsService } from '../../core/telemetry/metrics.service';
@@ -77,6 +78,7 @@ const SCOPES: Record<StockDocumentType, SequenceScope> = {
   production_order: 'PRODUCTION_ORDER',
   transfer: 'TRANSFER',
   transfer_receipt: 'TRANSFER_RECEIPT',
+  branch_consumption: 'BRANCH_CONSUMPTION',
 };
 
 /** Long enough for a posting to wait its turn behind another on the same lots. */
@@ -197,7 +199,56 @@ export type PostingPlan =
   | { refusal: { rule: PostingRule; lineNo?: number } }
   | { newLots: NewLot[] }
   | { lotChanges: LotChange[] }
-  | { production: ProductionPosting };
+  | { production: ProductionPosting }
+  | { consumption: ConsumptionPosting };
+
+/**
+ * What a branch consumed (#17, ADR-0030): changes to the branch's own lots, and what goes to the
+ * item's placeholder lot at the branch because the branch never held the item. The ledger creates
+ * the placeholder the first time one is needed, and carries its cost like any lot's.
+ */
+export interface ConsumptionPosting {
+  lotChanges: LotChange[];
+  placeholders: Array<{ lineNo: number; itemId: string; locationId: string; quantity: string }>;
+}
+
+/** The lot of an item a location received most recently, whatever is left of it (#17). */
+export interface ReceivedLot {
+  lotId: string;
+  number: string;
+  expiryDate: string;
+}
+
+/** One day's consumption of one item at one branch, from the ledger (#17). */
+export interface ConsumptionUsageRow {
+  date: string;
+  locationId: string;
+  itemId: string;
+  /** In the item's base unit, as posted. */
+  quantity: string;
+  /** Σ quantity × the cost of the lot each part came from, exact (ADR-0004). */
+  value: string;
+  /** Part of it came from a placeholder lot whose cost is an estimate (ADR-0030). */
+  estimatedCost: boolean;
+  /** Part of it came from a placeholder lot with no cost known (cost 0). */
+  unknownCost: boolean;
+  /** Part of it was taken from a lot past its expiry on that day (ADR-0030). */
+  consumedExpiredLot: boolean;
+}
+
+/** What a posted branch-consumption document took from one lot, for one of its lines (#17). */
+export interface ConsumedLot {
+  lineNo: number;
+  lotId: string;
+  lotNumber: string;
+  /** Taken, in the item's base unit (positive). */
+  quantity: string;
+  unitCost: string;
+  /** A placeholder lot (ADR-0030): its cost is an estimate, or unknown (0). */
+  placeholderCost: 'estimated' | 'unknown' | null;
+  /** The lot was past its expiry on the sale date. */
+  expired: boolean;
+}
 
 /** A document header as the ledger locks it. */
 export interface LockedDocument {
@@ -303,7 +354,7 @@ export class LedgerService {
     type: StockDocumentType,
     header: DraftHeader,
     actor: AuthenticatedUser,
-  ): Promise<DocumentRef> {
+  ): Promise<DocumentRef & { revision: number }> {
     this.assertBusinessDate(header.businessDate);
     const number = await this.sequences.next(tx, SCOPES[type], this.currentYear());
     const row = await tx.stockDocument.create({
@@ -314,7 +365,7 @@ export class LedgerService {
         note: header.note,
         createdById: actor.userId,
       },
-      select: { id: true, number: true },
+      select: { id: true, number: true, revision: true },
     });
     return row;
   }
@@ -412,7 +463,8 @@ export class LedgerService {
   /** The lots a posted document created, by line. */
   async lotsOf(documentId: string): Promise<LotView[]> {
     const rows = await this.prisma.lot.findMany({
-      where: { originDocumentId: documentId },
+      // A placeholder lot is never a document's own (ADR-0030): it only stands in for a branch.
+      where: { originDocumentId: documentId, placeholderLocationId: null },
       orderBy: { originLineNo: 'asc' },
     });
     return rows.map((row) => ({
@@ -423,7 +475,7 @@ export class LedgerService {
       quantity: row.quantity.toFixed(),
       secondaryQuantity: row.secondaryQuantity?.toFixed() ?? null,
       unitCost: normaliseDecimal(row.unitCost.toFixed()),
-      expiryDate: dateText(row.expiryDate),
+      expiryDate: dateText(row.expiryDate!),
       computedExpiryDate: row.computedExpiryDate ? dateText(row.computedExpiryDate) : null,
       supplierExpiryDate: row.supplierExpiryDate ? dateText(row.supplierExpiryDate) : null,
     }));
@@ -433,7 +485,9 @@ export class LedgerService {
   async lotFacts(ids: readonly string[], tx: Tx = this.prisma): Promise<Map<string, LotFacts>> {
     if (ids.length === 0) return new Map();
     const rows = await tx.lot.findMany({
-      where: { id: { in: [...new Set(ids)] } },
+      // A placeholder lot is no lot a document type may name (ADR-0030): it is left out, so a
+      // document naming one is refused as naming an unknown lot.
+      where: { id: { in: [...new Set(ids)] }, placeholderLocationId: null },
       select: { id: true, number: true, itemId: true, unitCost: true, expiryDate: true },
     });
     return new Map(
@@ -444,7 +498,7 @@ export class LedgerService {
           number: row.number,
           itemId: row.itemId,
           unitCost: normaliseDecimal(row.unitCost.toFixed()),
-          expiryDate: dateText(row.expiryDate),
+          expiryDate: dateText(row.expiryDate!),
         },
       ]),
     );
@@ -479,18 +533,162 @@ export class LedgerService {
       FROM "stock_balances" b
       JOIN "lots" l ON l."id" = b."lot_id"
       WHERE b."location_id" = ${locationId}::uuid AND b."item_id" = ANY(${ids}::uuid[])
-        AND b."quantity" > 0
+        AND b."quantity" > 0 AND l."placeholder_location_id" IS NULL
       ORDER BY l."expiry_date", l."number"
     `;
     return rows.map((row) => ({
       lotId: row.lotId,
       number: row.number,
       itemId: row.itemId,
-      expiryDate: dateText(row.expiryDate),
+      expiryDate: dateText(row.expiryDate!),
       unitCost: normaliseDecimal(row.unitCost),
       available: normaliseDecimal(row.quantity),
       availablePieces:
         row.secondaryQuantity === null ? null : normaliseDecimal(row.secondaryQuantity),
+    }));
+  }
+
+  // --- Branch consumption (#17, ADR-0030) ------------------------------------------
+
+  /**
+   * Locks every balance row of these items at a location, in the ledger's lock order, so that
+   * what a branch-consumption plan reads with `lotsAt` cannot change before it posts. Two
+   * processors at the same branch wait for each other here rather than both taking one lot.
+   */
+  async lockBalancesAt(tx: Tx, locationId: string, itemIds: readonly string[]): Promise<void> {
+    const ids = [...new Set(itemIds)];
+    if (ids.length === 0) return;
+    await tx.$queryRaw`
+      SELECT 1 FROM "stock_balances"
+      WHERE "location_id" = ${locationId}::uuid AND "item_id" = ANY(${ids}::uuid[])
+      ORDER BY "lot_id", "location_id"
+      FOR UPDATE
+    `;
+  }
+
+  /**
+   * For each of these items, the lot the location received most recently (its latest entry
+   * bringing stock in, a reversal excepted), whatever is left of it. Placeholder lots are never
+   * one: an item absent from the map was never received there.
+   */
+  async lastReceivedAt(
+    tx: Tx,
+    locationId: string,
+    itemIds: readonly string[],
+  ): Promise<Map<string, ReceivedLot>> {
+    const ids = [...new Set(itemIds)];
+    if (ids.length === 0) return new Map();
+    const rows = await tx.$queryRaw<
+      Array<{ itemId: string; lotId: string; number: string; expiryDate: Date }>
+    >`
+      SELECT DISTINCT ON (e."item_id")
+             e."item_id" AS "itemId", l."id" AS "lotId", l."number", l."expiry_date" AS "expiryDate"
+      FROM "ledger_entries" e
+      JOIN "lots" l ON l."id" = e."lot_id"
+      WHERE e."location_id" = ${locationId}::uuid AND e."item_id" = ANY(${ids}::uuid[])
+        AND e."quantity" > 0 AND e."reverses_entry_id" IS NULL
+        AND l."placeholder_location_id" IS NULL
+      ORDER BY e."item_id", e."business_time" DESC, e."posted_at" DESC, l."number" DESC
+    `;
+    return new Map(
+      rows.map((row) => [
+        row.itemId,
+        { lotId: row.lotId, number: row.number, expiryDate: dateText(row.expiryDate) },
+      ]),
+    );
+  }
+
+  /**
+   * What branches consumed, by day (the company's time zone), branch and item, read from the
+   * ledger entries of branch-consumption documents: the quantity, its value at the cost of each
+   * lot it came from, and whether any of it carried an estimated or unknown cost or came from a
+   * lot past its expiry that day (ADR-0030).
+   */
+  async consumptionUsage(input: {
+    from: string;
+    to: string;
+    locationId?: string;
+  }): Promise<ConsumptionUsageRow[]> {
+    const tz = this.config.app.timeZone;
+    const location = input.locationId
+      ? Prisma.sql`AND e."location_id" = ${input.locationId}::uuid`
+      : Prisma.empty;
+    const rows = await this.prisma.$queryRaw<
+      Array<{
+        date: string;
+        locationId: string;
+        itemId: string;
+        quantity: string;
+        value: string;
+        estimatedCost: boolean;
+        unknownCost: boolean;
+        consumedExpiredLot: boolean;
+      }>
+    >`
+      SELECT to_char((e."business_time" AT TIME ZONE ${tz})::date, 'YYYY-MM-DD') AS "date",
+             e."location_id" AS "locationId", e."item_id" AS "itemId",
+             (-SUM(e."quantity"))::text AS "quantity",
+             (-SUM(e."quantity" * e."unit_cost"))::text AS "value",
+             bool_or(l."placeholder_cost" = 'estimated') AS "estimatedCost",
+             bool_or(l."placeholder_cost" = 'unknown') AS "unknownCost",
+             bool_or(l."expiry_date" < (e."business_time" AT TIME ZONE ${tz})::date) AS "consumedExpiredLot"
+      FROM "ledger_entries" e
+      JOIN "stock_documents" d ON d."id" = e."document_id"
+      JOIN "lots" l ON l."id" = e."lot_id"
+      WHERE d."type" = 'branch_consumption'
+        AND e."business_time" >= ${this.startOf(input.from, 0)}
+        AND e."business_time" < ${this.startOf(input.to, 1)}
+        ${location}
+      GROUP BY 1, 2, 3
+      ORDER BY 1, 2, 3
+    `;
+    return rows.map((row) => ({
+      date: row.date,
+      locationId: row.locationId,
+      itemId: row.itemId,
+      quantity: normaliseDecimal(row.quantity),
+      value: normaliseDecimal(row.value),
+      estimatedCost: row.estimatedCost === true,
+      unknownCost: row.unknownCost === true,
+      consumedExpiredLot: row.consumedExpiredLot === true,
+    }));
+  }
+
+  /**
+   * What a posted branch-consumption document took, lot by lot: by line, then in the order FEFO
+   * takes them, a placeholder last (#17).
+   */
+  async consumedLots(documentId: string): Promise<ConsumedLot[]> {
+    const tz = this.config.app.timeZone;
+    const rows = await this.prisma.$queryRaw<
+      Array<{
+        lineNo: number;
+        lotId: string;
+        lotNumber: string;
+        quantity: string;
+        unitCost: string;
+        placeholderCost: 'estimated' | 'unknown' | null;
+        expired: boolean | null;
+      }>
+    >`
+      SELECT e."line_no" AS "lineNo", l."id" AS "lotId", l."number" AS "lotNumber",
+             (-SUM(e."quantity"))::text AS "quantity", e."unit_cost"::text AS "unitCost",
+             l."placeholder_cost"::text AS "placeholderCost",
+             bool_or(l."expiry_date" < (e."business_time" AT TIME ZONE ${tz})::date) AS "expired"
+      FROM "ledger_entries" e
+      JOIN "lots" l ON l."id" = e."lot_id"
+      WHERE e."document_id" = ${documentId}::uuid
+      GROUP BY e."line_no", l."id", l."number", l."expiry_date", e."unit_cost", l."placeholder_cost"
+      ORDER BY e."line_no", l."expiry_date" NULLS LAST, l."number"
+    `;
+    return rows.map((row) => ({
+      lineNo: row.lineNo,
+      lotId: row.lotId,
+      lotNumber: row.lotNumber,
+      quantity: normaliseDecimal(row.quantity),
+      unitCost: normaliseDecimal(row.unitCost),
+      placeholderCost: row.placeholderCost,
+      expired: row.expired === true,
     }));
   }
 
@@ -524,6 +722,13 @@ export class LedgerService {
       from: 'draft' | 'approved' | 'released';
       /** The rule that refuses a document not in `from`; `not_approved` unless said. */
       notReady?: PostingRule;
+      /**
+       * Branch consumption only (#17, ADR-0030): the entries' business time is the sale's own
+       * time rather than the start of the business date. It must fall on that date.
+       */
+      businessTime?: Date;
+      /** Run in the same transaction once the document is posted. */
+      afterPosting?: (tx: Tx, doc: LockedDocument) => Promise<void>;
     } = { from: 'draft' },
   ): Promise<void> {
     let doc: LockedDocument | undefined;
@@ -548,20 +753,34 @@ export class LedgerService {
         const dateRule = businessDateProblem(doc.businessDate, this.today());
         if (dateRule) throw new PostingRefusedError(dateRule);
 
+        if (
+          options.businessTime &&
+          dateIn(this.config.app.timeZone, options.businessTime) !== doc.businessDate
+        ) {
+          throw new Error(`document ${doc.number}: its business time is not on its business date`);
+        }
+        const at = options.businessTime ?? null;
         let movements: Movement[];
         if ('production' in prepared) {
           const { consumed, newLots, genealogy } = prepared.production;
           const consumption = await this.changesOf(tx, consumed);
           const created = await this.createLots(tx, doc, newLots);
           movements = [...consumption, ...created];
-          written = await this.write(tx, doc, movements, actor);
+          written = await this.write(tx, doc, movements, actor, at);
           await this.writeGenealogy(tx, doc, created, genealogy);
+        } else if ('consumption' in prepared) {
+          const { lotChanges, placeholders } = prepared.consumption;
+          movements = [
+            ...(await this.changesOf(tx, lotChanges)),
+            ...(await this.placeholderMovements(tx, doc, placeholders)),
+          ].sort((a, b) => a.lineNo - b.lineNo);
+          written = await this.write(tx, doc, movements, actor, at);
         } else {
           movements =
             'newLots' in prepared
               ? await this.createLots(tx, doc, prepared.newLots)
               : await this.changesOf(tx, prepared.lotChanges);
-          written = await this.write(tx, doc, movements, actor);
+          written = await this.write(tx, doc, movements, actor, at);
         }
         await tx.$executeRaw`
           UPDATE "stock_documents"
@@ -574,6 +793,7 @@ export class LedgerService {
           [...new Set(movements.map((m) => m.locationId))],
           `posted document ${doc.number}`,
         );
+        if (options.afterPosting) await options.afterPosting(tx, doc);
       }, POSTING_TRANSACTION);
     } catch (error) {
       if (error instanceof PostingRefusedError && doc)
@@ -755,7 +975,13 @@ export class LedgerService {
     const [lots, items, locations] = await Promise.all([
       this.prisma.lot.findMany({
         where: { id: { in: balances.map((b) => b.lotId) } },
-        select: { id: true, number: true, expiryDate: true, unitCost: true },
+        select: {
+          id: true,
+          number: true,
+          expiryDate: true,
+          unitCost: true,
+          placeholderCost: true,
+        },
       }),
       this.items.describe(balances.map((b) => b.itemId)),
       this.locations.describe(balances.map((b) => b.locationId)),
@@ -767,7 +993,7 @@ export class LedgerService {
       const item = items.get(balance.itemId)!;
       const location = locations.get(balance.locationId)!;
       const unitCost = normaliseDecimal(lot.unitCost.toFixed());
-      const expiryDate = dateText(lot.expiryDate);
+      const expiryDate = lot.expiryDate ? dateText(lot.expiryDate) : null;
       return {
         item: {
           id: item.id,
@@ -776,7 +1002,7 @@ export class LedgerService {
           nameEn: item.nameEn,
           baseUnitCode: item.baseUnitCode,
         },
-        lot: { id: lot.id, number: lot.number, expiryDate },
+        lot: { id: lot.id, number: lot.number, expiryDate, placeholderCost: lot.placeholderCost },
         location: {
           id: location.id,
           code: location.code,
@@ -789,7 +1015,8 @@ export class LedgerService {
           balance.secondaryQuantity === null ? null : formatQuantity(balance.secondaryQuantity, 0),
         unitCost,
         value: stockValue(balance.quantity, unitCost),
-        expired: compareDates(expiryDate, asOf) < 0,
+        // A placeholder lot has no expiry, so it is never expired (ADR-0030).
+        expired: expiryDate !== null && compareDates(expiryDate, asOf) < 0,
         countRecommended: location.type === 'branch' && balance.quantity.startsWith('-'),
       };
     });
@@ -797,7 +1024,8 @@ export class LedgerService {
       (a, b) =>
         a.location.code.localeCompare(b.location.code) ||
         a.item.code.localeCompare(b.item.code) ||
-        a.lot.expiryDate.localeCompare(b.lot.expiryDate) ||
+        // Placeholder lots, which have no expiry, after the item's real lots.
+        (a.lot.expiryDate ?? '9999-12-31').localeCompare(b.lot.expiryDate ?? '9999-12-31') ||
         a.lot.number.localeCompare(b.lot.number),
     );
     return {
@@ -895,7 +1123,7 @@ export class LedgerService {
              l."item_id" AS "itemId", l."number", l."unit_cost"::text AS "unitCost",
              l."expiry_date" AS "expiryDate"
       FROM "lots" l
-      WHERE l."item_id" = ANY(${ids}::uuid[])
+      WHERE l."item_id" = ANY(${ids}::uuid[]) AND l."placeholder_location_id" IS NULL
         AND l."expiry_date" >= ${this.today()}::date
         AND EXISTS (
           SELECT 1 FROM "stock_balances" b WHERE b."lot_id" = l."id" AND b."quantity" > 0
@@ -1061,6 +1289,74 @@ export class LedgerService {
   }
 
   /**
+   * Movements taking what a branch never held from each item's placeholder lot there, creating
+   * the placeholder the first time (ADR-0030): numbered `PH-<branch>-<item>`, holding nothing,
+   * no expiry, costed at the item's most recently received lot anywhere in the chain (an
+   * estimate), or at 0 with no cost known when the chain never held the item. Its cost is fixed
+   * when it is created, like any lot's.
+   */
+  private async placeholderMovements(
+    tx: Tx,
+    doc: LockedDocument,
+    placeholders: ConsumptionPosting['placeholders'],
+  ): Promise<Movement[]> {
+    if (placeholders.length === 0) return [];
+    const locations = await this.locations.describe(
+      placeholders.map((p) => p.locationId),
+      tx,
+    );
+    const items = await this.items.describe(
+      placeholders.map((p) => p.itemId),
+      tx,
+    );
+    const movements: Movement[] = [];
+    for (const wanted of placeholders) {
+      const locationCode = locations.get(wanted.locationId)?.code;
+      const itemCode = items.get(wanted.itemId)?.code;
+      if (!locationCode) throw new NotFoundError('Location', wanted.locationId);
+      if (!itemCode) throw new NotFoundError('Item', wanted.itemId);
+      await tx.$executeRaw`
+        INSERT INTO "lots"
+          ("id", "number", "item_id", "origin_document_id", "origin_line_no", "unit_cost",
+           "expiry_date", "quantity", "secondary_quantity", "placeholder_location_id",
+           "placeholder_cost", "created_at")
+        SELECT gen_random_uuid(), ${`PH-${locationCode}-${itemCode}`}, ${wanted.itemId}::uuid,
+               ${doc.id}::uuid, ${wanted.lineNo}, COALESCE(latest."unit_cost", 0), NULL, 0, NULL,
+               ${wanted.locationId}::uuid,
+               (CASE WHEN latest."unit_cost" IS NULL THEN 'unknown' ELSE 'estimated' END)::"PlaceholderCost",
+               now()
+        FROM (SELECT NULL) AS one
+        LEFT JOIN LATERAL (
+          SELECT l."unit_cost" FROM "lots" l
+          WHERE l."item_id" = ${wanted.itemId}::uuid AND l."placeholder_location_id" IS NULL
+          ORDER BY l."created_at" DESC, l."number" DESC
+          LIMIT 1
+        ) latest ON true
+        ON CONFLICT ("placeholder_location_id", "item_id") DO NOTHING
+      `;
+      const lot = await tx.lot.findUniqueOrThrow({
+        where: {
+          placeholderLocationId_itemId: {
+            placeholderLocationId: wanted.locationId,
+            itemId: wanted.itemId,
+          },
+        },
+        select: { id: true, unitCost: true },
+      });
+      movements.push({
+        lineNo: wanted.lineNo,
+        lotId: lot.id,
+        itemId: wanted.itemId,
+        locationId: wanted.locationId,
+        quantity: formatMinimal(negate(parseDecimal(wanted.quantity)!)),
+        secondaryQuantity: null,
+        unitCost: normaliseDecimal(lot.unitCost.toFixed()),
+      });
+    }
+    return movements;
+  }
+
+  /**
    * The heart of posting: lock the balance rows the movements touch, by lot then location
    * (ADR-0003 decision 6), check that no plant, warehouse or in-transit lot goes below zero,
    * then write the entries and the balances. Returns the number of entries written.
@@ -1070,8 +1366,13 @@ export class LedgerService {
     doc: { id: string; number: string; businessDate: string },
     movements: Movement[],
     actor: AuthenticatedUser,
+    businessTime: Date | null = null,
   ): Promise<Written> {
     if (movements.length === 0) return { entries: 0, negativeAtBranch: [] };
+    const entryTime =
+      businessTime === null
+        ? this.startOf(doc.businessDate, 0)
+        : Prisma.sql`${businessTime}::timestamptz`;
     const keys = lockOrder(netChanges(movements));
     const current = await tx.$queryRaw<Balance[]>`
       SELECT "lot_id" AS "lotId", "item_id" AS "itemId", "location_id" AS "locationId",
@@ -1114,7 +1415,7 @@ export class LedgerService {
           (m) => Prisma.sql`(
             gen_random_uuid(), ${doc.id}::uuid, ${m.lineNo}, ${m.itemId}::uuid, ${m.lotId}::uuid,
             ${m.locationId}::uuid, ${m.quantity}::numeric, ${m.secondaryQuantity}::numeric,
-            ${m.unitCost}::numeric, ${this.startOf(doc.businessDate, 0)}, ${actor.userId}::uuid,
+            ${m.unitCost}::numeric, ${entryTime}, ${actor.userId}::uuid,
             now(), ${m.reversesEntryId ?? null}::uuid
           )`,
         ),

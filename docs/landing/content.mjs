@@ -40,7 +40,7 @@ export const en = {
     cta: 'Try the demo',
     cta2: 'View the code',
     status:
-      'Walking skeleton: the stock ledger, master data, access control, purchase orders, goods receipts with inspection, production BOMs, production orders, transfers and branch requisitions work today. Traceability and the recall report are next.',
+      'Walking skeleton: the stock ledger, master data, access control, purchase orders, goods receipts with inspection, production BOMs, production orders, transfers, branch requisitions and branch consumption from POS sales work today. Traceability and the recall report are next.',
     shot: ['stock-dark', 'desktop', 'Stock on hand in dark mode: five lots at the Bang Na plant with unit cost and value'],
   },
   problemsHead: {
@@ -103,7 +103,7 @@ export const en = {
       kicker: 'Menu and recipes',
       title: 'Know what every portion should use, and what it should cost.',
       pain: 'The recipe lives in the head chef’s notebook, a branch quietly charges its own price, and nobody can say what a bucket costs to make.',
-      body: 'Menu items, prices and modifiers live in the ERP and every connected POS mirrors them. A price starts on a date, and a branch can have its own. Recipes are versioned: a new version starts on a date, and one in force never changes. Each recipe is priced at the cost of the lot FEFO would take next, shown as the estimate it is.',
+      body: 'Menu items, prices and modifiers live in the ERP and every connected POS mirrors them. A price starts on a date, and a branch can have its own. Recipes are versioned: a new version starts on a date, and one in force never changes. Each recipe is priced at the cost of the lot FEFO would take next, shown as the estimate it is. Every sale a connected POS delivers then becomes branch consumption (#17): its recipe, with the one in force on the day of the sale, takes the branch’s lots FEFO at the sale’s own time and cost. A branch that sold more than it had goes below zero and is asked for a count; a sale whose menu item is unknown, or whose POS clock is far ahead, waits on a screen for a person to fix and re-process it; and a theoretical usage report shows what each branch used, per day and ingredient, with every estimated cost marked. This works in an installation; the public demo does not have it yet.',
       points: [
         ['Prices from a date', 'Chain-wide or per branch, scheduled ahead, never rewritten once started. A branch can go back to the chain price.'],
         ['Versioned recipes', 'Per portion or per kilogram sold; “no sauce” takes the cup off.'],
@@ -243,7 +243,7 @@ export const th = {
     lead: 'ระบบหลังบ้านสำหรับเชนร้านอาหารที่ดูแลซัพพลายเชนเอง สร้างแบบเปิดเผยต่อสาธารณะ เริ่มจากสิ่งที่ทุกอย่างต้องพึ่ง: ตัวเลขสต๊อกที่เชื่อได้',
     cta: 'ลองเดโม',
     cta2: 'ดูโค้ด',
-    status: 'ระยะโครงระบบ: บัญชีเคลื่อนไหวสต๊อก master data สิทธิ์การใช้งาน ใบสั่งซื้อ ใบรับสินค้าพร้อมการตรวจรับ สูตรการผลิต ใบสั่งผลิต ใบโอน และใบขอเบิกของสาขาใช้ได้แล้ววันนี้ การย้อนรอยและรายงานเรียกคืนสินค้าตามมาถัดไป',
+    status: 'ระยะโครงระบบ: บัญชีเคลื่อนไหวสต๊อก master data สิทธิ์การใช้งาน ใบสั่งซื้อ ใบรับสินค้าพร้อมการตรวจรับ สูตรการผลิต ใบสั่งผลิต ใบโอน ใบขอเบิกของสาขา และการตัดวัตถุดิบที่สาขาจากยอดขาย POS ใช้ได้แล้ววันนี้ การย้อนรอยและรายงานเรียกคืนสินค้าตามมาถัดไป',
     shot: ['stock-dark', 'desktop', 'สต๊อกคงเหลือในโหมดมืด: lot ห้ารายการที่โรงงานบางนา พร้อมต้นทุนต่อหน่วยและมูลค่า'],
   },
   problemsHead: {
@@ -306,7 +306,7 @@ export const th = {
       kicker: 'เมนูและสูตร',
       title: 'รู้ว่าแต่ละที่ควรใช้อะไร และควรมีต้นทุนเท่าไร',
       pain: 'สูตรอยู่ในสมุดของหัวหน้าครัว สาขาแอบคิดราคาเอง และไม่มีใครบอกได้ว่าไก่หนึ่งถังมีต้นทุนเท่าไร',
-      body: 'รายการเมนู ราคา และตัวเลือกเสริมอยู่ใน ERP และ POS ที่เชื่อมต่อทุกเครื่องดึงไปใช้ ราคาเริ่มมีผลตามวันที่ และสาขามีราคาของตัวเองได้ สูตรมีเวอร์ชัน เวอร์ชันใหม่เริ่มตามวันที่ และเวอร์ชันที่มีผลแล้วไม่เปลี่ยน ทุกสูตรคิดต้นทุนจาก lot ที่ FEFO จะใช้ถัดไป และบอกชัดว่าเป็นค่าประมาณ',
+      body: 'รายการเมนู ราคา และตัวเลือกเสริมอยู่ใน ERP และ POS ที่เชื่อมต่อทุกเครื่องดึงไปใช้ ราคาเริ่มมีผลตามวันที่ และสาขามีราคาของตัวเองได้ สูตรมีเวอร์ชัน เวอร์ชันใหม่เริ่มตามวันที่ และเวอร์ชันที่มีผลแล้วไม่เปลี่ยน ทุกสูตรคิดต้นทุนจาก lot ที่ FEFO จะใช้ถัดไป และบอกชัดว่าเป็นค่าประมาณ จากนั้นยอดขายทุกรายการที่ POS ที่เชื่อมต่อส่งมาจะกลายเป็นการใช้วัตถุดิบที่สาขา (#17): ตัดจาก lot ของสาขาแบบ FEFO ตามสูตรที่ใช้ในวันขาย ด้วยเวลาและต้นทุนของการขายนั้น สาขาที่ขายเกินของที่มีจะติดลบและถูกขอให้นับ ยอดขายที่ไม่รู้จักเมนู หรือนาฬิกา POS ล้ำหน้าไปมาก จะรอบนหน้าจอให้คนแก้แล้วประมวลผลใหม่ และรายงานการใช้ตามสูตรบอกว่าแต่ละสาขาใช้วัตถุดิบอะไรเท่าไรต่อวัน พร้อมบอกทุกต้นทุนที่เป็นค่าประมาณ ใช้ได้ในระบบที่ติดตั้งแล้ว แต่ยังไม่อยู่ในเดโมสาธารณะ',
       points: [
         ['ราคาตามวันที่', 'ราคากลางหรือราคาสาขา ตั้งล่วงหน้าได้ ไม่ถูกเขียนทับเมื่อเริ่มแล้ว และสาขากลับไปใช้ราคากลางได้'],
         ['สูตรมีเวอร์ชัน', 'ต่อที่หรือต่อกิโลกรัมที่ขาย “ไม่รับน้ำจิ้ม” หักน้ำจิ้มออกหนึ่งถ้วย'],

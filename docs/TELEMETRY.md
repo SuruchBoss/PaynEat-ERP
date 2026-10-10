@@ -10,6 +10,24 @@ names**. A deployment on Google Cloud — where SherWhyve's live connectors run 
 metrics are identical everywhere; on Google Cloud, Managed Service for Prometheus collects them into
 Cloud Monitoring.
 
+## Additions to v1.2 (2026-10-10, ERP #17)
+
+Additive only; nothing is renamed. Agreed with the product owner on #17.
+
+- `erp_sales_events_total` gains three `outcome` values for what became of a received event:
+  `processed` (it became a branch-consumption document), `failed` and `held`, each with its `reason`
+  (listed under "Labels").
+- `sales_event.held` joins the catalogue: a sale dated further after its receipt than the company's
+  tolerance (a POS clock that is wrong) is held for a person instead of consuming stock. It is logged
+  once, when it is first held, and is not a failure.
+- Two gauges read from the database at scrape time, per active branch:
+  `erp_sales_events_unprocessed` and `erp_sales_events_oldest_unprocessed_age_seconds`.
+- `branch_consumption` joins the `document_type` values of `erp_postings_total`.
+- `sales_event.processed`, `sales_event.failed` and `sales_event.held` carry `pos_instance` and
+  `location_code`, and the event's idempotency key as their `correlation_id`, from ingest to posting.
+  `sales_event.processed` also carries the branch-consumption document it produced as
+  `document_number` (its `BC` number), so a sale leads to its consumption without a join.
+
 ## Additions to v1.2 (2026-09-27, PaynEat POS ticket 25)
 
 Additive only; nothing is renamed, and nothing the ERP emits changes.
@@ -135,6 +153,7 @@ way with the same reasons. Nothing from the credential itself is logged.
 | `sales_event.rejected` | ERP | `WARNING`, with `reason` |
 | `sales_event.processed` | ERP | `INFO` — the event became branch consumption |
 | `sales_event.failed` | ERP | `WARNING`, with `reason` — received but could not become consumption (ERP #17) |
+| `sales_event.held` | ERP | `WARNING`, with `reason` `sale_time_ahead` — held for a person, logged once when it is first held (ERP #17) |
 | `master_data.pulled` | ERP | `INFO`, with `pos_instance` |
 | `master_data.pull_refused` | ERP | `WARNING`, with `reason` (and `pos_instance` when the credential names one) — a refused pull (ERP #9) |
 | `master_data.pull.completed` | POS | `INFO`, with `pos_instance` — a pull the ERP answered and the POS applied |
@@ -166,7 +185,9 @@ Prometheus exposition at `GET /metrics` on each API, not exposed publicly.
 | `http_request_duration_seconds` | histogram | `app`, `method`, `route` | every API |
 | `auth_sign_in_failures_total` | counter | `app` | ERP, Cwork |
 | `erp_postings_total` | counter | `document_type`, `outcome`, `rule` | ERP |
-| `erp_sales_events_total` | counter | `outcome` (`received`, `duplicate`, `rejected`), `reason` | ERP |
+| `erp_sales_events_total` | counter | `outcome` (`received`, `duplicate`, `rejected`, `processed`, `failed`, `held`), `reason` | ERP |
+| `erp_sales_events_unprocessed` | gauge | `location_code` | ERP |
+| `erp_sales_events_oldest_unprocessed_age_seconds` | gauge | `location_code` | ERP |
 | `erp_master_data_last_pull_timestamp_seconds` | gauge | `pos_instance` | ERP |
 | `erp_negative_branch_balances` | gauge | `location_code` | ERP |
 | `erp_production_yield_percent` | gauge | `bom_code`, `measure` (`actual`, `expected`) | ERP |
@@ -181,7 +202,7 @@ Prometheus exposition at `GET /metrics` on each API, not exposed publicly.
 
 - `document_type`: the ERP's stock document type, as stored: `opening_balance`, `reversal`,
   `stock_adjustment`, `goods_receipt` (#11), `production_order` (#13), `transfer` and
-  `transfer_receipt` (#14) so far.
+  `transfer_receipt` (#14), and `branch_consumption` (#17) so far.
   Each ticket that adds a document type adds its value here.
 - `outcome`: `succeeded` or `refused`.
 - `rule`: the rule that refused the posting (for example `negative_stock_plant`, `expired_lot`,
@@ -208,6 +229,15 @@ neither received nor reversed (#14, ADR-0028), and `erp_transfers_oldest_in_tran
 oldest of them has been on the road, counted from its dispatch; both are 0 for an origin with nothing
 in transit, and both are read from the database at scrape time. A growing age is a delivery nobody
 has received: stock that is neither at the plant nor at the branch.
+
+What became of received sales events (#17, ADR-0030): `erp_sales_events_total` with `outcome`
+`processed`, `failed` or `held`. A `failed` event's `reason` is `unknown_menu_item`, `unknown_modifier`,
+`no_recipe_in_effect`, `sold_by_mismatch`, `inactive_ingredient` or `negative_usage`; a `held` event's is
+`sale_time_ahead`. `erp_sales_events_unprocessed` counts each active branch's events that are not yet
+consumption (waiting for their day, held or failed), and `erp_sales_events_oldest_unprocessed_age_seconds`
+is how long the oldest of them has waited since the ERP received it; both are 0 for a branch with
+nothing waiting, and both are read from the database at scrape time. A growing age is the processing
+lag: sales that happened and whose stock has not moved.
 
 Values that describe the system rather than one process are **read from the database at scrape time**,
 never held in process memory. `erp_master_data_last_pull_timestamp_seconds` is the stored time of each

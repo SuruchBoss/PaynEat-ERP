@@ -46,7 +46,8 @@ export type StockDocumentType =
   | 'goods_receipt'
   | 'production_order'
   | 'transfer'
-  | 'transfer_receipt';
+  | 'transfer_receipt'
+  | 'branch_consumption';
 
 /**
  * draft → posted for an opening balance; draft → submitted → approved → posted, or rejected,
@@ -94,7 +95,17 @@ export interface LotView {
 
 export interface StockOnHandRow {
   item: { id: string; code: string; nameTh: string; nameEn: string; baseUnitCode: string };
-  lot: { id: string; number: string; expiryDate: string };
+  lot: {
+    id: string;
+    number: string;
+    /** Null only for a placeholder lot (ADR-0030), which has no expiry. */
+    expiryDate: string | null;
+    /**
+     * Placeholder lots only: its cost is an estimate (`estimated`) or nothing is known about it
+     * (`unknown`, cost 0). Shown as such, never as a cost (ADR-0030).
+     */
+    placeholderCost: 'estimated' | 'unknown' | null;
+  };
   location: { id: string; code: string; type: LocationType; nameTh: string; nameEn: string };
   /** With the base unit's decimals: "21.600" kg, "40" pieces. Negative only at a branch. */
   quantity: string;

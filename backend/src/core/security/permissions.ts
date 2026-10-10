@@ -127,6 +127,16 @@ export const Permission = {
    * the suggestions follow (ADR-0009), so only the admin keeps it.
    */
   PAR_LEVEL_MANAGE: 'par_level:manage',
+  /**
+   * Read branch consumption (#17): each sale's consumption document, the sales events that
+   * failed or are held, and the theoretical usage per branch and item.
+   */
+  BRANCH_CONSUMPTION_READ: 'branch_consumption:read',
+  /**
+   * Re-process a failed or held sales event once its master data is fixed or its date has come
+   * (#17, ADR-0030). The person who asks posts the consumption that follows.
+   */
+  SALES_EVENT_REPROCESS: 'sales_event:reprocess',
 } as const;
 
 export type PermissionKey = (typeof Permission)[keyof typeof Permission];
@@ -170,6 +180,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly PermissionKey[]> = {
     Permission.PRODUCTION_BOM_MANAGE,
     Permission.REQUISITION_READ,
     Permission.PAR_LEVEL_MANAGE,
+    Permission.BRANCH_CONSUMPTION_READ,
+    Permission.SALES_EVENT_REPROCESS,
   ],
   // ADR-0008: create and send purchase orders (#10); manage suppliers (#6).
   // Purchasing follows what arrived against its orders (#11).
@@ -210,7 +222,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly PermissionKey[]> = {
   logistics: [Permission.TRANSFER_READ, Permission.TRANSFER_DISPATCH, Permission.REQUISITION_READ],
   // ADR-0008: raise requisitions, receive transfers, count branch stock. Adjusting branch
   // stock after a count is raising an adjustment (#8). A branch sells the menu: its manager
-  // reads it, with its recipes (#16). Receiving transfers is #14; requisitions are #15.
+  // reads it, with its recipes (#16). Receiving transfers is #14; requisitions are #15. What
+  // the branch's sales consumed, and which sales could not become consumption, is #17.
   branch_manager: [
     Permission.STOCK_ADJUSTMENT_RAISE,
     Permission.MENU_READ,
@@ -218,6 +231,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly PermissionKey[]> = {
     Permission.TRANSFER_RECEIVE,
     Permission.REQUISITION_READ,
     Permission.REQUISITION_RAISE,
+    Permission.BRANCH_CONSUMPTION_READ,
   ],
   // ADR-0008: view costs, variances and valuation; export financial data. An adjustment
   // changes the value of stock, so finance approves it (#8): never one it created itself.
@@ -225,7 +239,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly PermissionKey[]> = {
   // prices the company has committed to pay (#10), what each received lot cost (#11) and how a
   // batch's cost is split across its outputs (#12), and what each production order's output lots
   // cost, with its yield (#13), and what was written off on the way to a branch (#14). Par misses
-  // are stock the chain did not have where it was needed (#15).
+  // are stock the chain did not have where it was needed (#15). Branch consumption carries the
+  // cost of each lot it takes, and the theoretical usage is a cost report (#17).
   finance: [
     Permission.STOCK_ADJUSTMENT_APPROVE,
     Permission.MENU_READ,
@@ -235,6 +250,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly PermissionKey[]> = {
     Permission.PRODUCTION_ORDER_READ,
     Permission.TRANSFER_READ,
     Permission.REQUISITION_READ,
+    Permission.BRANCH_CONSUMPTION_READ,
   ],
 };
 

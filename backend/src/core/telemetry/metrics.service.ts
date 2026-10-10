@@ -59,7 +59,9 @@ export class MetricsService implements OnApplicationBootstrap, OnApplicationShut
 
   /**
    * Every sales event a POS delivered (#9, docs/TELEMETRY.md): `received` the first time,
-   * `duplicate` when its idempotency key was already stored, `rejected` with the `reason`.
+   * `duplicate` when its idempotency key was already stored, `rejected` with the `reason`; then
+   * what became of it (#17): `processed` into branch consumption, `failed` or `held` with the
+   * `reason`.
    */
   private readonly salesEvents = new Counter({
     name: 'erp_sales_events_total',
@@ -79,6 +81,7 @@ export class MetricsService implements OnApplicationBootstrap, OnApplicationShut
     this.signInFailures.inc({ app: APP_NAME }, 0);
     this.salesEvents.inc({ outcome: 'received', reason: '' }, 0);
     this.salesEvents.inc({ outcome: 'duplicate', reason: '' }, 0);
+    this.salesEvents.inc({ outcome: 'processed', reason: '' }, 0);
   }
 
   /** `route` must be a template (`/documents/:id`), never a concrete path. */
@@ -96,7 +99,10 @@ export class MetricsService implements OnApplicationBootstrap, OnApplicationShut
     this.postings.inc({ document_type: documentType, outcome, rule }, by);
   }
 
-  countSalesEvent(outcome: 'received' | 'duplicate' | 'rejected', reason = ''): void {
+  countSalesEvent(
+    outcome: 'received' | 'duplicate' | 'rejected' | 'processed' | 'failed' | 'held',
+    reason = '',
+  ): void {
     this.salesEvents.inc({ outcome, reason });
   }
 

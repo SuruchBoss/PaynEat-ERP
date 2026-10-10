@@ -29,6 +29,8 @@ export default async function globalSetup(): Promise<void> {
   // On purpose: the suite seeds the demo chain and signs in with its accounts, which only
   // a demo installation allows (#5). Specs that test the refusals boot with ERP_DEMO=0.
   process.env.ERP_DEMO = '1';
+  // Branch consumption runs when a spec asks for it, never on a timer behind its back (#17).
+  process.env.SALES_CONSUMPTION_INTERVAL_SECONDS = '0';
 
   execFileSync('npx', ['prisma', 'migrate', 'deploy'], {
     cwd: process.cwd(),

@@ -30,6 +30,12 @@ import type {
 } from './dto/menu.dto';
 import { dateText, dateValue, MenuItemsService } from './menu-items.service';
 import { ModifierGroupsService } from './modifier-groups.service';
+import {
+  saleUsage,
+  type SaleLine,
+  type SaleModifierOption,
+  type SaleUsage,
+} from './domain/sale-usage';
 
 /** The master data entity types recipe versions are logged under (contract 1.1). */
 export const MENU_RECIPE_ENTITY = 'menu_recipe';
@@ -76,6 +82,66 @@ export class RecipesService {
     private readonly menuItems: MenuItemsService,
     private readonly modifierGroups: ModifierGroupsService,
   ) {}
+
+  /**
+   * What one sale line uses (#17): the menu item's and its modifiers' recipes in force on the
+   * sale date, exploded per item, or why not. A menu item or option no longer on sale still
+   * uses its recipe: the sale happened. Pass the caller's transaction to read inside it.
+   */
+  async saleUsage(
+    line: SaleLine,
+    tx: Prisma.TransactionClient = this.prisma,
+  ): Promise<{ menuItemId: string | null; usage: SaleUsage }> {
+    const recipeVersions = {
+      select: {
+        effectiveFrom: true,
+        lines: { select: { itemId: true, quantity: true }, orderBy: { lineNo: 'asc' as const } },
+      },
+    };
+    const menuItem = await tx.menuItem.findUnique({
+      where: { code: line.menuItemCode },
+      select: { id: true, code: true, soldBy: true, recipeVersions },
+    });
+    const optionRows = line.modifiers.length
+      ? await tx.modifierOption.findMany({
+          where: { code: { in: [...new Set(line.modifiers.map((m) => m.code))] } },
+          select: { id: true, code: true, recipeVersions },
+        })
+      : [];
+    const dated = (versions: (typeof optionRows)[number]['recipeVersions']) =>
+      versions.map((version) => ({
+        effectiveFrom: dateText(version.effectiveFrom),
+        lines: version.lines.map((l) => ({ itemId: l.itemId, quantity: l.quantity.toFixed() })),
+      }));
+    const options = new Map<string, SaleModifierOption>(
+      optionRows.map((row) => [
+        row.code,
+        { id: row.id, code: row.code, recipes: dated(row.recipeVersions) },
+      ]),
+    );
+    const itemIds = [
+      ...(menuItem?.recipeVersions ?? []),
+      ...optionRows.flatMap((row) => row.recipeVersions),
+    ].flatMap((version) => version.lines.map((l) => l.itemId));
+    const items = await this.items.describe(itemIds, tx);
+    const active = new Set([...items.values()].filter((i) => i.active).map((i) => i.id));
+    return {
+      menuItemId: menuItem?.id ?? null,
+      usage: saleUsage(
+        line,
+        menuItem
+          ? {
+              id: menuItem.id,
+              code: menuItem.code,
+              soldBy: menuItem.soldBy,
+              recipes: dated(menuItem.recipeVersions),
+            }
+          : null,
+        options,
+        active,
+      ),
+    };
+  }
 
   /** Every version of the recipe, newest first, each priced at current lot costs. */
   async recipe(kind: RecipeKind, subjectId: string): Promise<RecipeView> {

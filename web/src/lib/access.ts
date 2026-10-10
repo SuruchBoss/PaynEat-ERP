@@ -78,6 +78,10 @@ export const Permission = {
   REQUISITION_RAISE: 'requisition:raise',
   /** Set and remove par levels: the admin (#15). */
   PAR_LEVEL_MANAGE: 'par_level:manage',
+  /** Read branch consumption, failed and held sales events and theoretical usage: the admin, branch managers, finance (#17). */
+  BRANCH_CONSUMPTION_READ: 'branch_consumption:read',
+  /** Re-process a failed or held sales event: the admin (#17). */
+  SALES_EVENT_REPROCESS: 'sales_event:reprocess',
 } as const;
 
 export type PermissionKey = (typeof Permission)[keyof typeof Permission];
