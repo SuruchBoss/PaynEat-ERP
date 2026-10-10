@@ -95,6 +95,7 @@ const VERSION_PROBLEMS: Record<string, MessageKey> = {
   outputs_heavier_than_inputs: 'bom.versionProblem.outputs_heavier_than_inputs',
   ratios_incomplete: 'bom.versionProblem.ratios_incomplete',
   ratios_not_100: 'bom.versionProblem.ratios_not_100',
+  default_ratio_zero: 'bom.versionProblem.default_ratio_zero',
 };
 
 function describeError(
@@ -109,12 +110,21 @@ function describeError(
   return undefined;
 }
 
-function savedIssues(error: unknown): { issues: BomLineIssue[]; problems: string[] } {
+function savedIssues(error: unknown): {
+  issues: BomLineIssue[];
+  problems: string[];
+  zeroRatioOutputs: number[];
+} {
   if (!(error instanceof ApiError) || error.code !== 'INVALID_PRODUCTION_BOM') {
-    return { issues: [], problems: [] };
+    return { issues: [], problems: [], zeroRatioOutputs: [] };
   }
-  const details = error.details as { issues?: BomLineIssue[]; problems?: string[] } | undefined;
-  return { issues: details?.issues ?? [], problems: details?.problems ?? [] };
+  const details = error.details as
+    { issues?: BomLineIssue[]; problems?: string[]; zeroRatioOutputs?: number[] } | undefined;
+  return {
+    issues: details?.issues ?? [],
+    problems: details?.problems ?? [],
+    zeroRatioOutputs: details?.zeroRatioOutputs ?? [],
+  };
 }
 
 /** Waits until typing stops before the value changes. */
@@ -808,11 +818,20 @@ function BomForm({
   const shownPreview: BomPreview | undefined = preview.data;
   const issues = save.isError ? fromSave.issues : (shownPreview?.issues ?? []);
   const problems = save.isError ? fromSave.problems : (shownPreview?.problems ?? []);
+  const zeroRatioOutputs = save.isError
+    ? fromSave.zeroRatioOutputs
+    : (shownPreview?.zeroRatioOutputs ?? []);
   const itemsList = items.data ?? [];
   const itemOf = (id: string) => itemsList.find((i) => i.id === id);
   const choosable = (current: string): ItemView[] =>
     itemsList.filter((i) => i.active || i.id === current);
   const unitOf = (code: string) => unitName(units.data ?? [], code, language);
+  // Line numbers from the API count only the output rows with an item, as they were sent.
+  const zeroRatioNames = zeroRatioOutputs
+    .map((lineNo) => itemOf(outputs.filter((r) => r.itemId)[lineNo - 1]?.itemId ?? ''))
+    .map((item) => (item ? (language === 'th' ? item.nameTh : item.nameEn) : ''))
+    .filter((name) => name !== '')
+    .join(', ');
 
   // The preview lists outputs in the order sent, which skips rows with no item yet.
   const previewOutput = (row: Row) => {
@@ -1064,7 +1083,7 @@ function BomForm({
         )}
         {problems.map((problem) => (
           <p key={problem} className="field-error">
-            {t(VERSION_PROBLEMS[problem] ?? 'bom.problem.unknown')}
+            {t(VERSION_PROBLEMS[problem] ?? 'bom.problem.unknown', { items: zeroRatioNames })}
           </p>
         ))}
       </div>

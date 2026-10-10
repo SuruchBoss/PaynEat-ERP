@@ -86,11 +86,18 @@ export type BomProblem =
   /** Some outputs carry a ratio and some do not: override all of them, or none. */
   | 'ratios_incomplete'
   /** The overriding ratios do not add up to exactly 100.00. */
-  | 'ratios_not_100';
+  | 'ratios_not_100'
+  /**
+   * With no overriding ratios, an output's share of the expected output weight comes out at
+   * 0.00 % after the cut to 0.01 %, so it would carry no cost without anyone choosing that.
+   */
+  | 'default_ratio_zero';
 
 export interface BomIssues {
   lines: BomLineIssue[];
   problems: BomProblem[];
+  /** The 1-based output lines whose default ratio is 0.00, when `default_ratio_zero`. */
+  zeroRatioOutputs: number[];
 }
 
 /** Twelve digits before the point: more than any real batch, less than NUMERIC(18,6) holds. */
@@ -115,8 +122,8 @@ export function isWeightUnit(unitCode: string): boolean {
 
 /**
  * Everything wrong with a version's lines, at most one issue per line, and with the version
- * as a whole. Version-wide checks that need weights (heavier outputs, ratio totals) run only
- * when every line is valid, so one mistake is not reported three times.
+ * as a whole. Version-wide checks that need weights (heavier outputs, ratio totals, a default
+ * ratio of zero) run only when every line is valid, so one mistake is not reported three times.
  */
 export function bomIssues(
   inputs: readonly BomLineInput[],
@@ -125,6 +132,7 @@ export function bomIssues(
 ): BomIssues {
   const lines: BomLineIssue[] = [];
   const problems: BomProblem[] = [];
+  const zeroRatioOutputs: number[] = [];
   if (inputs.length === 0) problems.push('no_inputs');
   if (outputs.length === 0) problems.push('no_outputs');
 
@@ -159,8 +167,14 @@ export function bomIssues(
       );
       if (sign(add(total, negate(HUNDRED))) !== 0) problems.push('ratios_not_100');
     }
+    if (withRatio === 0) {
+      defaultRatios(figures.outputWeights).forEach((ratio, index) => {
+        if (sign(decimal(ratio)) === 0) zeroRatioOutputs.push(index + 1);
+      });
+      if (zeroRatioOutputs.length > 0) problems.push('default_ratio_zero');
+    }
   }
-  return { lines, problems };
+  return { lines, problems, zeroRatioOutputs };
 }
 
 function lineProblem(

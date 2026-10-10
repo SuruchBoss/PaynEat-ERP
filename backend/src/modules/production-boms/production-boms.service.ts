@@ -202,14 +202,17 @@ export class ProductionBomsService {
   /** What a version would give, with every problem it has; refuses nothing and writes nothing. */
   async preview(dto: BomLinesDto): Promise<BomPreviewView> {
     const items = await this.items.describe([...dto.inputs, ...dto.outputs].map((l) => l.itemId));
-    const { lines: issues, problems } = bomIssues(dto.inputs, dto.outputs, items);
+    const { lines: issues, problems, zeroRatioOutputs } = bomIssues(dto.inputs, dto.outputs, items);
     const stated = statedRatioTotal(dto.outputs);
-    if (issues.length > 0) return { issues, problems, figures: null, statedRatioTotal: stated };
+    if (issues.length > 0) {
+      return { issues, problems, zeroRatioOutputs, figures: null, statedRatioTotal: stated };
+    }
     const figures = bomFigures(dto.inputs, dto.outputs, items);
     const defaults = defaultRatios(figures.outputWeights);
     return {
       issues,
       problems,
+      zeroRatioOutputs,
       figures: {
         inputWeightKg: formatKg(figures.inputWeight),
         outputWeightKg: formatKg(figures.outputWeight),
@@ -476,12 +479,17 @@ export class ProductionBomsService {
     const issues = bomIssues(dto.inputs, dto.outputs, items);
     if (issues.lines.length > 0 || issues.problems.length > 0) {
       const text = [
-        ...issues.problems.map((p) => p.replaceAll('_', ' ')),
+        ...issues.problems.map((p) =>
+          p === 'default_ratio_zero'
+            ? `default ratio zero on output line ${issues.zeroRatioOutputs.join(', ')}`
+            : p.replaceAll('_', ' '),
+        ),
         ...issues.lines.map((i) => `${i.side} line ${i.lineNo}: ${i.problem.replaceAll('_', ' ')}`),
       ].join('; ');
       throw new BusinessRuleError('INVALID_PRODUCTION_BOM', text, {
         issues: issues.lines,
         problems: issues.problems,
+        zeroRatioOutputs: issues.zeroRatioOutputs,
       });
     }
     return items;

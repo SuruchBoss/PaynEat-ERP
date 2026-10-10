@@ -1366,6 +1366,8 @@ export const en: Messages = {
     'The expected outputs weigh more than the inputs: a batch cannot gain weight.',
   'bom.versionProblem.ratios_incomplete': 'Set by hand, every output needs a share.',
   'bom.versionProblem.ratios_not_100': 'Shares set by hand must add up to exactly 100.',
+  'bom.versionProblem.default_ratio_zero':
+    'By weight, the share of {items} rounds to 0.00, so it would carry no cost. Set the shares by hand, or correct the expected weights.',
   'bom.error.codeTaken': 'A BOM with this code already exists.',
   'bom.error.overlap':
     'Another version starts on that day: two versions would be in force at once.',

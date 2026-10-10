@@ -60,6 +60,19 @@ answer:
 - The console cannot import backend code (ADR-0021), so it asks the API to preview a version while
   it is typed (`POST /production-boms/preview`), as goods receipts do. The rules exist once.
 
+## Amendment (2026-10-10, #69)
+
+This adds a check; it does not change any decision above.
+
+- Decision 2 can cut the share of a very light output to 0.00 % (1 g against 50 kg is
+  0.0019999 %, and the largest remainder hands the missing hundredth to the heavier output), while
+  decision 3 refuses a ratio of zero only when it is stated. A version whose **default** ratios give
+  any output 0.00 is therefore refused too (`default_ratio_zero`), naming the output lines, so no
+  production order allocates a lot no cost without anyone having chosen it. The admin states the
+  ratios or corrects the expected weights.
+- Overriding ratios are unaffected: they already refuse zero. Versions saved before this check are
+  not re-validated.
+
 ## Alternatives considered
 
 - **Ratios by count of outputs, or by sales value.** Rejected for the default: ADR-0004 chose
