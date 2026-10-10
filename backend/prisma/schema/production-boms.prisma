@@ -1,0 +1,73 @@
+// Copyright 2026 Suruch Chakrapeesirisuk
+// SPDX-License-Identifier: Apache-2.0
+
+// Production BOMs — owned by the production-boms module (#12, ADR-0004, ADR-0026).
+
+/// Which side of a batch a BOM line is on.
+enum BomSide {
+  input
+  output
+}
+
+/// How the plant turns inputs into outputs, versioned by effective date (ADR-0026). Not master
+/// data: no POS mirrors it. Deactivated, never deleted.
+model ProductionBom {
+  id           String       @id @default(uuid()) @db.Uuid
+  /// Unique and stable: set once, never changed.
+  code         String       @unique
+  nameTh       String       @map("name_th")
+  nameEn       String       @map("name_en")
+  /// The type of location that runs it: the plant, in v1.
+  locationType LocationType @map("location_type")
+  active       Boolean      @default(true)
+  /// Bumped by every change to the header: an edit made from an older revision is refused.
+  revision     Int          @default(1)
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  versions ProductionBomVersion[]
+
+  @@map("production_boms")
+}
+
+/// One version of a BOM, in force from its effective-from business date until the next
+/// version starts (ADR-0023). Never changes once in force; a scheduled one may be corrected.
+model ProductionBomVersion {
+  id               String        @id @default(uuid()) @db.Uuid
+  bomId            String        @map("bom_id") @db.Uuid
+  bom              ProductionBom @relation(fields: [bomId], references: [id], onDelete: Restrict)
+  /// 1, 2, 3… per BOM, in the order versions were created.
+  number           Int
+  effectiveFrom    DateTime      @map("effective_from") @db.Date
+  /// True when the outputs' allocation ratios were set by hand rather than by weight share.
+  ratiosOverridden Boolean       @map("ratios_overridden")
+  createdAt        DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  lines ProductionBomLine[]
+
+  @@unique([bomId, effectiveFrom])
+  @@unique([bomId, number])
+  @@map("production_bom_versions")
+}
+
+/// An item a batch consumes (input) or is expected to yield (output), per batch, in the item's
+/// base unit. An item appears at most once in a version.
+model ProductionBomLine {
+  versionId        String               @map("version_id") @db.Uuid
+  version          ProductionBomVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  side             BomSide
+  /// 1-based within its side.
+  lineNo           Int                  @map("line_no")
+  itemId           String               @map("item_id") @db.Uuid
+  item             Item                 @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  quantity         Decimal              @db.Decimal(18, 6)
+  /// The expected weight per batch in kg, for items whose base unit is not kg or g.
+  expectedWeightKg Decimal?             @map("expected_weight_kg") @db.Decimal(15, 3)
+  /// Outputs only: the percentage of the batch cost this output carries (ADR-0004).
+  allocationRatio  Decimal?             @map("allocation_ratio") @db.Decimal(5, 2)
+
+  @@id([versionId, side, lineNo])
+  @@unique([versionId, itemId])
+  @@map("production_bom_lines")
+}

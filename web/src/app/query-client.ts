@@ -58,4 +58,9 @@ export const qk = {
   goodsReceipt: (id: string) => ['goods-receipts', id] as const,
   goodsReceiptPreview: (input: string) => ['goods-receipts', 'preview', input] as const,
   supplierReturns: (purchaseOrderId: string) => ['supplier-returns', purchaseOrderId] as const,
+  productionBoms: ['production-boms'] as const,
+  productionBomList: (includeInactive: boolean) =>
+    ['production-boms', 'list', includeInactive] as const,
+  productionBom: (id: string) => ['production-boms', id] as const,
+  productionBomPreview: (input: string) => ['production-boms', 'preview', input] as const,
 };

@@ -52,6 +52,7 @@ model Item {
   recipeLines         RecipeLine[]
   goodsReceiptLines   GoodsReceiptLine[]
   supplierReturnLines SupplierReturnLine[]
+  productionBomLines  ProductionBomLine[]
 
   @@map("items")
 }

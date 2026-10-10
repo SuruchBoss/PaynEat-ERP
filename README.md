@@ -41,11 +41,13 @@ screens from the demo.
 > against a sent order, line by line, inspected against each item's tolerances, posted at once when
 > within them or approved by a purchasing approver who never approves their own, each accepted line
 > a lot at the order line's cost with the earlier of two expiries, and what is turned away a return
-> to supplier — and the
+> to supplier — and **production BOMs**: which inputs a batch turns into which outputs, each output's
+> expected yield, and the share of the batch's cost it carries, by weight or set by hand to exactly
+> 100 %, versioned by date — and the
 > **POS integration contract** ([`contracts/`](contracts/README.md)): POS instances registered with a
 > machine credential pull master data by version and deliver sales events the ERP stores exactly once. The console works on a desktop, a tablet (the menu narrows to icons) and a phone (each table
 > row becomes a card), in light and dark mode, and anyone can try it in the browser on the
-[public demo](https://suruchboss.github.io/PaynEat-ERP/). No production or transfer document exists
+[public demo](https://suruchboss.github.io/PaynEat-ERP/). No production order or transfer exists
 > yet; they are being built in public, one GitHub issue at a time. This README says only what is true
 > today and will grow as things work.
 
@@ -121,6 +123,22 @@ Menu items, prices and modifiers live in the ERP and every connected POS mirrors
 - **Costed honestly** — An ingredient with no lot has no cost, not a cost of zero.
 
 **Try it:** Sign in as finance, open “Menu and prices” and open the bucket of eight pieces.
+
+### Know what a case of chicken should become, and what each piece should cost.
+
+<p align="center">
+  <img src="docs/landing/img/en-boms.webp" width="720" alt="The whole-chicken cutting BOM: five outputs with their expected yield and cost share, and the waste">
+</p>
+
+**The problem:** The cutting yield lives in a supervisor’s head, and what a breast costs is whatever this week’s spreadsheet says.
+
+A production BOM says which inputs make which outputs: a case of whole chicken into breasts, thighs, drumsticks, wings and frames. Each output has its expected weight and yield, and the share of the batch’s cost it carries: by weight, unless the chain sets its own shares, which must add up to exactly 100 %. Waste is shown and carries no share. BOMs are versioned by date like recipes; production orders that use them come next (#13).
+
+- **Yield you can check** — 20 kg in, 18 kg expected out, 2 kg waste: 90 %.
+- **Shares that add up** — By weight, rounded so they sum to exactly 100 %, or set by hand.
+- **Versioned by date** — A version in force never changes; a scheduled one can be corrected.
+
+**Try it:** Sign in as plant, open “Production BOMs” and open “Cut whole chicken”.
 
 ### The right people. Only the right people.
 
@@ -240,6 +258,7 @@ The "why" matters more than the "what" in an ERP, so every decision is written d
 | [0023](docs/adr/0023-menu-prices-and-versioned-recipes.md) | Menu prices and recipe versions start on a business date; a recipe never changes for a day that has begun, and nothing changes once in force; a branch's own price wins while in force and can end with a return to the chain price; a modifier recipe is per unit sold; the theoretical cost is an estimate at the next FEFO lot's cost (proposed with #16) |
 | [0024](docs/adr/0024-purchase-order-totals-and-approval.md) | Purchase order money rounds once per line to 2 decimals and the order is the sum of its lines; a line's cost per base unit is its price over the conversion factor, net of recoverable VAT, to 6 decimals; the approval threshold is an admin setting compared with the gross total, at or below it approved automatically, 0 until set; a rejected order is final; a line keeps its conversion factor; goods go to a plant or a warehouse (proposed with #10) |
 | [0025](docs/adr/0025-goods-receipts-expected-quantity-and-completion.md) | A goods receipt counts in the ordered unit or the base unit; each delivery is inspected against what is still outstanding on its order line; findings are fixed when submitted and the approver decides on those; an order line accepts at most what was ordered plus the item's variance limit, checked under the order's lock; a line is complete within that limit below what was ordered; rejected goods become one return to supplier with no ledger entries; receiving tolerances are configuration, not master data (proposed with #11) |
+| [0026](docs/adr/0026-production-bom-weights-ratios-and-versions.md) | A production BOM compares everything by weight in kg, stated for lines not counted in kg or g; default allocation ratios are each output's share of expected output weight to 0.01 %, rounded by largest remainder to exactly 100; an override covers every output, each above zero with two decimals, adding up to exactly 100; waste is input less expected output weight and carries no ratio, and heavier outputs are refused; versions follow ADR-0023; a BOM is configuration, not master data; the plant runs it in v1 (proposed with #12) |
 
 Domain vocabulary, in English and Thai: [`docs/GLOSSARY.md`](docs/GLOSSARY.md).
 
@@ -328,7 +347,7 @@ echo 'ERP_DEMO=1' >> .env
 
 docker compose up -d --build                        # PostgreSQL 16, the API and the web console
 docker compose run --rm --build migrate             # apply database migrations
-docker compose run --rm migrate npm run db:seed     # the fictional chain: users, items, sites, suppliers, opening stock, purchase orders, goods receipts
+docker compose run --rm migrate npm run db:seed     # the fictional chain: users, items, sites, suppliers, opening stock, purchase orders, goods receipts, production BOMs
 curl http://localhost:3100/health                   # {"status":"ok","api":"up","database":"up"}
 docker compose logs api                             # one JSON object per line
 ```
@@ -362,13 +381,13 @@ The password of every demo account is **`demo-chicken-2026`**.
 
 | Role | Email | What the role is for (ADR-0008) | What it can do in the console today |
 |---|---|---|---|
-| `admin` | `admin@demo-chicken.example` | Manage users, roles, locations, configuration; reopen closed periods | Sign in with a second factor; **Users and roles**: list, create, give and take away roles; **Items and units**: create, edit, deactivate; **Locations**: create, correct a code, deactivate, supersede; **Suppliers**; **Company settings**: the purchase approval threshold; read stock on hand and opening balances; register POS instances and manage their credentials (API); read the audit trail (API) |
+| `admin` | `admin@demo-chicken.example` | Manage users, roles, locations, configuration; reopen closed periods | Sign in with a second factor; **Users and roles**: list, create, give and take away roles; **Items and units**: create, edit, deactivate; **Locations**: create, correct a code, deactivate, supersede; **Suppliers**; **Company settings**: the purchase approval threshold; **Production BOMs**: create, add a version, correct a scheduled one, rename, deactivate; read stock on hand and opening balances; register POS instances and manage their credentials (API); read the audit trail (API) |
 | `purchasing` | `purchasing@demo-chicken.example` | Create and send purchase orders; manage suppliers | Sign in; **Suppliers**: create, edit, deactivate; read items, locations and stock on hand; **Purchase orders**: draft, edit, submit, mark as sent, cancel; read **Goods receipts** and returns to supplier |
 | `purchasing_approver` | `approver@demo-chicken.example` | Approve purchase orders above the approval threshold, and out-of-tolerance receipts | Sign in; **Purchase orders**: approve or reject, never one it raised; **Goods receipts**: approve (which posts) or reject one with findings, never one it recorded; read items, locations, suppliers and stock on hand |
-| `plant` | `plant@demo-chicken.example` | Receive goods, run production orders, manage plant stock | Sign in; **Goods receipts**: receive against a sent order, draft and submit; read purchase orders; **Opening balances**: draft, post, reverse; **Stock adjustments**: draft and submit; **Stock on hand**; read items, locations and suppliers; its production screens arrive with #13 |
+| `plant` | `plant@demo-chicken.example` | Receive goods, run production orders, manage plant stock | Sign in; **Goods receipts**: receive against a sent order, draft and submit; read purchase orders; **Opening balances**: draft, post, reverse; **Stock adjustments**: draft and submit; **Stock on hand**; read items, locations and suppliers; read **Production BOMs**; its production order screens arrive with #13 |
 | `logistics` | `logistics@demo-chicken.example` | Dispatch transfers | Sign in; read items, locations, suppliers and stock on hand; its screen arrives with #14 |
 | `branch_manager` | `branch.manager@demo-chicken.example` | Raise requisitions, receive transfers, count branch stock | Sign in; **Stock adjustments**: draft and submit; read items, locations, suppliers and stock on hand; its requisition and transfer screens arrive with #14 and #15 |
-| `finance` | `finance@demo-chicken.example` | View costs, variances and valuation; export financial data | Sign in; **Stock adjustments**: approve (which posts) or reject, never one it raised; **Stock on hand** with cost and value; read items, locations, suppliers, purchase orders and goods receipts; its screens arrive with the costing and period-close work of weeks 4–5 |
+| `finance` | `finance@demo-chicken.example` | View costs, variances and valuation; export financial data | Sign in; **Stock adjustments**: approve (which posts) or reject, never one it raised; **Stock on hand** with cost and value; read items, locations, suppliers, purchase orders, goods receipts and production BOMs; its screens arrive with the costing and period-close work of weeks 4–5 |
 
 A user may hold several roles; the API refuses anything none of them allows (403), and anything
 without a session (401). Nobody approves a document they created, whatever roles they hold: the API
@@ -409,7 +428,7 @@ undoes them.
    base unit cannot change (ADR-0019). **Deactivate** it: it leaves the default list, nothing is
    deleted, and **Show: All** brings it back to reactivate.
 7. Every item change is a new **master data version**, the number a POS pulls by (with its machine
-   credential, step 16). Read the log with any user's access token:
+   credential, step 17). Read the log with any user's access token:
    `GET /api/v1/master-data/changes?since=0` returns each change in version order, the whole item as
    it stood after it, and `latestVersion`; ask again with `since` set to the last version you saw and
    only newer changes come back. Two admins saving at the same moment still
@@ -511,7 +530,20 @@ undoes them.
    it comes, a started price is refused — or send a branch back to the chain price the same way; add a recipe version — once one is in force, a new one starts
    tomorrow at the earliest, two never start on one day, and one in force never changes (ADR-0023).
    Every change is a new master data version a POS pulls (contract 1.1).
-16. Connect a POS (Docker install; the public demo has no API for it). With the **admin**'s access
+16. Sign in as **plant** (or **finance**) and open **Production BOMs**. **Cut whole chicken** turns one
+   case of whole chicken, 20 kg, into 22 each of breasts, thighs, drumsticks and wings, expected to
+   weigh 5, 3.6, 2.8 and 2.2 kg, and 4.4 kg of frames: 18 kg expected, 2 kg waste, a yield of 90 %. By
+   weight the frames would carry 24.44 % of the batch's cost; the chain overrides the shares so the
+   pieces it sells carry it (35 / 22 / 18 / 17 / 8 %). **Mix batter** keeps the default, its one output
+   carrying 100 %. Plant and finance read BOMs; purchasing does not see them. As **admin**, **New
+   production BOM**: choose inputs and outputs and the weights, yield and weight shares appear as you
+   type. An output not counted in kilograms needs its expected weight, outputs heavier than the inputs
+   are refused, and **Set the cost shares by hand** starts from the weight shares and shows what yours
+   add up to, refused unless exactly 100. **Add a version** follows the recipe rules — once one is in
+   force a new one starts tomorrow at the earliest, two never start on one day — and a version not yet
+   started can be corrected, one in force never (ADR-0026). Every change is in the audit trail. On the
+   public demo BOMs are read only; the preview works, saving says it is not in the demo.
+17. Connect a POS (Docker install; the public demo has no API for it). With the **admin**'s access
    token, `POST /api/v1/pos-instances` with a `code` (`POS-SILOM-1`), a `name` and the `branchCodes` it
    sells for (`["BR-SILOM"]`): the answer carries the machine credential, `pnepos_…`, **once** — the ERP
    keeps only its hash. With that credential as the bearer token, `GET /api/v1/pos/instance` answers who
@@ -526,7 +558,7 @@ undoes them.
    Every one of these is a `sales_event.*` or `master_data.*` log line carrying `pos_instance`, the
    branch's `location_code`, and the event's idempotency key as its `correlation_id`, counted in
    `erp_sales_events_total` — and the credential itself never appears in a log.
-17. Every one of those changes, and every refused sign-in, is in the audit trail with who, when and
+18. Every one of those changes, and every refused sign-in, is in the audit trail with who, when and
    the request's correlation id. Read it through the API with the admin's access token:
    `GET /api/v1/audit-logs` (filters: `action`, `entityId`, `actorUserId`, `correlationId`, `from`,
    `to`). A refused sign-in is also a `WARNING` line with `"event":"auth.sign_in.failed"` in

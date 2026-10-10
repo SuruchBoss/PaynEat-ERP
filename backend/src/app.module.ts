@@ -25,6 +25,7 @@ import { OpeningBalancesModule } from './modules/opening-balances/opening-balanc
 import { MenuModule } from './modules/menu/menu.module';
 import { CompanyModule } from './modules/company/company.module';
 import { PurchaseOrdersModule } from './modules/purchase-orders/purchase-orders.module';
+import { ProductionBomsModule } from './modules/production-boms/production-boms.module';
 import { PosIntegrationModule } from './modules/pos-integration/pos-integration.module';
 import { StockAdjustmentsModule } from './modules/stock-adjustments/stock-adjustments.module';
 import { SuppliersModule } from './modules/suppliers/suppliers.module';
@@ -69,6 +70,7 @@ import { SuppliersModule } from './modules/suppliers/suppliers.module';
     CompanyModule,
     GoodsReceiptsModule,
     PurchaseOrdersModule,
+    ProductionBomsModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: AllExceptionsFilter },

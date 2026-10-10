@@ -6,8 +6,10 @@
  * effective-from business date until the next version starts; there is no end date to
  * keep in step, so two versions of one recipe can never cover the same day unless they
  * start on it, and that is refused. No clock here: callers pass today's business date.
+ * The dated-version rules themselves live in `core/time/domain/dated-versions`, shared
+ * with production BOMs (#12); they are re-exported here under their recipe names.
  */
-import { addDays, compareDates } from '../../../core/time/domain/business-date';
+import { versionInEffect, type Dated } from '../../../core/time/domain/dated-versions';
 import {
   add,
   decimalPlaces,
@@ -20,51 +22,13 @@ import {
   type ExactDecimal,
 } from '../../../core/quantity/domain/exact-decimal';
 
-export interface Dated {
-  /** ISO `YYYY-MM-DD`, a business date in the company's time zone (ADR-0018). */
-  effectiveFrom: string;
-}
-
-/**
- * The version in force on `date`: the one with the latest effective-from on or before it.
- * Null when the first version starts later, or there is none. The input order does not
- * matter.
- */
-export function recipeInEffect<T extends Dated>(versions: readonly T[], date: string): T | null {
-  let found: T | null = null;
-  for (const version of versions) {
-    if (compareDates(version.effectiveFrom, date) > 0) continue;
-    if (!found || compareDates(version.effectiveFrom, found.effectiveFrom) > 0) found = version;
-  }
-  return found;
-}
-
-/** Whether a version has taken effect: from then on it is history and never changes. */
-export function hasTakenEffect(version: Dated, today: string): boolean {
-  return compareDates(version.effectiveFrom, today) <= 0;
-}
-
-export type NewVersionProblem =
-  /** Another version of this recipe starts on that day: two would be in force at once. */
-  | { reason: 'overlap' }
-  /**
-   * Earlier than `earliest`. A version never starts in the past; once a version is in
-   * force, a new one starts tomorrow at the earliest, so no day that has begun changes
-   * recipe after sales may already have been made on it.
-   */
-  | { reason: 'too_early'; earliest: string };
-
-/** Why a new version starting on `effectiveFrom` is refused, or null when it is allowed. */
-export function newVersionProblem(
-  existing: readonly Dated[],
-  effectiveFrom: string,
-  today: string,
-): NewVersionProblem | null {
-  const earliest = recipeInEffect(existing, today) ? addDays(today, 1) : today;
-  if (compareDates(effectiveFrom, earliest) < 0) return { reason: 'too_early', earliest };
-  if (existing.some((v) => v.effectiveFrom === effectiveFrom)) return { reason: 'overlap' };
-  return null;
-}
+export {
+  hasTakenEffect,
+  newVersionProblem,
+  versionInEffect as recipeInEffect,
+  type Dated,
+  type NewVersionProblem,
+} from '../../../core/time/domain/dated-versions';
 
 export interface PricePoint extends Dated {
   /** The branch's location code, or null for the price every branch uses by default. */
@@ -88,13 +52,13 @@ export function priceInEffect<T extends PricePoint>(
   date: string,
 ): T | null {
   if (locationCode) {
-    const own = recipeInEffect(
+    const own = versionInEffect(
       prices.filter((p) => p.locationCode === locationCode),
       date,
     );
     if (own && own.price !== null) return own;
   }
-  return recipeInEffect(
+  return versionInEffect(
     prices.filter((p) => p.locationCode === null),
     date,
   );

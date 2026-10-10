@@ -243,6 +243,8 @@ describe('signing in', () => {
           'menu:read',
           'menu:manage',
           'company_settings:manage',
+          'production_bom:read',
+          'production_bom:manage',
         ],
         mfaEnabled: true,
       });

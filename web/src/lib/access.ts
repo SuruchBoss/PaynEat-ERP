@@ -56,6 +56,10 @@ export const Permission = {
   GOODS_RECEIPT_RECEIVE: 'goods_receipt:receive',
   /** Approve (which posts) or reject receipts with findings: purchasing approvers, never their own (#11). */
   GOODS_RECEIPT_APPROVE: 'goods_receipt:approve',
+  /** Read production BOMs, their yields and allocation ratios: admin, plant, finance (#12). */
+  PRODUCTION_BOM_READ: 'production_bom:read',
+  /** Create BOMs, add and correct their versions: the admin (#12). */
+  PRODUCTION_BOM_MANAGE: 'production_bom:manage',
 } as const;
 
 export type PermissionKey = (typeof Permission)[keyof typeof Permission];

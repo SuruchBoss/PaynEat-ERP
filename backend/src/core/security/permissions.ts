@@ -76,6 +76,16 @@ export const Permission = {
    * approved one the ledger refused (#11). Never a receipt the approver created (ADR-0008).
    */
   GOODS_RECEIPT_APPROVE: 'goods_receipt:approve',
+  /**
+   * Read production BOMs (#12): their allocation ratios decide what each output costs, so
+   * reading needs a permission, like the menu's recipes.
+   */
+  PRODUCTION_BOM_READ: 'production_bom:read',
+  /**
+   * Create production BOMs, add and correct their versions (#12). A BOM is configuration every
+   * production order follows, so only the admin changes it (ADR-0008).
+   */
+  PRODUCTION_BOM_MANAGE: 'production_bom:manage',
 } as const;
 
 export type PermissionKey = (typeof Permission)[keyof typeof Permission];
@@ -101,8 +111,8 @@ export type Role = (typeof ROLE_KEYS)[number];
 export const ROLE_PERMISSIONS: Record<Role, readonly PermissionKey[]> = {
   // ADR-0008: manage users, roles, locations, configuration; reopen closed periods.
   // Master data is configuration: only the admin maintains items (#5). Connecting a POS is
-  // configuration too (#9), and so is the menu every POS mirrors (#16) and the purchase approval
-  // threshold (#10).
+  // configuration too (#9), and so is the menu every POS mirrors (#16), the purchase approval
+  // threshold (#10) and the production BOMs every production order follows (#12).
   admin: [
     Permission.USER_READ,
     Permission.USER_MANAGE,
@@ -114,6 +124,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly PermissionKey[]> = {
     Permission.MENU_READ,
     Permission.MENU_MANAGE,
     Permission.COMPANY_SETTINGS_MANAGE,
+    Permission.PRODUCTION_BOM_READ,
+    Permission.PRODUCTION_BOM_MANAGE,
   ],
   // ADR-0008: create and send purchase orders (#10); manage suppliers (#6).
   // Purchasing follows what arrived against its orders (#11).
@@ -133,13 +145,15 @@ export const ROLE_PERMISSIONS: Record<Role, readonly PermissionKey[]> = {
   ],
   // ADR-0008: receive goods, run production orders, manage plant stock. Bringing existing
   // stock in with an opening balance is managing it (#7), and so is adjusting it (#8). Receiving
-  // means reading the order being received against (#11).
+  // means reading the order being received against (#11). Running production means reading the
+  // BOM it follows (#12).
   plant: [
     Permission.OPENING_BALANCE_MANAGE,
     Permission.STOCK_ADJUSTMENT_RAISE,
     Permission.PURCHASE_ORDER_READ,
     Permission.GOODS_RECEIPT_READ,
     Permission.GOODS_RECEIPT_RECEIVE,
+    Permission.PRODUCTION_BOM_READ,
   ],
   // ADR-0008: dispatch transfers.
   logistics: [],
@@ -150,12 +164,14 @@ export const ROLE_PERMISSIONS: Record<Role, readonly PermissionKey[]> = {
   // ADR-0008: view costs, variances and valuation; export financial data. An adjustment
   // changes the value of stock, so finance approves it (#8): never one it created itself.
   // Recipes and their theoretical cost are costs: finance reads them (#16), and so are the
-  // prices the company has committed to pay (#10) and what each received lot cost (#11).
+  // prices the company has committed to pay (#10), what each received lot cost (#11) and how a
+  // batch's cost is split across its outputs (#12).
   finance: [
     Permission.STOCK_ADJUSTMENT_APPROVE,
     Permission.MENU_READ,
     Permission.PURCHASE_ORDER_READ,
     Permission.GOODS_RECEIPT_READ,
+    Permission.PRODUCTION_BOM_READ,
   ],
 };
 

@@ -136,8 +136,11 @@ What branches sell, kept in the ERP and mirrored by the POS (ADR-0002, ADR-0023)
 | Yield | อัตราผลได้ | Output weight ÷ input weight of a production order. Expected yield lives on the BOM; actual yield is measured. |
 | Co-product | ผลิตภัณฑ์ร่วม | One of several saleable outputs of the same input (e.g. drumstick, thigh, breast from one bird). |
 | By-product | ผลิตภัณฑ์พลอยได้ | A low-value output (e.g. frames for stock). |
-| Waste | ของเสีย | Input that becomes no output. |
-| Allocation ratio | สัดส่วนปันต้นทุน | The share of input cost assigned to each output on a production BOM. Defaults to share of weight. |
+| Waste | ของเสีย | Input that becomes no output. On a BOM, input weight less expected output weight; it carries no allocation ratio (ADR-0026). |
+| Allocation ratio | สัดส่วนปันต้นทุน | The share of input cost assigned to each output on a production BOM. Defaults to the output's share of expected output weight, to 0.01 %, rounded by largest remainder so the ratios add up to exactly 100; the admin may override all of them (ADR-0026). |
+| BOM version | เวอร์ชันสูตรการผลิต | One version of a production BOM, numbered 1, 2, 3…, in force from its effective-from date until the next version starts. Never edited once in force; a production order records the version it used (ADR-0026). |
+| Batch | รอบการผลิต | One run of a production BOM: the quantities on a BOM are per batch. |
+| Expected weight | น้ำหนักที่คาดไว้ | The weight in kg a BOM line is expected to have per batch. Stated for lines not counted in kg or g; a kg or g line weighs its quantity (ADR-0026). |
 | Lot cost | ต้นทุนราย lot | The actual unit cost carried by a lot. Consumption takes the cost of the lot FEFO picks. |
 | Standard cost | ต้นทุนมาตรฐาน | A predetermined cost per item with variances reported against it. **Not used in v1** (ADR-0004). |
 | Three-way match | การจับคู่สามทาง (3-way match) | Checking a supplier invoice against its purchase order and goods receipt. Stretch goal for v1. |

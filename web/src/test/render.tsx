@@ -38,6 +38,8 @@ export const ADMIN: SessionUser = {
     'menu:read',
     'menu:manage',
     'company_settings:manage',
+    'production_bom:read',
+    'production_bom:manage',
   ],
   mfaEnabled: true,
 };
@@ -96,6 +98,7 @@ export const PLANT: SessionUser = {
     'purchase_order:read',
     'goods_receipt:read',
     'goods_receipt:receive',
+    'production_bom:read',
   ],
   mfaEnabled: false,
 };

@@ -68,6 +68,19 @@ export const NAV: readonly NavSection[] = [
     ],
   },
   {
+    id: 'production',
+    headingKey: 'nav.section.production',
+    // How a batch's cost is split is commercial: admin, plant and finance read BOMs (#12).
+    items: [
+      {
+        to: '/production-boms',
+        labelKey: 'nav.productionBoms',
+        icon: 'split',
+        permission: Permission.PRODUCTION_BOM_READ,
+      },
+    ],
+  },
+  {
     id: 'menu',
     headingKey: 'nav.section.menu',
     // Recipes and their costs are commercial: admin, finance and branch managers read them (#16).
