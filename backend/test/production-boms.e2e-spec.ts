@@ -173,6 +173,37 @@ describe('production BOMs (#12)', () => {
     expect(audit?.summary).toContain(`Created production BOM ${res.body.code}`);
   });
 
+  it('previews weights, yield and default ratios while a version is entered, writing nothing', async () => {
+    const before = await prisma.productionBomVersion.count();
+    const partial = cutting();
+    partial.outputs[0] = { ...partial.outputs[0], allocationRatio: '40' } as never;
+    const res = await as(admin).post('/production-boms/preview', partial);
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      issues: [],
+      problems: ['ratios_incomplete'],
+      statedRatioTotal: '40.00',
+      figures: { inputWeightKg: '20.000', wasteKg: '2.000', yieldPercent: '90.00' },
+    });
+    expect(res.body.figures.outputs.map((o: Body) => o.defaultRatio)).toEqual([
+      '27.78',
+      '20.00',
+      '15.56',
+      '12.22',
+      '24.44',
+    ]);
+
+    const broken = cutting();
+    broken.outputs[1] = { ...broken.outputs[1], quantity: 'abc' };
+    const invalid = await as(admin).post('/production-boms/preview', broken);
+    expect(invalid.body).toMatchObject({
+      issues: [{ side: 'output', lineNo: 2, problem: 'not_a_decimal' }],
+      figures: null,
+    });
+    expect(await prisma.productionBomVersion.count()).toBe(before);
+    expect((await as(finance).post('/production-boms/preview', cutting())).status).toBe(403);
+  });
+
   it('refuses a code already taken', async () => {
     const res = await create(admin, { code: 'CUT-WHOLE-CHICKEN' });
     expect(res.status).toBe(409);

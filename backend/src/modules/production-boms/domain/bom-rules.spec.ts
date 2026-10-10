@@ -8,6 +8,7 @@ import {
   bomIssues,
   defaultRatios,
   formatKg,
+  statedRatioTotal,
   yieldPercent,
   type BomItemFacts,
   type BomLineInput,
@@ -178,6 +179,15 @@ describe('production BOM rules', () => {
       { side: 'output', lineNo: 3, problem: 'not_a_decimal' },
       { side: 'output', lineNo: 4, problem: 'too_large' },
     ]);
+  });
+
+  it('adds up the ratios a person has stated so far', () => {
+    const with_ = (ratios: Array<string | null>) =>
+      cutting.outputs.map((line, i) => ({ ...line, allocationRatio: ratios[i] ?? null }));
+    expect(statedRatioTotal(cutting.outputs)).toBeNull();
+    expect(statedRatioTotal(with_(['35', '22', '18', '17', '7.99']))).toBe('99.99');
+    expect(statedRatioTotal(with_(['50', null, '25']))).toBe('75.00');
+    expect(statedRatioTotal(with_(['50', 'x']))).toBeNull();
   });
 
   it('needs at least one input and one output', () => {

@@ -19,6 +19,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import type { VersionStatus } from '../../../core/time/domain/dated-versions';
+import type { BomLineIssue, BomProblem } from '../domain/bom-rules';
 
 /** The ecosystem-wide code shape (docs/GLOSSARY.md). */
 export const BOM_CODE_PATTERN = /^[A-Z0-9][A-Z0-9-]{1,31}$/;
@@ -210,4 +211,29 @@ export interface ProductionBomView extends Omit<ProductionBomSummaryView, 'curre
   today: string;
   /** Newest first. */
   versions: BomVersionView[];
+}
+
+/**
+ * What a version being entered would give, before it is saved: every problem, and once every
+ * line is valid, its weights, yield and the ratios it would store. Nothing is written.
+ */
+export interface BomPreviewView {
+  issues: BomLineIssue[];
+  problems: BomProblem[];
+  /** Null until every line is valid. */
+  figures: {
+    inputWeightKg: string;
+    outputWeightKg: string;
+    wasteKg: string;
+    yieldPercent: string;
+    /** Per output, in input order. */
+    outputs: Array<{
+      weightKg: string;
+      yieldPercent: string;
+      /** The output's share of expected output weight, two decimals. */
+      defaultRatio: string;
+    }>;
+  } | null;
+  /** What the stated ratios add up to so far; null when none is stated. */
+  statedRatioTotal: string | null;
 }

@@ -312,6 +312,22 @@ export function allocationRatios(
   return { ratios: defaultRatios(outputWeights), overridden: false };
 }
 
+/**
+ * What the ratios the outputs state add up to, two decimals, so a person overriding them sees
+ * how far from 100 they are. Null when no output states one, or one is not a decimal.
+ */
+export function statedRatioTotal(outputs: readonly BomOutputInput[]): string | null {
+  const stated = outputs.filter((line) => hasText(line.allocationRatio));
+  if (stated.length === 0) return null;
+  let total = ZERO;
+  for (const line of stated) {
+    const value = parseDecimal(line.allocationRatio ?? '');
+    if (!value) return null;
+    total = add(total, value);
+  }
+  return formatFixed(total, RATIO_DECIMALS);
+}
+
 /** A weight in kg as the API spells it: exactly three decimals. */
 export function formatKg(value: ExactDecimal): string {
   return formatFixed(value, WEIGHT_DECIMALS);

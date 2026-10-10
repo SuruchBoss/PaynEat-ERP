@@ -5,6 +5,8 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -24,6 +26,7 @@ import {
   CreateProductionBomDto,
   ProductionBomsQueryDto,
   UpdateProductionBomDto,
+  type BomPreviewView,
   type ProductionBomSummaryView,
   type ProductionBomView,
 } from './dto/production-boms.dto';
@@ -43,6 +46,14 @@ export class ProductionBomsController {
   @RequirePermissions(Permission.PRODUCTION_BOM_READ)
   list(@Query() query: ProductionBomsQueryDto): Promise<ProductionBomSummaryView[]> {
     return this.boms.list(query);
+  }
+
+  /** Weights, yield and ratios of a version being entered; whoever may save one may ask. */
+  @Post('preview')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions(Permission.PRODUCTION_BOM_MANAGE)
+  preview(@Body() dto: BomLinesDto): Promise<BomPreviewView> {
+    return this.boms.preview(dto);
   }
 
   @Get(':id')

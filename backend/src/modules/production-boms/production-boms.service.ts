@@ -21,9 +21,11 @@ import {
   allocationRatios,
   bomFigures,
   bomIssues,
+  defaultRatios,
   formatKg,
   lineWeightKg,
   normaliseQuantity,
+  statedRatioTotal,
   yieldPercent,
   type BomOutputInput,
 } from './domain/bom-rules';
@@ -31,6 +33,7 @@ import type {
   BomLineView,
   BomLinesDto,
   BomLocationType,
+  BomPreviewView,
   BomVersionView,
   CreateBomVersionDto,
   CreateProductionBomDto,
@@ -138,6 +141,32 @@ export class ProductionBomsService {
       ...header(row),
       today,
       versions: dated.map(({ v }) => versionView(v, dated, items, today)),
+    };
+  }
+
+  /** What a version would give, with every problem it has; refuses nothing and writes nothing. */
+  async preview(dto: BomLinesDto): Promise<BomPreviewView> {
+    const items = await this.items.describe([...dto.inputs, ...dto.outputs].map((l) => l.itemId));
+    const { lines: issues, problems } = bomIssues(dto.inputs, dto.outputs, items);
+    const stated = statedRatioTotal(dto.outputs);
+    if (issues.length > 0) return { issues, problems, figures: null, statedRatioTotal: stated };
+    const figures = bomFigures(dto.inputs, dto.outputs, items);
+    const defaults = defaultRatios(figures.outputWeights);
+    return {
+      issues,
+      problems,
+      figures: {
+        inputWeightKg: formatKg(figures.inputWeight),
+        outputWeightKg: formatKg(figures.outputWeight),
+        wasteKg: formatKg(figures.waste),
+        yieldPercent: yieldPercent(figures),
+        outputs: figures.outputWeights.map((weight, index) => ({
+          weightKg: formatKg(weight),
+          yieldPercent: yieldPercent({ inputWeight: figures.inputWeight, outputWeight: weight }),
+          defaultRatio: defaults[index],
+        })),
+      },
+      statedRatioTotal: stated,
     };
   }
 
