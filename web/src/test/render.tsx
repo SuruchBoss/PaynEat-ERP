@@ -133,6 +133,7 @@ export const BRANCH_MANAGER: SessionUser = {
     'transfer:receive',
     'requisition:read',
     'requisition:raise',
+    'branch_consumption:read',
   ],
 };
 

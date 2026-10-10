@@ -77,4 +77,9 @@ export const qk = {
   suggestions: (branchId: string) => ['requisitions', 'suggestions', branchId] as const,
   parLevels: ['par-levels'] as const,
   parMisses: (query: string) => ['requisitions', 'par-misses', query] as const,
+  branchConsumption: ['branch-consumption'] as const,
+  consumptionProblems: (branchId: string) => ['branch-consumption', 'problems', branchId] as const,
+  consumptions: (query: string) => ['branch-consumption', 'list', query] as const,
+  consumption: (id: string) => ['branch-consumption', id] as const,
+  consumptionUsage: (query: string) => ['branch-consumption', 'usage', query] as const,
 };

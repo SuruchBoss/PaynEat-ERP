@@ -14,13 +14,19 @@ import {
 } from '@/test/render';
 
 describe('company settings', () => {
-  it('lets the admin set the purchase approval threshold, sent with the revision it was opened at', async () => {
-    let settings = { purchaseApprovalThreshold: '0.00', revision: 0, updated: null as unknown };
+  it('lets the admin set the threshold and the sale-time tolerance, sent with the revision it was opened at', async () => {
+    let settings = {
+      purchaseApprovalThreshold: '0.00',
+      saleTimeAheadToleranceMinutes: 10,
+      revision: 0,
+      updated: null as unknown,
+    };
     const api = mockApi({
       'GET /company/settings': () => jsonResponse(200, settings),
       'PATCH /company/settings': () => {
         settings = {
           purchaseApprovalThreshold: '20000.00',
+          saleTimeAheadToleranceMinutes: 15,
           revision: 1,
           updated: {
             by: { id: ADMIN.id, displayName: 'Demo admin' },
@@ -41,19 +47,33 @@ describe('company settings', () => {
     expect(field).toHaveValue('0.00');
     expect(await axeViolations()).toEqual([]);
 
+    const tolerance = screen.getByLabelText('จำนวนนาที (0 ถึง 1440)');
+    expect(tolerance).toHaveValue('10');
+
     await u.clear(field);
     await u.type(field, '20000');
+    await u.clear(tolerance);
+    await u.type(tolerance, '15');
     await u.click(screen.getByRole('button', { name: 'บันทึก' }));
     expect(await screen.findByText('ตั้งเกณฑ์วงเงินเป็น 20,000.00 บาทแล้ว')).toBeVisible();
     expect(await screen.findByText(/แก้ไขล่าสุด .* โดย Demo admin/)).toBeVisible();
     const call = api.mock.calls.findIndex(([, init]) => init?.method === 'PATCH');
-    expect(sentBody(api, call)).toEqual({ revision: 0, purchaseApprovalThreshold: '20000' });
+    expect(sentBody(api, call)).toEqual({
+      revision: 0,
+      purchaseApprovalThreshold: '20000',
+      saleTimeAheadToleranceMinutes: 15,
+    });
   });
 
   it('says why a threshold is refused', async () => {
     mockApi({
       'GET /company/settings': () =>
-        jsonResponse(200, { purchaseApprovalThreshold: '20000.00', revision: 1, updated: null }),
+        jsonResponse(200, {
+          purchaseApprovalThreshold: '20000.00',
+          saleTimeAheadToleranceMinutes: 10,
+          revision: 1,
+          updated: null,
+        }),
       'PATCH /company/settings': () =>
         jsonResponse(422, { code: 'INVALID_APPROVAL_THRESHOLD', message: 'x' }),
     });
@@ -74,7 +94,12 @@ describe('company settings', () => {
   it('is only the admin’s: others do not see it in the navigation', async () => {
     mockApi({
       'GET /company/settings': () =>
-        jsonResponse(200, { purchaseApprovalThreshold: '20000.00', revision: 1, updated: null }),
+        jsonResponse(200, {
+          purchaseApprovalThreshold: '20000.00',
+          saleTimeAheadToleranceMinutes: 10,
+          revision: 1,
+          updated: null,
+        }),
       'GET /purchase-orders': () => jsonResponse(200, []),
     });
     renderApp('/purchase-orders', { as: PURCHASING });

@@ -36,6 +36,7 @@ const row = (overrides: Partial<StockOnHandRow>): StockOnHandRow => ({
   },
   lot: {
     id: '00000000-0000-4000-8000-0000000000c1',
+    placeholderCost: null,
     number: 'OB-2026-00001/3',
     expiryDate: '2026-09-27',
   },
@@ -63,6 +64,7 @@ const TODAY: StockOnHandView = {
       },
       lot: {
         id: '00000000-0000-4000-8000-0000000000c2',
+        placeholderCost: null,
         number: 'OB-2026-00001/1',
         expiryDate: '2027-02-23',
       },
@@ -76,6 +78,7 @@ const TODAY: StockOnHandView = {
       location: BRANCH,
       lot: {
         id: '00000000-0000-4000-8000-0000000000c3',
+        placeholderCost: null,
         number: 'OB-2026-00002/1',
         expiryDate: '2026-09-28',
       },

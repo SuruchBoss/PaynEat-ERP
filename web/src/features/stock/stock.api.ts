@@ -8,7 +8,14 @@ import type { LocationType } from '@/features/locations/locations.api';
 /** Quantities, costs and values are exact decimal strings (ADR-0019): shown as they are. */
 export interface StockOnHandRow {
   item: { id: string; code: string; nameTh: string; nameEn: string; baseUnitCode: string };
-  lot: { id: string; number: string; expiryDate: string };
+  lot: {
+    id: string;
+    number: string;
+    /** Null only for a placeholder lot (ADR-0030), which has no expiry. */
+    expiryDate: string | null;
+    /** A placeholder lot's cost is an estimate, or unknown (0); null for every other lot. */
+    placeholderCost: 'estimated' | 'unknown' | null;
+  };
   location: { id: string; code: string; type: LocationType; nameTh: string; nameEn: string };
   /** With the base unit's decimals. Negative only at a branch (ADR-0003). */
   quantity: string;

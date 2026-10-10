@@ -174,9 +174,15 @@ export function StockOnHandPage() {
                           <span>
                             <code>{row.lot.number}</code>
                             <span className="subtle">
-                              {t('stock.expires', {
-                                date: formatBusinessDate(row.lot.expiryDate, language),
-                              })}
+                              {row.lot.expiryDate === null
+                                ? t(
+                                    row.lot.placeholderCost === 'unknown'
+                                      ? 'stock.placeholder.unknown'
+                                      : 'stock.placeholder.estimated',
+                                  )
+                                : t('stock.expires', {
+                                    date: formatBusinessDate(row.lot.expiryDate, language),
+                                  })}
                               {row.expired && (
                                 <span className="badge badge--down badge--inline">
                                   {t('stock.expired')}

@@ -58,7 +58,7 @@ const HELD: StockOnHandView = {
         nameEn: CHICKEN.nameEn,
         baseUnitCode: 'kg',
       },
-      lot: { ...LOT, expiryDate: '2026-09-28' },
+      lot: { ...LOT, expiryDate: '2026-09-28', placeholderCost: null },
       location: PLANT_SITE,
       quantity: '21.600',
       secondaryQuantity: '12',
