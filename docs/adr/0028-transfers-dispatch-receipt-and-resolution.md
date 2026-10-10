@@ -1,6 +1,6 @@
 # ADR-0028: Transfers: dispatch and receipt are two documents, one receipt posts, and every dispatched quantity is accepted, returned or written off
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-10
 - **ภาษาไทย:** [0028-transfers-dispatch-receipt-and-resolution.th.md](0028-transfers-dispatch-receipt-and-resolution.th.md)
 
