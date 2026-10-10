@@ -25,6 +25,8 @@ Additive only; nothing is renamed. Agreed with the product owner on #17.
 - `branch_consumption` joins the `document_type` values of `erp_postings_total`.
 - `sales_event.processed`, `sales_event.failed` and `sales_event.held` carry `pos_instance` and
   `location_code`, and the event's idempotency key as their `correlation_id`, from ingest to posting.
+  `sales_event.processed` also carries the branch-consumption document it produced as
+  `document_number` (its `BC` number), so a sale leads to its consumption without a join.
 
 ## Additions to v1.2 (2026-09-27, PaynEat POS ticket 25)
 

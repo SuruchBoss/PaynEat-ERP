@@ -190,11 +190,13 @@ export class BranchConsumptionService implements OnApplicationBootstrap, OnAppli
     if (!('documentId' in claimed)) return claimed.attempt;
     const { event, documentId, revision } = claimed;
 
+    let documentNumber = '';
     try {
       await this.ledger.post(documentId, revision, actor, (tx, doc) => this.plan(tx, doc), {
         from: 'draft',
         businessTime: event.saleTime,
         afterPosting: async (tx, doc) => {
+          documentNumber = doc.number;
           await this.pos.setSalesEventStatus(tx, event.id, 'processed');
           await tx.salesEventProcessing.create({
             data: {
@@ -219,7 +221,8 @@ export class BranchConsumptionService implements OnApplicationBootstrap, OnAppli
       event,
       'INFO',
       'sales_event.processed',
-      `Sales event ${event.idempotencyKey} became branch consumption`,
+      `Sales event ${event.idempotencyKey} became branch consumption ${documentNumber}`,
+      { document_number: documentNumber },
     );
     this.metrics.countSalesEvent('processed');
     return 'processed';
@@ -665,7 +668,7 @@ export class BranchConsumptionService implements OnApplicationBootstrap, OnAppli
       outcome === 'held'
         ? `Sales event ${event.idempotencyKey} is held: its sale time is too far ahead of its receipt`
         : `Sales event ${event.idempotencyKey} could not become consumption: ${reason}`,
-      reason,
+      { reason },
     );
     this.metrics.countSalesEvent(outcome, reason);
   }
@@ -675,7 +678,7 @@ export class BranchConsumptionService implements OnApplicationBootstrap, OnAppli
     severity: 'INFO' | 'WARNING',
     name: string,
     message: string,
-    reason?: string,
+    extra: { reason?: string; document_number?: string } = {},
   ): void {
     this.logger.write({
       severity,
@@ -684,7 +687,8 @@ export class BranchConsumptionService implements OnApplicationBootstrap, OnAppli
       labels: {
         pos_instance: event.posInstanceCode,
         location_code: event.locationCode,
-        ...(reason ? { reason } : {}),
+        ...(extra.reason ? { reason: extra.reason } : {}),
+        ...(extra.document_number ? { document_number: extra.document_number } : {}),
       },
       // The idempotency key is the event's correlation id, here as at ingest (docs/TELEMETRY.md).
       correlationId: event.idempotencyKey,

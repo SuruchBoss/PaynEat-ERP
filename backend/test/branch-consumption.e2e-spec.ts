@@ -240,6 +240,7 @@ describe('branch consumption', () => {
       expect(processed[0].labels).toMatchObject({
         pos_instance: at.pos.code,
         location_code: at.branch.code,
+        document_number: doc.number,
       });
       expect(await metric('erp_sales_events_total', { outcome: 'processed' })).toBe(before + 1);
       expect(

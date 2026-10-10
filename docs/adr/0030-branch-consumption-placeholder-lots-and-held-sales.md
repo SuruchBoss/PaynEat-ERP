@@ -1,6 +1,6 @@
 # ADR-0030: Branch consumption: one document per sale, placeholder lots, held sales and the automatic account
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-10
 - **ภาษาไทย:** [0030-branch-consumption-placeholder-lots-and-held-sales.th.md](0030-branch-consumption-placeholder-lots-and-held-sales.th.md)
 

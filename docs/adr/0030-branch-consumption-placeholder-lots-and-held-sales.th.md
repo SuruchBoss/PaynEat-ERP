@@ -1,6 +1,6 @@
 # ADR-0030: การใช้วัตถุดิบที่สาขา: เอกสารหนึ่งใบต่อยอดขาย lot แทน ยอดขายที่ถูกพัก และบัญชีอัตโนมัติ
 
-- **สถานะ:** Proposed
+- **สถานะ:** Accepted
 - **วันที่:** 2026-10-10
 - **English:** [0030-branch-consumption-placeholder-lots-and-held-sales.md](0030-branch-consumption-placeholder-lots-and-held-sales.md)
 
