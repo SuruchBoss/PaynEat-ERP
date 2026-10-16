@@ -22,7 +22,7 @@ edited to change their meaning; a new ADR supersedes them.
 | 0012 | [Positioning: niche depth over breadth](0012-positioning-niche-depth-over-breadth.md) | [จุดยืน: ลึกในตลาดเฉพาะ แทนความกว้าง](0012-positioning-niche-depth-over-breadth.th.md) | Accepted (decision 4 partly superseded by 0015) |
 | 0013 | [Extension by integration, not in-process plugins](0013-extension-by-integration.md) | [ต่อยอดผ่านการเชื่อมต่อ ไม่ใช่ plugin ภายใน](0013-extension-by-integration.th.md) | Accepted |
 | 0014 | [A lot's expiry is never later than the supplier's date](0014-lot-expiry-never-later-than-supplier-date.md) | [วันหมดอายุของ lot ต้องไม่เกินวันที่ซัพพลายเออร์ระบุ](0014-lot-expiry-never-later-than-supplier-date.th.md) | Accepted |
-| 0015 | [Editions: Community and Enterprise](0015-editions-community-and-enterprise.md) | [รุ่นของระบบ: Community และ Enterprise](0015-editions-community-and-enterprise.th.md) | Accepted |
+| 0015 | [Editions: Community and Enterprise](0015-editions-community-and-enterprise.md) | [รุ่นของระบบ: Community และ Enterprise](0015-editions-community-and-enterprise.th.md) | Accepted (decision 9 superseded by 0031) |
 | 0016 | [ExcelToGo joins the ecosystem as the spreadsheet companion](0016-exceltogo-spreadsheet-companion.md) | [ExcelToGo เข้าร่วมระบบนิเวศในฐานะเครื่องมือสเปรดชีต](0016-exceltogo-spreadsheet-companion.th.md) | Accepted (decision 6 extended by 0020) |
 | 0017 | [Stock counts: blind, as of a count time, allocated to lots by rule at branches](0017-stock-counts.md) | [การตรวจนับสต๊อก: นับแบบไม่เห็นยอด ณ เวลาตรวจนับ และที่สาขาปันส่วนต่างลง lot ตามกฎ](0017-stock-counts.th.md) | Accepted |
 | 0018 | [Period close by business date, and sales that arrive after their period closed](0018-period-close-and-business-time.md) | [ปิดงวดตามวันที่เกิดรายการ และยอดขายที่มาถึงหลังงวดปิดไปแล้ว](0018-period-close-and-business-time.th.md) | Accepted |
@@ -38,6 +38,7 @@ edited to change their meaning; a new ADR supersedes them.
 | 0028 | [Transfers: dispatch and receipt are two documents, one receipt posts, and every dispatched quantity is accepted, returned or written off](0028-transfers-dispatch-receipt-and-resolution.md) | [การโอนสินค้า: ส่งของและรับโอนเป็นเอกสารสองใบ ใบรับโอน post ได้ใบเดียว และทุกจำนวนที่ส่งออกไปต้องถูกรับเข้า ส่งคืน หรือตัดจำหน่าย](0028-transfers-dispatch-receipt-and-resolution.th.md) | Accepted |
 | 0029 | [Requisitions: fulfilment follows what transfers dispatched, suggestions come in whole requisition units, and par misses are counted two ways](0029-requisitions-par-levels-and-par-misses.md) | [ใบขอเบิก: สถานะการส่งเดินตามของที่ใบโอนส่งออกไปจริง ค่าแนะนำเป็นจำนวนเต็มของหน่วยขอเบิก และนับการขาดของสองแบบ](0029-requisitions-par-levels-and-par-misses.th.md) | Accepted |
 | 0030 | [Branch consumption: one document per sale, placeholder lots, held sales and the automatic account](0030-branch-consumption-placeholder-lots-and-held-sales.md) | [การใช้วัตถุดิบที่สาขา: เอกสารหนึ่งใบต่อยอดขาย lot แทน ยอดขายที่ถูกพัก และบัญชีอัตโนมัติ](0030-branch-consumption-placeholder-lots-and-held-sales.th.md) | Accepted |
+| 0031 | [PaynEat POS editions: Community for good, and a Pro edition for new work](0031-pos-editions-community-and-pro.md) | [รุ่นของ PaynEat POS: Community ฟรีตลอดไป และรุ่น Pro สำหรับงานใหม่](0031-pos-editions-community-and-pro.th.md) | Accepted |
 
 ## Template
 

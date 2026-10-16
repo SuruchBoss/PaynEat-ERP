@@ -244,3 +244,4 @@ What branches sell, kept in the ERP and mirrored by the POS (ADR-0002, ADR-0023)
 | Enterprise edition | รุ่น Enterprise | The paid edition: Community plus the modules in `ee/`, activated by a license key (ADR-0015). |
 | License key | license key | A signed key verified offline that turns on Enterprise modules. When it expires, Enterprise screens become read-only; core work and data access never stop. |
 | Active location | สถานที่ที่ใช้งาน | A plant, warehouse or branch with postings in the billing month; the unit Enterprise is priced by. |
+| PaynEat POS Pro | PaynEat POS รุ่น Pro | The POS's paid edition (POS `DECISIONS.md` #102, ADR-0031): only code written after the tag `community-baseline-2026-10`, under ELv2. Everything at that tag, and the POS "never" list, stays Community. Not part of this ERP. |
